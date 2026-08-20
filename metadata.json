@@ -1,0 +1,6 @@
+{
+  "name": "QueueMind AI",
+  "description": "AI-powered Queue and Crowd Intelligence Management Platform with predictive wait times, dynamic counter allocation, fairness routing, and live visitor token tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
