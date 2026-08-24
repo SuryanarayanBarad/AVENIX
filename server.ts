@@ -2420,12 +2420,38 @@ app.get('/api/visitor/tokens/:id', apiRoute(async (req, res) => {
  * Ownership check shared by the visitor's own token edit and cancel routes:
  * either the signed-in owner, or somebody holding the token's access key.
  */
-async function requireTokenOwner(req: express.Request, token: { id: string; userId: string | null; accessKeyHash: string }) {
+async function requireTokenOwner(
+  req: express.Request,
+  token: { id: string; userId: string | null; accessKeyHash: string },
+  /**
+   * A staff capability that also satisfies this check.
+   *
+   * Passed only where the same act already has an admin route with the same
+   * authority — completing a visit. Editing and cancelling deliberately do NOT
+   * pass one: those go through /api/admin/tokens/:id, which writes the audit
+   * row the Super Admin's queue-activity feed reads. Opening them here would
+   * let an administrator change somebody's place in the queue unobserved.
+   */
+  staffPermission?: Permission,
+) {
   const authHeader = req.header('authorization');
   if (authHeader?.startsWith('Bearer ')) {
     try {
       const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as { userId: string };
       if (token.userId && payload.userId === token.userId) return;
+
+      if (staffPermission) {
+        // Role from the database, never from the JWT claim.
+        let user: any = getCachedUser(payload.userId);
+        if (user === undefined) {
+          user = await prisma.user.findFirst({
+            where: { id: payload.userId, deletedAt: null },
+            include: { doctor: { select: { id: true } } },
+          });
+          setCachedUser(payload.userId, user);
+        }
+        if (user && hasPermission(user.role, staffPermission)) return;
+      }
     } catch {
       // Fall through to the access-key check.
     }
@@ -2506,7 +2532,10 @@ app.patch('/api/visitor/tokens/:id', apiRoute(async (req, res) => {
 app.post('/api/visitor/tokens/:id/complete', apiRoute(async (req, res) => {
   const token = await TokenRepo.findById(req.params.id);
   if (!token) throw new ApiError(404, 'TOKEN_NOT_FOUND', 'The token was not found.');
-  await requireTokenOwner(req, token);
+  // Staff running the board mark visits done from the tracker too;
+  // /api/admin/tokens/:id/complete is the same act with the same
+  // permission, so this is not a new authority.
+  await requireTokenOwner(req, token, 'queue:manage');
 
   if (['Completed', 'Cancelled'].includes(token.status)) {
     // Re-sending is a no-op rather than an error: a double tap or a retried
