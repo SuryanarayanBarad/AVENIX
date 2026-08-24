@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Mail, Lock, User as UserIcon, Shield } from 'lucide-react';
 import { authApi } from '../services/authApi';
+import { wakeServer } from '../services/apiClient';
 import { User } from '../types';
 
 interface AuthModalProps {
@@ -22,6 +23,40 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
   
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  /**
+   * How long the request in flight has been running: 0 normal, 1 slow, 2 very
+   * slow. A sleeping free-tier instance takes tens of seconds to restart, and a
+   * button that only ever says "Processing..." is indistinguishable from one
+   * that has hung. Saying what is happening is the difference between waiting
+   * and giving up.
+   */
+  const [waitStage, setWaitStage] = useState<0 | 1 | 2>(0);
+
+  useEffect(() => {
+    if (!loading) {
+      setWaitStage(0);
+      return;
+    }
+    const slow = setTimeout(() => setWaitStage(1), 4_000);
+    const verySlow = setTimeout(() => setWaitStage(2), 15_000);
+    return () => {
+      clearTimeout(slow);
+      clearTimeout(verySlow);
+    };
+  }, [loading]);
+
+  // Opening the modal is the earliest reliable signal that credentials are
+  // coming, so start the server waking while the form is still being filled in.
+  useEffect(() => {
+    if (isOpen) wakeServer();
+  }, [isOpen]);
+
+  const busyLabel = waitStage === 2
+    ? 'Still waking the server...'
+    : waitStage === 1
+      ? 'Waking the server...'
+      : 'Processing...';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,8 +190,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
                 disabled={loading}
                 className="w-full px-5 py-3 rounded-2xl bg-gradient-to-r from-[#8e7dff] to-purple-600 hover:opacity-90 text-white font-bold shadow-lg shadow-[#8e7dff]/30 cursor-pointer border border-white/20 disabled:opacity-50"
               >
-                {loading ? 'Processing...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+                {loading ? busyLabel : mode === 'login' ? 'Sign In' : 'Create Account'}
               </button>
+
+              {loading && waitStage > 0 && (
+                <p className="mt-2 text-center text-[11px] leading-relaxed text-white/50">
+                  {waitStage === 2
+                    ? 'This host sleeps when nobody is using it. The first request wakes it, which can take up to a minute — nothing has been lost.'
+                    : 'Free hosting pauses when idle. Hang on a few seconds while it starts back up.'}
+                </p>
+              )}
             </div>
 
             <div className="relative flex items-center py-2">

@@ -77,38 +77,105 @@ export const parseResponse = async <T>(response: Response, fallback: string): Pr
  */
 export const REQUEST_TIMEOUT_MS = 45_000;
 
+/**
+ * Sign-in and sign-up are usually the first request a visitor makes, so they
+ * are the ones that pay the cold-start cost. They get a longer budget than an
+ * ordinary in-app call, and `retryOnTimeout` on top of it.
+ */
+export const AUTH_TIMEOUT_MS = 75_000;
+
+type ApiFetchOptions = RequestInit & {
+  fallback?: string;
+  auth?: boolean;
+  timeoutMs?: number;
+  /**
+   * Retry once when the first attempt times out. A timeout on a sleeping host
+   * usually means the request itself woke it: by the time we give up the
+   * instance is running, so the second attempt answers in the normal couple of
+   * seconds. Only safe on idempotent calls, or on calls the server already
+   * de-duplicates (sign-in, sign-up).
+   */
+  retryOnTimeout?: boolean;
+};
+
 /** fetch + parseResponse in one call, with JSON, auth headers and a timeout. */
 export const apiFetch = async <T>(
   path: string,
-  { fallback = 'The request failed', auth = true, timeoutMs = REQUEST_TIMEOUT_MS, ...init }:
-    RequestInit & { fallback?: string; auth?: boolean; timeoutMs?: number } = {},
+  {
+    fallback = 'The request failed',
+    auth = true,
+    timeoutMs = REQUEST_TIMEOUT_MS,
+    retryOnTimeout = false,
+    ...init
+  }: ApiFetchOptions = {},
 ): Promise<T> => {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const attempt = async (): Promise<Response> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(path, {
+        ...init,
+        signal: controller.signal,
+        headers: {
+          Accept: 'application/json',
+          ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+          ...(auth ? authHeaders() : {}),
+          ...(init.headers ?? {}),
+        },
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+  };
 
   let response: Response;
   try {
-    response = await fetch(path, {
-      ...init,
-      signal: controller.signal,
-      headers: {
-        Accept: 'application/json',
-        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-        ...(auth ? authHeaders() : {}),
-        ...(init.headers ?? {}),
-      },
-    });
+    response = await attempt();
   } catch (error: any) {
-    if (error?.name === 'AbortError') {
+    const timedOut = error?.name === 'AbortError';
+
+    if (timedOut && retryOnTimeout) {
+      try {
+        response = await attempt();
+        return parseResponse<T>(response, fallback);
+      } catch {
+        // Fall through to the message below — a second failure is a real one.
+      }
+    }
+
+    if (timedOut) {
       throw new ApiRequestError(
-        `${fallback}: the server did not respond in time. It may be waking up — wait a moment and try again.`,
+        `${fallback}: the server did not respond in time. It may still be waking up — wait a moment and try again.`,
         0,
       );
     }
     throw new ApiRequestError(`${fallback}: could not reach the server. Check your connection and try again.`, 0);
-  } finally {
-    clearTimeout(timer);
   }
 
   return parseResponse<T>(response, fallback);
+};
+
+/**
+ * Nudge the server awake without blocking anything.
+ *
+ * Free hosting stops the instance after a spell of inactivity, and the request
+ * that restarts it can take the better part of a minute. Firing this the moment
+ * the app loads means the wait is spent while somebody is still reading the
+ * page or typing their password, rather than in front of a "Processing..."
+ * button. Never throws, never awaited by callers.
+ */
+let wakeInFlight: Promise<void> | null = null;
+
+export const wakeServer = (): Promise<void> => {
+  if (wakeInFlight) return wakeInFlight;
+
+  wakeInFlight = fetch('/api/health', { method: 'GET', cache: 'no-store' })
+    .then(() => undefined)
+    .catch(() => undefined)
+    .finally(() => {
+      // Allow another nudge later, once this one has settled.
+      wakeInFlight = null;
+    });
+
+  return wakeInFlight;
 };

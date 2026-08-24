@@ -5,6 +5,7 @@ import { LandingPage } from './components/LandingPage';
 import { AuthModal } from './components/AuthModal';
 import { ProfileModal } from './components/ProfileModal';
 import { authApi } from './services/authApi';
+import { wakeServer } from './services/apiClient';
 import { User } from './types';
 import { VisitorKiosk } from './components/VisitorKiosk';
 import { VisitorTokenView } from './components/VisitorTokenView';
@@ -65,6 +66,12 @@ export default function App() {
   const [doctorList, setDoctorList] = useState<DoctorOption[]>([]);
 
   useEffect(() => {
+    // Nudge the server awake immediately. Free hosting stops the instance when
+    // it has been idle, and the request that restarts it can take the better
+    // part of a minute — better to spend that wait here, while the page is
+    // still being read, than in front of the sign-in button.
+    wakeServer();
+
     // Check for Google OAuth callback params in URL hash
     const hash = window.location.hash.substring(1);
     if (hash) {

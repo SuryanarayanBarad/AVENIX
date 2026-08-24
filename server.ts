@@ -1136,6 +1136,37 @@ app.get('/api/health', async (req, res) => {
 //   POST /api/auth/login
 //   GET  /api/auth/me
 
+/**
+ * bcrypt work factor.
+ *
+ * Each step doubles the work. Cost 12 measured ~2.3s per sign-in on the shared
+ * CPU this deploys to, which is the whole of the wait a user sees after
+ * pressing "Sign In"; cost 10 is ~4x faster and is the standard default
+ * (bcryptjs, Spring Security). Raise it if this ever moves to dedicated CPU —
+ * `bcrypt.compare` reads the cost out of each stored hash, so changing this
+ * number never invalidates existing passwords.
+ */
+const PASSWORD_HASH_COST = 10;
+
+/**
+ * Migrates one password to the current work factor, in the background.
+ *
+ * Only ever called just after `bcrypt.compare` returned true, so the plaintext
+ * is known-correct. Failure is deliberately silent: the sign-in it follows has
+ * already succeeded, and a hash that stays on the old cost is merely slower,
+ * never wrong.
+ */
+async function rehashPasswordIfStale(userId: string, storedHash: string, password: string): Promise<void> {
+  try {
+    if (bcrypt.getRounds(storedHash) === PASSWORD_HASH_COST) return;
+    const passwordHash = await bcrypt.hash(password, PASSWORD_HASH_COST);
+    await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    invalidateUser(userId);
+  } catch {
+    // Left on the old cost; the next sign-in tries again.
+  }
+}
+
 app.post('/api/auth/register', apiRoute(async (req, res) => {
   if (!enforceRateLimit(req, res, 'register', 30, 60_000)) return;
 
@@ -1158,7 +1189,7 @@ app.post('/api/auth/register', apiRoute(async (req, res) => {
   const facility = await getCachedFacility();
 
   // Hash password — never store plaintext
-  const passwordHash = await bcrypt.hash(password, 12);
+  const passwordHash = await bcrypt.hash(password, PASSWORD_HASH_COST);
 
   // Self-registration ALWAYS produces a VISITOR. Any `role` in the request body
   // is ignored: this endpoint previously honoured it, which let anyone sign
@@ -1206,6 +1237,11 @@ app.post('/api/auth/login', apiRoute(async (req, res) => {
     throw new ApiError(401, 'INVALID_CREDENTIALS', 'Invalid email or password.');
   }
 
+  // Accounts created under an older work factor keep paying its cost on every
+  // sign-in. Now that we hold the plaintext and know it is correct, re-hash at
+  // the current cost — after the response, so the user never waits for it.
+  void rehashPasswordIfStale(user.id, user.passwordHash, password);
+
   const token = jwt.sign(
     { userId: user.id, email: user.email, role: user.role },
     JWT_SECRET,
@@ -1250,7 +1286,7 @@ app.post('/api/auth/google', apiRoute(async (req, res) => {
     const facility = await getCachedFacility();
     // For Google Sign In, generate a random secure password hash since they won't use password login
     const randomPassword = randomBytes(32).toString('hex');
-    const passwordHash = await bcrypt.hash(randomPassword, 12);
+    const passwordHash = await bcrypt.hash(randomPassword, PASSWORD_HASH_COST);
 
     user = await UserRepo.create({
       name,
@@ -1379,7 +1415,7 @@ app.get(['/api/auth/google/callback', '/auth/google/callback'], async (req, res)
     if (!user) {
       const facility = await getCachedFacility();
       const randomPassword = randomBytes(32).toString('hex');
-      const passwordHash = await bcrypt.hash(randomPassword, 12);
+      const passwordHash = await bcrypt.hash(randomPassword, PASSWORD_HASH_COST);
 
       user = await UserRepo.create({
         name,
@@ -3465,7 +3501,7 @@ app.post('/api/super-admin/doctors', apiRoute(async (req, res) => {
       account = await UserRepo.create({
         name,
         email,
-        passwordHash: await bcrypt.hash(password as string, 12),
+        passwordHash: await bcrypt.hash(password as string, PASSWORD_HASH_COST),
         role: 'DOCTOR',
         facilityId: facility.id,
         avatarUrl: photoUrl ?? null,
@@ -3477,7 +3513,7 @@ app.post('/api/super-admin/doctors', apiRoute(async (req, res) => {
           role: 'DOCTOR',
           facilityId: account.facilityId ?? facility.id,
           ...(photoUrl && !account.avatarUrl ? { avatarUrl: photoUrl } : {}),
-          ...(password ? { passwordHash: await bcrypt.hash(password, 12) } : {}),
+          ...(password ? { passwordHash: await bcrypt.hash(password, PASSWORD_HASH_COST) } : {}),
         },
       });
     }
@@ -4204,7 +4240,7 @@ async function startServer() {
       const existing = await prisma.user.findUnique({
         where: { email: process.env.SUPER_ADMIN_EMAIL }
       });
-      const hash = await bcrypt.hash(process.env.SUPER_ADMIN_PASSWORD, 12);
+      const hash = await bcrypt.hash(process.env.SUPER_ADMIN_PASSWORD, PASSWORD_HASH_COST);
       if (!existing) {
         await prisma.user.create({
           data: {

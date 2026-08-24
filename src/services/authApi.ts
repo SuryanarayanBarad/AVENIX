@@ -1,5 +1,5 @@
 import { User, AuthResponse } from '../types';
-import { apiFetch, parseResponse } from './apiClient';
+import { apiFetch, parseResponse, AUTH_TIMEOUT_MS } from './apiClient';
 
 const API_BASE = '/api/auth';
 
@@ -10,6 +10,8 @@ export const authApi = {
       body: JSON.stringify(data),
       auth: false,
       fallback: 'Registration failed',
+      timeoutMs: AUTH_TIMEOUT_MS,
+      retryOnTimeout: true,
     });
     localStorage.setItem('auth_token', result.token);
     return result;
@@ -21,6 +23,8 @@ export const authApi = {
       body: JSON.stringify(data),
       auth: false,
       fallback: 'Login failed',
+      timeoutMs: AUTH_TIMEOUT_MS,
+      retryOnTimeout: true,
     });
     localStorage.setItem('auth_token', result.token);
     return result;
@@ -32,6 +36,8 @@ export const authApi = {
       body: JSON.stringify({ idToken }),
       auth: false,
       fallback: 'Google login failed',
+      timeoutMs: AUTH_TIMEOUT_MS,
+      retryOnTimeout: true,
     });
     localStorage.setItem('auth_token', result.token);
     return result;
@@ -41,6 +47,8 @@ export const authApi = {
     return apiFetch<{ url: string; state: string }>(`${API_BASE}/google/url`, {
       auth: false,
       fallback: 'Google sign-in is not available',
+      timeoutMs: AUTH_TIMEOUT_MS,
+      retryOnTimeout: true,
     });
   },
 
