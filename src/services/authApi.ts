@@ -5,41 +5,43 @@ const API_BASE = '/api/auth';
 
 export const authApi = {
   async register(data: any): Promise<AuthResponse> {
-    const res = await fetch(`${API_BASE}/register`, {
+    const result = await apiFetch<AuthResponse>(`${API_BASE}/register`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+      auth: false,
+      fallback: 'Registration failed',
     });
-    const result = await parseResponse<AuthResponse>(res, 'Registration failed');
     localStorage.setItem('auth_token', result.token);
     return result;
   },
 
   async login(data: any): Promise<AuthResponse> {
-    const res = await fetch(`${API_BASE}/login`, {
+    const result = await apiFetch<AuthResponse>(`${API_BASE}/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+      auth: false,
+      fallback: 'Login failed',
     });
-    const result = await parseResponse<AuthResponse>(res, 'Login failed');
     localStorage.setItem('auth_token', result.token);
     return result;
   },
 
   async googleLogin(idToken: string): Promise<AuthResponse> {
-    const res = await fetch(`${API_BASE}/google`, {
+    const result = await apiFetch<AuthResponse>(`${API_BASE}/google`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idToken }),
+      auth: false,
+      fallback: 'Google login failed',
     });
-    const result = await parseResponse<AuthResponse>(res, 'Google login failed');
     localStorage.setItem('auth_token', result.token);
     return result;
   },
 
   async googleGetAuthUrl(): Promise<{ url: string; state: string }> {
-    const res = await fetch(`${API_BASE}/google/url`);
-    return parseResponse<{ url: string; state: string }>(res, 'Google sign-in is not available');
+    return apiFetch<{ url: string; state: string }>(`${API_BASE}/google/url`, {
+      auth: false,
+      fallback: 'Google sign-in is not available',
+    });
   },
 
   async verify(): Promise<{ user: User }> {

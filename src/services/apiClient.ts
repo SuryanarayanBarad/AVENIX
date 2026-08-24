@@ -67,19 +67,48 @@ export const parseResponse = async <T>(response: Response, fallback: string): Pr
   return payload as T;
 };
 
-/** fetch + parseResponse in one call, with JSON and auth headers applied. */
+/**
+ * How long to wait before giving up on a request.
+ *
+ * Generous on purpose: a free-tier host that has gone to sleep can take the
+ * better part of a minute to answer its first request. Without any limit a
+ * stalled connection leaves the UI spinning forever with no way to recover —
+ * which is worse than a clear failure the user can retry.
+ */
+export const REQUEST_TIMEOUT_MS = 45_000;
+
+/** fetch + parseResponse in one call, with JSON, auth headers and a timeout. */
 export const apiFetch = async <T>(
   path: string,
-  { fallback = 'The request failed', auth = true, ...init }: RequestInit & { fallback?: string; auth?: boolean } = {},
+  { fallback = 'The request failed', auth = true, timeoutMs = REQUEST_TIMEOUT_MS, ...init }:
+    RequestInit & { fallback?: string; auth?: boolean; timeoutMs?: number } = {},
 ): Promise<T> => {
-  const response = await fetch(path, {
-    ...init,
-    headers: {
-      Accept: 'application/json',
-      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(auth ? authHeaders() : {}),
-      ...(init.headers ?? {}),
-    },
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        Accept: 'application/json',
+        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(auth ? authHeaders() : {}),
+        ...(init.headers ?? {}),
+      },
+    });
+  } catch (error: any) {
+    if (error?.name === 'AbortError') {
+      throw new ApiRequestError(
+        `${fallback}: the server did not respond in time. It may be waking up — wait a moment and try again.`,
+        0,
+      );
+    }
+    throw new ApiRequestError(`${fallback}: could not reach the server. Check your connection and try again.`, 0);
+  } finally {
+    clearTimeout(timer);
+  }
+
   return parseResponse<T>(response, fallback);
 };
