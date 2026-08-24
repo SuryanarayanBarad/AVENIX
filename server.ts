@@ -500,10 +500,24 @@ async function requireDoctor(req: express.Request, res: express.Response): Promi
       return null;
     }
 
-    if (user.role !== 'DOCTOR' || !user.doctor) {
+    // Two different failures used to share one message. "Only doctors can
+    // access this resource" is accurate for the wrong role, but actively
+    // misleading for a DOCTOR whose profile has not been created yet — that
+    // reads as a permissions bug when it is a setup step nobody was told about.
+    if (user.role !== 'DOCTOR') {
       res.status(403).json({
         error: 'AUTHORIZATION_DENIED',
-        message: 'Only doctors can access this resource.',
+        message: `This area is for doctors. Your account is signed in as ${user.role}.`,
+      });
+      return null;
+    }
+
+    if (!user.doctor) {
+      res.status(403).json({
+        error: 'DOCTOR_PROFILE_MISSING',
+        message:
+          'Your account has the doctor role, but no doctor profile has been created for it yet. ' +
+          'Ask a super admin to open Doctors and add your profile — everything here works as soon as it exists.',
       });
       return null;
     }
@@ -3375,6 +3389,64 @@ app.patch('/api/super-admin/users/:id/role', apiRoute(async (req, res) => {
     return;
   }
   const newRole = requested as typeof ASSIGNABLE_ROLES[number];
+
+  // Granting DOCTOR has to produce a doctor who can actually work.
+  //
+  // The role and the Doctor profile were two separate operations, so between
+  // them the account sat in a state nothing could serve: every /api/doctor/*
+  // route checks for a profile and answered a bare 403, which on screen was an
+  // unexplained wall of failures. Observed gaps of 5 and 103 minutes.
+  //
+  // The profile is created here in the same transaction as the role, with
+  // placeholder details a SUPER_ADMIN edits afterwards in the Doctors tab. An
+  // existing profile is left exactly as it is — this only fills a hole.
+  if (newRole === 'DOCTOR') {
+    const existingProfile = await prisma.doctor.findUnique({ where: { userId: targetUser.id } });
+    if (!existingProfile) {
+      const facility = await getCachedFacilityOrThrow();
+      const department = await prisma.department.findFirst({
+        where: { facilityId: facility.id },
+        orderBy: { name: 'asc' },
+      });
+      if (!department) {
+        res.status(409).json({
+          error: 'NO_DEPARTMENT',
+          message: 'Create a department before assigning the DOCTOR role — a doctor profile must belong to one.',
+        });
+        return;
+      }
+
+      await prisma.$transaction([
+        prisma.user.update({ where: { id: targetUser.id }, data: { role: 'DOCTOR' } }),
+        prisma.doctor.create({
+          data: {
+            name: targetUser.name,
+            userId: targetUser.id,
+            facilityId: facility.id,
+            departmentId: department.id,
+            isActive: true,
+          },
+        }),
+      ]);
+
+      invalidateUser(targetUser.id);
+      publishEvent({ type: 'doctor.changed', doctorId: targetUser.id, facilityId: facility.id });
+
+      await prisma.auditLog.create({
+        data: {
+          actorId: superAdmin.id,
+          actorRole: 'SUPER_ADMIN',
+          action: 'update_user_role',
+          targetType: 'user',
+          targetId: targetUser.id,
+          metadata: { newRole, doctorProfileCreated: true, department: department.name },
+        },
+      });
+
+      res.json({ id: targetUser.id, name: targetUser.name, email: targetUser.email, role: 'DOCTOR' });
+      return;
+    }
+  }
 
   const updatedUser = await prisma.user.update({
     where: { id: req.params.id },
