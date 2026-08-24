@@ -66,7 +66,27 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'queuemind-dev-secret-change-in-production';
+/**
+ * Signing key for every session token.
+ *
+ * The development fallback below is, by definition, public — it sits in source
+ * control. Anyone holding it can mint a token for any account, including
+ * SUPER_ADMIN, which walks straight past every role check in this file. So a
+ * production process refuses to start on it rather than run wide open: a
+ * deploy that fails loudly is recoverable, one that silently trusts a known
+ * key is not.
+ */
+const DEV_JWT_SECRET = 'queuemind-dev-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || DEV_JWT_SECRET;
+
+if (process.env.NODE_ENV === 'production' && JWT_SECRET === DEV_JWT_SECRET) {
+  console.error(
+    '[fatal] JWT_SECRET is not set. Sessions would be signed with the public ' +
+    'development key, letting anyone forge a SUPER_ADMIN token. Set JWT_SECRET ' +
+    'to a long random value in the hosting environment and redeploy.',
+  );
+  process.exit(1);
+}
 
 app.disable('x-powered-by');
 // Render/Cloud Run terminate TLS upstream, so the client address arrives in
