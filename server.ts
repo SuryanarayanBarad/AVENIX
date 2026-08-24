@@ -52,6 +52,7 @@ import {
   hasPermission,
 } from './lib/permissions.js';
 import { publishEvent, subscribeToEvents } from './lib/eventBus.js';
+import { startOfServiceDay, serviceDayKey, displayVisitorName } from './lib/serviceDay.js';
 import { consume } from './lib/rateLimit.js';
 import {
   getCachedFacility, getCachedService, getCachedServices, invalidateReferenceCache,
@@ -1167,6 +1168,70 @@ app.get('/api/health', async (req, res) => {
  * number never invalidates existing passwords.
  */
 const PASSWORD_HASH_COST = 10;
+
+/**
+ * Close out tokens left unserved when a previous service day ended.
+ *
+ * The queue reads are already scoped to today, so this is not what keeps stale
+ * rows off the board — it is what stops them lingering as permanently "Waiting"
+ * data: holding their owner's one-active-token slot, and turning up in history
+ * as though the visitor is still queueing days later.
+ *
+ * Cancelled is used rather than a new status because it is already terminal and
+ * already rendered everywhere; the audit row is what records that this was an
+ * automatic end-of-day sweep rather than somebody cancelling.
+ */
+const MAX_TOKEN_AGE_HOURS = Number(process.env.MAX_TOKEN_AGE_HOURS) || 12;
+
+async function expireStaleTokens(): Promise<number> {
+  const dayStart = startOfServiceDay();
+  // Two ways to be stale, and the queue needs both. The day boundary catches a
+  // token left over from yesterday. The age limit catches one issued at ten
+  // past midnight and still "Waiting" twenty-one hours later — the same service
+  // day by the calendar, but nobody has been standing in the lobby that long.
+  const ageCutoff = new Date(Date.now() - MAX_TOKEN_AGE_HOURS * 60 * 60 * 1000);
+  try {
+    const stale = await prisma.token.findMany({
+      where: {
+        status: { in: ['Waiting', 'Approaching', 'Serving'] },
+        OR: [
+          { issuedAt: { lt: dayStart } },
+          { issuedAt: { lt: ageCutoff } },
+        ],
+        deletedAt: null,
+      },
+      select: { id: true, code: true, facilityId: true, issuedAt: true },
+    });
+    if (stale.length === 0) return 0;
+
+    await prisma.token.updateMany({
+      where: { id: { in: stale.map((t) => t.id) } },
+      data: { status: 'Cancelled' },
+    });
+
+    // No audit row: audit_logs.actor_id carries a foreign key to a real user,
+    // and attributing an automatic sweep to a person would be worse than not
+    // recording it. The console line below is the trail, and the codes are
+    // named so an expired token can always be accounted for.
+    console.log(
+      `🧹 Expired ${stale.length} abandoned token(s) — earlier service day, or unserved for over ` +
+      `${MAX_TOKEN_AGE_HOURS}h (${stale.slice(0, 20).map((t) => t.code).join(', ')}${stale.length > 20 ? ', …' : ''})`,
+    );
+
+    // One nudge per facility is enough — subscribers treat this as "the queue
+    // moved, refetch" rather than reading the individual token out of it.
+    for (const facilityId of new Set(stale.map((t) => t.facilityId))) {
+      const first = stale.find((t) => t.facilityId === facilityId)!;
+      publishEvent({ type: 'token.status', tokenId: first.id, status: 'Cancelled', facilityId });
+    }
+
+    return stale.length;
+  } catch (err) {
+    // A failed sweep must never stop the server serving today's queue.
+    console.error('Failed to expire stale tokens:', err);
+    return 0;
+  }
+}
 
 /**
  * Migrates one password to the current work factor, in the background.
@@ -2638,7 +2703,7 @@ app.get('/api/admin/tokens', apiRoute(async (req, res) => {
         id: t.id,
         code: t.code,
         service: t.service.name,
-        patientName: t.visitorName || 'Walk-in Visitor',
+        patientName: displayVisitorName(t.visitorName, t.code),
         issueTime: t.issuedAt instanceof Date ? t.issuedAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : t.issuedAt,
         estWaitMin: estWait,
         peopleAhead,
@@ -3899,7 +3964,7 @@ app.get('/api/doctor/queue', apiRoute(async (req, res) => {
     id: t.id,
     code: t.code,
     service: t.service.name,
-    patientName: t.visitorName || 'Walk-in Visitor',
+    patientName: displayVisitorName(t.visitorName, t.code),
     issueTime: t.issuedAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
     estWaitMin: Math.max(t.service.estimatedWaitMinutes, Math.ceil(index * 1.7)),
     peopleAhead: index,
@@ -4253,6 +4318,12 @@ async function startServer() {
     console.error('   Make sure PostgreSQL is running and DATABASE_URL is correct in .env');
     process.exit(1);
   }
+
+  // Close out anything left queueing from an earlier day, then keep checking:
+  // a long-running instance has to notice midnight passing, and a free-tier one
+  // that sleeps overnight has to catch up the moment it wakes.
+  await expireStaleTokens();
+  setInterval(() => { void expireStaleTokens(); }, 60 * 60 * 1000).unref();
 
   // Bootstrap Super Admin from environment variables
   if (process.env.SUPER_ADMIN_EMAIL && process.env.SUPER_ADMIN_PASSWORD) {

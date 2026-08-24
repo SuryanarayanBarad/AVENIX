@@ -198,10 +198,16 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] py-8 px-4 sm:px-6 flex items-center justify-center text-white">
+    <div className="min-h-[calc(100vh-4rem)] py-0 px-0 sm:py-8 sm:px-6 flex items-center justify-center text-white">
 
-      {/* Mobile Frame Mockup Container (Frosted Glass Smartphone) */}
-      <div className="w-full max-w-md glass-panel-elevated rounded-[36px] overflow-hidden flex flex-col min-h-[760px] h-[85vh] relative shadow-2xl border border-white/[0.18] backdrop-blur-2xl">
+      {/* Mobile Frame Mockup Container (Frosted Glass Smartphone)
+          On a desktop this is a phone mockup, and it reads well as one. On an
+          actual phone it was a phone drawn inside a phone: a rounded, bordered
+          box held 760px tall — taller than the viewport it was sitting in — so
+          the visitor scrolled a card inside a page instead of just reading
+          their token. Below `sm` the frame steps off and the content fills the
+          screen; from `sm` up the mockup returns unchanged. */}
+      <div className="w-full sm:max-w-md glass-panel-elevated rounded-none sm:rounded-[36px] overflow-hidden flex flex-col min-h-[calc(100vh-4rem)] sm:min-h-[680px] sm:h-[85vh] relative shadow-2xl border-0 sm:border border-white/[0.18] backdrop-blur-2xl">
 
         {/* Mobile Header */}
         <div className="bg-white/[0.05] text-white px-5 py-4 flex items-center justify-between border-b border-white/[0.12] backdrop-blur-xl shrink-0">
@@ -253,7 +259,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
         >
             
           {/* ─── CARD 1: TOKEN ─── */}
-          <div className="min-w-full w-full shrink-0 snap-center p-5 overflow-y-auto space-y-4">
+          <div className="min-w-full w-full shrink-0 snap-center p-4 sm:p-5 overflow-y-auto space-y-3.5 sm:space-y-4">
             {/* Notification Alert Banner (Frosted Amber Pill) */}
             {isApproaching && (
               <div className="p-4 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-200 text-xs flex items-start gap-3 backdrop-blur-xl shadow-lg animate-pulse">
@@ -280,7 +286,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
             )}
 
             {/* Center Circular Progress Ring & Token Code */}
-            <div className="p-6 rounded-3xl glass-panel text-center relative overflow-hidden">
+            <div className="p-4 sm:p-6 rounded-3xl glass-panel text-center relative overflow-hidden">
               <div className="absolute top-3 right-3">
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#8e7dff]/20 text-[#8e7dff] border border-[#8e7dff]/40 backdrop-blur-md">
                   {tokenService}
@@ -446,7 +452,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
           </div>
 
           {/* ─── CARD 2: WAIT TIME (TIMELINE) ─── */}
-          <div className="min-w-full w-full shrink-0 snap-center p-5 overflow-y-auto space-y-4">
+          <div className="min-w-full w-full shrink-0 snap-center p-4 sm:p-5 overflow-y-auto space-y-3.5 sm:space-y-4">
             <div className="glass-panel p-5 rounded-3xl">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-sm text-white flex items-center gap-2">
@@ -528,7 +534,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
           </div>
 
           {/* ─── CARD 3: DIRECTIONS ─── */}
-          <div className="min-w-full w-full shrink-0 snap-center p-5 overflow-y-auto space-y-4">
+          <div className="min-w-full w-full shrink-0 snap-center p-4 sm:p-5 overflow-y-auto space-y-3.5 sm:space-y-4">
             <div className="p-4 rounded-2xl glass-panel space-y-4">
               <div className="flex items-center gap-2">
                 <Navigation className="w-5 h-5 text-[#8e7dff]" />
@@ -567,7 +573,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
           </div>
 
           {/* ─── CARD 4: ALERTS & FUNCTIONS ─── */}
-          <div className="min-w-full w-full shrink-0 snap-center p-5 overflow-y-auto space-y-4">
+          <div className="min-w-full w-full shrink-0 snap-center p-4 sm:p-5 overflow-y-auto space-y-3.5 sm:space-y-4">
             <div className="glass-panel p-5 rounded-3xl space-y-4">
               <h3 className="font-bold text-sm text-white flex items-center gap-2">
                 <Bell className="w-4 h-4 text-[#8e7dff]" />

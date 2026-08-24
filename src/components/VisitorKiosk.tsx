@@ -183,47 +183,51 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 flex flex-col justify-between text-white">
+    <div className="min-h-[calc(100vh-4rem)] p-3 sm:p-6 lg:p-8 flex flex-col justify-between text-white">
 
       {/* Kiosk Container (Frosted Glass Shell) */}
       <div className="max-w-5xl mx-auto w-full glass-panel-elevated rounded-3xl overflow-hidden shadow-2xl">
 
-        {/* Kiosk Header */}
-        <div className="bg-white/[0.05] border-b border-white/[0.12] p-6 sm:p-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 backdrop-blur-xl">
-          <div className="flex items-center gap-4">
+        {/* Kiosk Header
+            Compact on a phone: the identity block and the language pills share
+            one row instead of stacking, and the decorative tagline steps aside.
+            Every control is still here — this is the same header, tightened. */}
+        <div className="bg-white/[0.05] border-b border-white/[0.12] p-4 sm:p-7 flex items-center justify-between gap-3 backdrop-blur-xl">
+          <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
             {onBackToHome && (
               <button
                 onClick={onBackToHome}
-                className="p-2.5 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/[0.14] text-white transition-all cursor-pointer"
+                className="p-2 sm:p-2.5 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/[0.14] text-white transition-all cursor-pointer shrink-0"
                 title={t.backToOverview}
+                aria-label={t.backToOverview}
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
             )}
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#8e7dff] to-[#ff7db8] flex items-center justify-center text-white shadow-lg shadow-[#8e7dff]/25 border border-white/20">
-              <Building2 className="w-6 h-6" />
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-[#8e7dff] to-[#ff7db8] flex items-center justify-center text-white shadow-lg shadow-[#8e7dff]/25 border border-white/20 shrink-0">
+              <Building2 className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-xl sm:text-2xl font-display text-white">{t.facilityName}</span>
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 backdrop-blur-md">
+                <span className="font-bold text-base sm:text-2xl font-display text-white truncate">{t.facilityName}</span>
+                <span className="hidden xs:inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 backdrop-blur-md shrink-0">
                   {t.kioskBadge}
                 </span>
               </div>
-              <p className="text-xs text-white/60 mt-0.5">
+              <p className="hidden sm:block text-xs text-white/60 mt-0.5">
                 {t.tagline}
               </p>
             </div>
           </div>
 
           {/* Language Switcher (Frosted Glass Pills) */}
-          <div className="flex items-center bg-white/[0.06] border border-white/[0.12] rounded-2xl p-1 text-xs backdrop-blur-md">
+          <div className="flex items-center bg-white/[0.06] border border-white/[0.12] rounded-2xl p-0.5 sm:p-1 text-xs backdrop-blur-md shrink-0">
             {KIOSK_LANGUAGES.map((option) => (
               <button
                 key={option.id}
                 onClick={() => setLanguage(option.id)}
                 aria-pressed={language === option.id}
-                className={`px-3 py-1.5 rounded-xl font-semibold transition-all cursor-pointer ${language === option.id ? 'bg-[#8e7dff] text-white shadow-md shadow-[#8e7dff]/30' : 'text-white/60 hover:text-white'
+                className={`px-2 sm:px-3 py-1.5 rounded-xl font-semibold transition-all cursor-pointer ${language === option.id ? 'bg-[#8e7dff] text-white shadow-md shadow-[#8e7dff]/30' : 'text-white/60 hover:text-white'
                   }`}
               >
                 {option.label}
@@ -233,7 +237,7 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="p-6 sm:p-8">
+        <div className="p-4 sm:p-8">
 
           {issuedToken ? (
             /* Printed Token Confirmation Card - Frosted Glass Ticket */
@@ -249,7 +253,7 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
               </div>
 
               {/* Physical Slip Mockup (Glowing Frosted Card) */}
-              <div className="p-6 rounded-3xl bg-white/[0.08] border border-white/20 text-left relative shadow-2xl backdrop-blur-2xl">
+              <div className="p-4 sm:p-6 rounded-3xl bg-white/[0.08] border border-white/20 text-left relative shadow-2xl backdrop-blur-2xl">
                 <div className="flex items-center justify-between border-b border-white/10 pb-3">
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-white/50">CityCare Hospital</span>
@@ -260,7 +264,7 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
 
                 <div className="py-6 text-center">
                   <span className="text-xs text-white/60 font-medium">{t.yourTokenNumber}</span>
-                  <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#8e7dff] to-[#ff7db8] font-mono tracking-tight my-2">
+                  <div className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#8e7dff] to-[#ff7db8] font-mono tracking-tight my-2">
                     {issuedToken.code}
                   </div>
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#8e7dff]/20 text-[#8e7dff] border border-[#8e7dff]/40 mt-1">
@@ -321,8 +325,14 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
                 </div>
               </div>
 
-              {/* Service Cards Grid (Frosted Glass Interactive Cards) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Service Cards Grid (Frosted Glass Interactive Cards)
+                  Two per row on a phone. Full-width cards meant six services
+                  filled roughly two screens of scrolling before the visitor
+                  could reach the button that acts on their choice; paired up,
+                  the whole list is visible at once. The description is the one
+                  thing that steps aside at this size — the title, the icon, the
+                  live wait and the queue count all stay. */}
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
                 {services.map((s) => {
                   const Icon = s.icon;
                   const isSelected = selectedService === s.type;
@@ -330,41 +340,42 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
                     <button
                       key={s.type}
                       onClick={() => setSelectedService(s.type)}
-                      className={`p-5 rounded-3xl text-left transition-all flex flex-col justify-between relative group cursor-pointer ${isSelected
+                      aria-pressed={isSelected}
+                      className={`p-3.5 sm:p-5 rounded-3xl text-left transition-all flex flex-col justify-between relative group cursor-pointer ${isSelected
                         ? 'bg-[#8e7dff]/20 border-2 border-[#8e7dff] shadow-[0_0_25px_rgba(142,125,255,0.3)] backdrop-blur-2xl'
                         : 'glass-panel-interactive border border-white/[0.12] hover:border-white/[0.25]'
                         }`}
                     >
                       {/* Badge if any */}
                       {s.badge && (
-                        <span className={`absolute top-4 right-4 px-2 py-0.5 rounded-full text-[10px] font-semibold border backdrop-blur-md ${s.badgeColor}`}>
+                        <span className={`absolute top-3 right-3 sm:top-4 sm:right-4 px-2 py-0.5 rounded-full text-[10px] font-semibold border backdrop-blur-md ${s.badgeColor}`}>
                           {s.badge}
                         </span>
                       )}
 
-                      <div className="space-y-3">
-                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${isSelected
+                      <div className="space-y-2 sm:space-y-3">
+                        <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center ${isSelected
                           ? 'bg-[#8e7dff] text-white shadow-md shadow-[#8e7dff]/40'
                           : 'bg-white/[0.08] text-white/80 group-hover:bg-[#8e7dff]/20 group-hover:text-[#8e7dff]'
                           } transition-colors border border-white/10`}>
-                          <Icon className="w-6 h-6" />
+                          <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-white text-base">{s.title}</h3>
-                          <p className="text-xs text-white/60 mt-1 line-clamp-2">{s.description}</p>
+                          <h3 className="font-bold text-white text-sm sm:text-base leading-snug">{s.title}</h3>
+                          <p className="hidden sm:block text-xs text-white/60 mt-1 line-clamp-2">{s.description}</p>
                         </div>
                       </div>
 
                       {/* Wait & Queue Metrics footer */}
-                      <div className="mt-4 pt-3 border-t border-white/[0.10] flex items-center justify-between text-xs">
+                      <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-white/[0.10] flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[11px] sm:text-xs">
                         <div className="flex items-center gap-1 font-semibold text-white/90">
-                          <Clock className="w-3.5 h-3.5 text-[#8e7dff]" />
+                          <Clock className="w-3.5 h-3.5 text-[#8e7dff] shrink-0" />
                           <span>
                             {s.waitMin === null ? '—' : s.waitMin === 0 ? t.noWait : `~${s.waitMin} ${t.minWait}`}
                           </span>
                         </div>
                         <div className="flex items-center gap-1 text-white/60">
-                          <Users className="w-3.5 h-3.5 text-white/40" />
+                          <Users className="w-3.5 h-3.5 text-white/40 shrink-0" />
                           <span>{s.peopleWaiting === null ? '—' : `${s.peopleWaiting} ${t.peopleWaiting}`}</span>
                         </div>
                       </div>
@@ -374,10 +385,10 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
               </div>
 
               {/* Priority Demographics Bar (Fairness Assistance) */}
-              <div className="p-5 rounded-3xl bg-white/[0.05] border border-white/[0.12] backdrop-blur-xl space-y-3">
-                <div className="flex items-center justify-between">
+              <div className="p-3.5 sm:p-5 rounded-3xl bg-white/[0.05] border border-white/[0.12] backdrop-blur-xl space-y-2.5 sm:space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
                   <div className="flex items-center gap-2">
-                    <Heart className="w-4 h-4 text-[#ff7db8]" />
+                    <Heart className="w-4 h-4 text-[#ff7db8] shrink-0" />
                     <h4 className="text-xs font-bold uppercase tracking-wider text-white/80">
                       {t.stepAssistance}
                     </h4>
@@ -393,13 +404,17 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
                       key={demo.type}
                       type="button"
                       onClick={() => setDemographic(demo.type)}
-                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${demographic === demo.type
+                      aria-pressed={demographic === demo.type}
+                      className={`p-2.5 sm:p-3 rounded-2xl border text-left transition-all cursor-pointer ${demographic === demo.type
                         ? 'border-[#8e7dff] bg-[#8e7dff]/25 font-semibold text-white shadow-[0_0_15px_rgba(142,125,255,0.25)]'
                         : 'border-white/[0.10] bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white'
                         }`}
                     >
-                      <div className="font-semibold text-xs text-white">{demo.label}</div>
-                      <div className="text-[10px] text-white/50 mt-0.5">{demo.desc}</div>
+                      <div className="font-semibold text-xs text-white leading-snug">{demo.label}</div>
+                      {/* The qualifier is guidance, not a control: it makes each
+                          tile a three-line block on a phone, so it waits for a
+                          wider screen. The label alone still says what it is. */}
+                      <div className="hidden sm:block text-[10px] text-white/50 mt-0.5">{demo.desc}</div>
                     </button>
                     );
                   })}
@@ -456,10 +471,13 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
         </div>
 
         {/* Anonymous Sensing Trust Footer */}
-        <div className="bg-white/[0.03] border-t border-white/[0.08] px-6 py-3.5 flex flex-col sm:flex-row items-center justify-between text-xs text-white/60 gap-2 backdrop-blur-md">
+        <div className="bg-white/[0.03] border-t border-white/[0.08] px-4 sm:px-6 py-3 sm:py-3.5 flex flex-col sm:flex-row items-center justify-between text-[11px] sm:text-xs text-white/60 gap-1.5 sm:gap-2 backdrop-blur-md text-center sm:text-left">
           <div className="flex items-center gap-2 font-medium">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Anonymous Spatial Sensing Active • Zero Facial Recognition • HIPAA Compliant</span>
+            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+            {/* The full recital runs to three lines on a phone. The short form
+                makes the same promise; the detail returns with the room. */}
+            <span className="sm:hidden">Anonymous sensing • No facial recognition</span>
+            <span className="hidden sm:inline">Anonymous Spatial Sensing Active • Zero Facial Recognition • HIPAA Compliant</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(74,222,128,0.8)]" />

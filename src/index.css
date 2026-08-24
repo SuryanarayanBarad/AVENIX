@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* Tailwind's smallest breakpoint is 640px, which treats a 360px Android and a
+   430px iPhone Pro Max as the same screen. The visitor flow is used almost
+   entirely on phones, and that 70px decides whether a label fits beside an icon
+   or wraps onto its own line — so the gap gets a breakpoint of its own. */
+@theme {
+  --breakpoint-xs: 26.25rem; /* 420px */
+}
+
 :root {
   --glass-bg: rgba(255, 255, 255, 0.07);
   --glass-bg-hover: rgba(255, 255, 255, 0.12);

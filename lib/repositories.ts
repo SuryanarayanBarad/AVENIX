@@ -8,6 +8,17 @@
 import { prisma } from './db.js';
 import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
+import { startOfServiceDay } from './serviceDay.js';
+
+/**
+ * The queue only ever contains tokens issued today.
+ *
+ * Without this a token left Waiting when the clinic closed stayed in the queue
+ * indefinitely — counted in "people ahead", drawn on the live board, and
+ * holding its owner's one-active-token slot. Scoping the reads means a stale
+ * row can never leak into today's queue even if the sweeper has not run yet.
+ */
+const issuedToday = () => ({ gte: startOfServiceDay() });
 
 // ---------------------------------------------------------------------------
 // Facility
@@ -286,6 +297,7 @@ export const TokenRepo = {
       where: {
         userId,
         status: { in: ['Waiting', 'Approaching', 'Serving'] },
+        issuedAt: issuedToday(),
         deletedAt: null,
       },
       orderBy: { issuedAt: 'desc' },
@@ -297,6 +309,7 @@ export const TokenRepo = {
       where: {
         serviceId,
         status: { in: ['Waiting', 'Approaching'] },
+        issuedAt: issuedToday(),
         deletedAt: null,
       },
     });
@@ -309,6 +322,7 @@ export const TokenRepo = {
   async findAllActiveForFacility(facilityId: string, search?: string) {
     const where: Prisma.TokenWhereInput = {
       facilityId,
+      issuedAt: issuedToday(),
       deletedAt: null,
       // The live board shows the queue as it stands. Completed and cancelled
       // tokens were previously still listed, which inflated the board and made
@@ -345,7 +359,7 @@ export const TokenRepo = {
         serviceId: token.serviceId,
         facilityId: token.facilityId,
         status: { in: ['Waiting', 'Approaching'] },
-        issuedAt: { lt: issuedAt },
+        issuedAt: { lt: issuedAt, gte: startOfServiceDay() },
         deletedAt: null,
       },
     });
@@ -369,7 +383,7 @@ export const TokenRepo = {
         serviceId: token.serviceId,
         facilityId: token.facilityId,
         status: { in: ['Waiting', 'Approaching', 'Serving'] },
-        issuedAt: { lt: issuedAt },
+        issuedAt: { lt: issuedAt, gte: startOfServiceDay() },
         deletedAt: null,
       },
       select: { id: true, code: true, status: true },
@@ -383,7 +397,7 @@ export const TokenRepo = {
         serviceId: token.serviceId,
         facilityId: token.facilityId,
         status: { in: ['Waiting', 'Approaching'] },
-        issuedAt: { gt: issuedAt },
+        issuedAt: { gt: issuedAt, gte: startOfServiceDay() },
         id: { not: token.id },
         deletedAt: null,
       },
@@ -398,6 +412,7 @@ export const TokenRepo = {
         serviceId: token.serviceId,
         facilityId: token.facilityId,
         status: 'Serving',
+        issuedAt: issuedToday(),
         deletedAt: null,
       },
       select: { id: true, code: true, status: true, counterName: true },

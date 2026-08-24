@@ -454,7 +454,7 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
               <div className="text-center">
                 <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-emerald-400/35 bg-emerald-500/15 text-emerald-300 shadow-lg shadow-emerald-500/10"><CheckCircle2 className="h-7 w-7" aria-hidden="true" /></span>
                 <p className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-emerald-300">Your token</p>
-                <h1 id="token-result-title" className="mt-1 font-mono text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-[#d8d4ff] to-[#ffb5d4]">{token.code}</h1>
+                <h1 id="token-result-title" className="mt-1 font-mono text-4xl xs:text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-[#d8d4ff] to-[#ffb5d4]">{token.code}</h1>
                 <p className="mt-2 text-xs text-white/60">{token.serviceName}</p>
               </div>
 
