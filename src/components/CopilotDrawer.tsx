@@ -45,6 +45,9 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
   // hardcoded strings repeated under every reply, proposing action on counters
   // this facility does not have.
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  // Reported by the server, never written here: the badge said "Gemini 2.5
+  // Flash" as a literal string while the server was calling something else.
+  const [model, setModel] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const shouldReduceMotion = useReducedMotion();
 
@@ -62,8 +65,12 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
-    apiFetch<{ suggestions: string[] }>('/api/copilot/suggestions', { fallback: 'Could not load suggestions' })
-      .then((data) => { if (!cancelled) setSuggestions(data.suggestions ?? []); })
+    apiFetch<{ suggestions: string[]; model?: string | null }>('/api/copilot/suggestions', { fallback: 'Could not load suggestions' })
+      .then((data) => {
+        if (cancelled) return;
+        setSuggestions(data.suggestions ?? []);
+        setModel(data.model ?? null);
+      })
       .catch(() => { /* the drawer is still usable without them */ });
     return () => { cancelled = true; };
   }, [isOpen]);
@@ -87,7 +94,7 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
       // The server assembles the live snapshot itself. Sending counters and
       // zones from here meant posting mock data up and getting confident
       // analysis of it back.
-      const data = await apiFetch<{ reply: string; suggestions?: string[] }>('/api/copilot/chat', {
+      const data = await apiFetch<{ reply: string; suggestions?: string[]; model?: string }>('/api/copilot/chat', {
         method: 'POST',
         fallback: 'The copilot could not answer',
         body: JSON.stringify({
@@ -100,6 +107,7 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
       });
 
       if (data.suggestions) setSuggestions(data.suggestions);
+      if (data.model) setModel(data.model);
 
       const aiMsg: CopilotMessage = {
         id: `ai-${Date.now()}`,
@@ -159,11 +167,13 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-sm font-display text-white">QueueMind AI Copilot</h3>
-                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#8e7dff]/20 text-[#8e7dff] border border-[#8e7dff]/40 font-mono backdrop-blur-md">
-                  Gemini 2.5 Flash
-                </span>
+                {model && (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#8e7dff]/20 text-[#8e7dff] border border-[#8e7dff]/40 font-mono backdrop-blur-md">
+                    {model}
+                  </span>
+                )}
               </div>
-              <p className="text-[10px] text-white/60">Autonomous Queue & Crowd Intelligence</p>
+              <p className="text-[10px] text-white/60">Answers from your live queue data</p>
             </div>
           </div>
 

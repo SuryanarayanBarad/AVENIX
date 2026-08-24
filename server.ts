@@ -1264,22 +1264,31 @@ app.post('/api/copilot/chat', apiRoute(async (req, res) => {
     };
 
     let response;
+    let modelUsed = COPILOT_MODEL;
     try {
       response = await ai.models.generateContent({ model: COPILOT_MODEL, contents, config });
     } catch (primaryError: any) {
-      // The newest Flash model gets busy. That is a queue on Google's side, not
-      // a fault here, and one retry on the previous generation answers the same
-      // question from the same snapshot rather than showing the user an error.
-      const overloaded = /503|UNAVAILABLE|high demand|overloaded/i.test(
-        primaryError?.message ?? String(primaryError),
-      );
-      if (!overloaded) throw primaryError;
+      // Two upstream conditions are worth a second attempt, and both are about
+      // the model rather than the question:
+      //   503 UNAVAILABLE     — that model is momentarily busy
+      //   429 RESOURCE_EXHAUSTED — the free tier allows only 20 requests per
+      //     day PER MODEL, so a different model has its own untouched budget
+      // Either way the previous generation answers the same question from the
+      // same snapshot, which beats showing the user a failure.
+      const message = primaryError?.message ?? String(primaryError);
+      const retryable = /503|UNAVAILABLE|high demand|overloaded|429|RESOURCE_EXHAUSTED|quota/i.test(message);
+      if (!retryable) throw primaryError;
       console.warn(`Copilot: ${COPILOT_MODEL} busy, retrying on ${COPILOT_FALLBACK_MODEL}`);
       response = await ai.models.generateContent({ model: COPILOT_FALLBACK_MODEL, contents, config });
+      modelUsed = COPILOT_FALLBACK_MODEL;
     }
 
     res.json({
       reply: response.text?.trim() || 'I could not produce an answer for that.',
+      // Which model actually answered, so the badge in the drawer cannot drift
+      // from reality — it read "Gemini 2.5 Flash" as a hardcoded string long
+      // after the server had moved on.
+      model: modelUsed,
       snapshot,
       suggestions,
       timestamp: new Date().toISOString(),
@@ -1287,10 +1296,17 @@ app.post('/api/copilot/chat', apiRoute(async (req, res) => {
   } catch (error: any) {
     // No silent fallback to invented prose — saying the assistant is
     // unavailable is honest; answering from fiction is not.
-    console.error('Copilot request failed:', error?.message ?? error);
+    const detail = error?.message ?? String(error);
+    console.error('Copilot request failed:', detail);
+
+    // A daily quota is not a transient blip, and telling somebody to "try
+    // again shortly" when the budget is spent until tomorrow wastes their time.
+    const quotaSpent = /429|RESOURCE_EXHAUSTED|quota/i.test(detail);
     res.status(503).json({
-      error: 'COPILOT_UNAVAILABLE',
-      message: 'The assistant could not be reached just now. The live figures are still accurate in the panels behind this drawer.',
+      error: quotaSpent ? 'COPILOT_QUOTA_EXHAUSTED' : 'COPILOT_UNAVAILABLE',
+      message: quotaSpent
+        ? "The assistant has used up today's request allowance on this API key. It will work again tomorrow, or sooner on a paid plan. Every figure in the panels behind this drawer is still live."
+        : 'The assistant could not be reached just now. The live figures are still accurate in the panels behind this drawer.',
       snapshot,
       suggestions,
     });
@@ -1306,7 +1322,7 @@ app.get('/api/copilot/suggestions', apiRoute(async (req, res) => {
     return;
   }
   const snapshot = await buildCopilotSnapshot();
-  res.json({ suggestions: copilotSuggestions(snapshot), snapshot });
+  res.json({ suggestions: copilotSuggestions(snapshot), snapshot, model: ai ? COPILOT_MODEL : null });
 }));
 
 // Run Counter AI Optimization Simulation API

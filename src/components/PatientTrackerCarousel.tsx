@@ -325,8 +325,14 @@ export const PatientTrackerCarousel: React.FC<PatientTrackerCarouselProps> = ({
 
   const isDoctorUser = user?.role === 'DOCTOR';
 
-  // Use liveTokens if we successfully fetched them, otherwise fall back to initialTokens
-  const displayTokens = liveTokens.length > 0 || !isLoading ? liveTokens : initialTokens;
+  // Only ever the live queue.
+  //
+  // This used to fall back to initialTokens while the first fetch was in
+  // flight, so during that window the board showed seeded demo rows. They
+  // looked identical to real ones and were tappable, and the id behind them
+  // did not exist in the database — which is what produced "the token was not
+  // found" when a patient completed one. A pending fetch now shows nothing.
+  const displayTokens = liveTokens;
 
   useEffect(() => {
     let mounted = true;
@@ -461,11 +467,21 @@ export const PatientTrackerCarousel: React.FC<PatientTrackerCarouselProps> = ({
                 <div className="flex items-center justify-center h-64 text-white/40 text-sm">
                   <div className="text-center space-y-2">
                     {isLoading ? (
-                      <RefreshCw className="w-8 h-8 mx-auto opacity-40 animate-spin" />
-                    ) : (
+                      <>
+                        <RefreshCw className="w-8 h-8 mx-auto opacity-40 animate-spin" />
+                        <p>Loading the live queue…</p>
+                      </>
+                    ) : searchQuery ? (
                       <>
                         <Search className="w-8 h-8 mx-auto opacity-40" />
                         <p>No patients match "{searchQuery}"</p>
+                      </>
+                    ) : (
+                      /* An empty queue is a real state, not a failed search.
+                         This branch previously read: No patients match "". */
+                      <>
+                        <Users className="w-8 h-8 mx-auto opacity-40" />
+                        <p>Nobody is waiting right now.</p>
                       </>
                     )}
                   </div>

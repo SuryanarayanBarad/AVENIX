@@ -41,7 +41,6 @@ import {
   mockZones,
   mockSensors,
   mockPredictions,
-  mockTokens,
   mockAppointments,
   mockFairnessWeights,
   mockDecisionLogs,
@@ -164,10 +163,15 @@ export default function App() {
   const [zones, setZones] = useState<FacilityZone[]>(mockZones);
   const [sensors, setSensors] = useState<SensorNode[]>(mockSensors);
   const [predictions, setPredictions] = useState<PredictionPoint[]>(mockPredictions);
-  // The live queue is real data. mockTokens only seeds the first paint so the
-  // Command Center is never blank while the first fetch is in flight — this is
-  // what made the board disagree with the visitor's own "people ahead" count.
-  const [tokens, setTokens] = useState<Token[]>(mockTokens);
+  // The live queue is real data, and starts empty.
+  //
+  // Seeding it with mockTokens to avoid a blank first paint meant the tracker
+  // briefly rendered five invented patients with invented ids. Tapping one and
+  // pressing "Complete consultation" sent an id like "t-184" to the API, which
+  // correctly answered "the token was not found" — the patient had acted on a
+  // row that never existed. An empty list and a loading state is honest; fake
+  // rows that accept taps are not.
+  const [tokens, setTokens] = useState<Token[]>([]);
   // Lets the live stream trigger the same refetch the poller uses.
   const queueRefetchRef = useRef<(() => void) | null>(null);
 
@@ -175,9 +179,6 @@ export default function App() {
   const [fairnessWeights, setFairnessWeights] = useState<FairnessWeight[]>(mockFairnessWeights);
   const [decisionLogs, setDecisionLogs] = useState<DecisionLogEntry[]>(mockDecisionLogs);
   const [alerts, setAlerts] = useState<AlertItem[]>(mockAlerts);
-
-  // Active visitor token (default to A-184 for instant tracking)
-  const [activeVisitorToken, setActiveVisitorToken] = useState<Token>(mockTokens[0]);
 
   // Selected token for detail view in patient-tracker carousel
   const [selectedTrackerToken, setSelectedTrackerToken] = useState<Token | null>(null);
@@ -274,7 +275,6 @@ export default function App() {
   /** A token was issued at the kiosk. Record it, but stay on the ticket screen. */
   const handleTokenIssuedAtKiosk = (newToken: Token) => {
     setTokens(prev => [newToken, ...prev]);
-    setActiveVisitorToken(newToken);
     // Keeps the nav pill current without waiting for the next poll.
     refreshMyToken();
   };
@@ -301,9 +301,6 @@ export default function App() {
   // Handler for updating token status
   const handleUpdateToken = (updatedToken: Token) => {
     setTokens(prev => prev.map(t => t.id === updatedToken.id ? updatedToken : t));
-    if (activeVisitorToken.id === updatedToken.id) {
-      setActiveVisitorToken(updatedToken);
-    }
   };
 
   // Handler for adding token
