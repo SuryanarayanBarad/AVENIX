@@ -8,6 +8,7 @@ import {
   LoaderCircle,
   Phone,
   RefreshCw,
+  Hourglass,
   Send,
   ShieldCheck,
   Stethoscope,
@@ -20,6 +21,18 @@ export interface DoctorOption {
   department: string;
   status?: 'Available' | 'Busy' | 'Delayed' | 'Unavailable';
   delayMinutes?: number;
+  /** Public profile fields, populated by /api/visitor/doctors. */
+  specialization?: string;
+  photoUrl?: string | null;
+  qualification?: string | null;
+  experienceYears?: number;
+  consultationFee?: number;
+}
+
+export interface SpecializationOption {
+  id: string;
+  name: string;
+  doctorCount: number;
 }
 
 export interface AppointmentRequest {
@@ -44,7 +57,11 @@ export interface PublicAppointment {
   patientName: string;
   reasonForVisit: string;
   phoneMasked: string;
-  status: 'Confirmed' | 'Scheduled' | 'Updated' | 'Cancelled';
+  /** Plain-language state from lib/appointmentState.ts (toPatientStatus). */
+  status: 'Awaiting approval' | 'Confirmed' | 'Scheduled' | 'Updated' | 'Checked in' | 'Waiting' | 'In consultation' | 'Completed' | 'Delayed' | 'Declined' | 'Cancelled' | 'Missed';
+  /** Raw lifecycle status, for callers that need the enum. */
+  lifecycleStatus?: string;
+  awaitingApproval?: boolean;
   accessKey?: string;
   notification?: {
     id: string;
@@ -66,13 +83,23 @@ interface AppointmentFlowProps {
   onBack?: () => void;
 }
 
+import { visitorApi } from '../services/queueApi';
+
 const today = new Date().toISOString().slice(0, 10);
 
 const statusClass: Record<PublicAppointment['status'], string> = {
+  'Awaiting approval': 'border-amber-400/30 bg-amber-500/15 text-amber-100',
   Confirmed: 'border-emerald-400/30 bg-emerald-500/15 text-emerald-200',
   Scheduled: 'border-[#8e7dff]/35 bg-[#8e7dff]/15 text-[#dedaff]',
   Updated: 'border-amber-400/30 bg-amber-500/15 text-amber-100',
+  'Checked in': 'border-amber-400/30 bg-amber-500/15 text-amber-100',
+  Waiting: 'border-amber-400/30 bg-amber-500/15 text-amber-100',
+  'In consultation': 'border-[#8e7dff]/35 bg-[#8e7dff]/15 text-[#dedaff]',
+  Completed: 'border-white/[0.16] bg-white/[0.07] text-white/70',
+  Delayed: 'border-amber-400/30 bg-amber-500/15 text-amber-100',
+  Declined: 'border-rose-400/30 bg-rose-500/15 text-rose-100',
   Cancelled: 'border-rose-400/30 bg-rose-500/15 text-rose-100',
+  Missed: 'border-rose-400/30 bg-rose-500/15 text-rose-100',
 };
 
 const formatDate = (date: string) => {
@@ -88,6 +115,7 @@ const formatDate = (date: string) => {
  */
 export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
   doctors,
+  user = null,
   initialAppointment = null,
   onGetSlots,
   onCreateAppointment,
@@ -97,7 +125,7 @@ export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
   onBack,
 }) => {
   const [step, setStep] = useState<'doctor' | 'date' | 'time' | 'details' | 'confirmed' | 'reschedule'>(initialAppointment ? 'confirmed' : 'doctor');
-  const [doctorId, setDoctorId] = useState(doctors[0]?.id ?? '');
+  const [doctorId, setDoctorId] = useState('');
   const [date, setDate] = useState(today);
   const [time, setTime] = useState('');
   const [slots, setSlots] = useState<string[]>([]);
@@ -112,7 +140,66 @@ export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [requestSent, setRequestSent] = useState(false);
 
-  const doctor = useMemo(() => doctors.find((candidate) => candidate.id === doctorId), [doctorId, doctors]);
+  // The directory is refetched whenever this screen opens, so a doctor the
+  // Super Admin assigned a moment ago is bookable straight away rather than
+  // waiting for a page reload.
+  const [liveDoctors, setLiveDoctors] = useState<DoctorOption[]>(doctors);
+  const [specializations, setSpecializations] = useState<SpecializationOption[]>([]);
+  const [specialization, setSpecialization] = useState<string>('all');
+  const [isLoadingDirectory, setIsLoadingDirectory] = useState(false);
+
+  const loadDirectory = async () => {
+    setIsLoadingDirectory(true);
+    try {
+      const [directory, specs] = await Promise.all([
+        visitorApi.getDoctorDirectory(date),
+        visitorApi.getSpecializations().catch(() => []),
+      ]);
+      setLiveDoctors(directory as DoctorOption[]);
+      setSpecializations(specs);
+    } catch {
+      // Keep whatever the parent seeded us with rather than emptying the list.
+    } finally {
+      setIsLoadingDirectory(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDirectory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Parent-supplied doctors still seed the list on first paint.
+  useEffect(() => {
+    if (doctors.length > 0) {
+      setLiveDoctors((current) => (current.length === 0 ? doctors : current));
+    }
+  }, [doctors]);
+
+  const availableDoctors = liveDoctors.length > 0 ? liveDoctors : doctors;
+
+  const visibleDoctors = useMemo(() => (
+    specialization === 'all'
+      ? availableDoctors
+      : availableDoctors.filter((candidate) => (candidate.specialization ?? candidate.department) === specialization)
+  ), [availableDoctors, specialization]);
+
+  const doctor = useMemo(() => availableDoctors.find((candidate) => candidate.id === doctorId), [doctorId, availableDoctors]);
+
+  // Filtering away the selected doctor clears the selection, so the flow can
+  // never carry a doctor the patient can no longer see.
+  useEffect(() => {
+    if (doctorId && !visibleDoctors.some((candidate) => candidate.id === doctorId)) {
+      setDoctorId('');
+    }
+  }, [visibleDoctors, doctorId]);
+
+  // A signed-in visitor should not retype what their account already holds.
+  useEffect(() => {
+    if (!user) return;
+    setPatientName((current) => current || user.name || '');
+    setPhone((current) => current || user.phone || '');
+  }, [user]);
 
   useEffect(() => {
     if (initialAppointment) {
@@ -248,10 +335,72 @@ export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
         <div className="p-5 sm:p-6">
           {step === 'doctor' && (
             <section aria-labelledby="doctor-title">
-              <h1 id="doctor-title" className="font-display text-2xl font-bold tracking-tight text-white">Choose a doctor</h1>
-              <p className="mt-1 text-xs leading-relaxed text-white/60">Appointments are separate from walk-in queue tokens.</p>
-              <div className="mt-5 space-y-2.5">
-                {doctors.map((candidate) => {
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h1 id="doctor-title" className="font-display text-2xl font-bold tracking-tight text-white">Choose a doctor</h1>
+                  <p className="mt-1 text-xs leading-relaxed text-white/60">Appointments are separate from walk-in queue tokens.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadDirectory}
+                  title="Refresh doctor list"
+                  className="mt-1 shrink-0 rounded-xl border border-white/[0.14] bg-white/[0.06] p-2 text-white/65 hover:bg-white/[0.12] hover:text-white cursor-pointer"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${isLoadingDirectory ? 'animate-spin' : ''}`} aria-hidden="true" />
+                </button>
+              </div>
+
+              {/* Specialization filter — every specialization the hospital has,
+                  with All first. Ones with no doctor assigned are shown but
+                  cannot be selected, so the filter is never a dead end. */}
+              <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Filter doctors by specialization">
+                <button
+                  type="button"
+                  onClick={() => setSpecialization('all')}
+                  aria-pressed={specialization === 'all'}
+                  className={`rounded-full border px-3 py-1.5 text-[11px] font-bold transition-colors cursor-pointer ${
+                    specialization === 'all'
+                      ? 'border-[#8e7dff]/55 bg-[#8e7dff]/20 text-white'
+                      : 'border-white/[0.14] bg-white/[0.05] text-white/70 hover:bg-white/[0.10] hover:text-white'
+                  }`}
+                >
+                  All <span className="ml-1 text-white/45">{availableDoctors.length}</span>
+                </button>
+
+                {specializations.map((spec) => {
+                  const active = specialization === spec.name;
+                  const empty = spec.doctorCount === 0;
+                  return (
+                    <button
+                      key={spec.id}
+                      type="button"
+                      disabled={empty}
+                      onClick={() => setSpecialization(spec.name)}
+                      aria-pressed={active}
+                      title={empty ? 'No doctors assigned to this specialization yet' : undefined}
+                      className={`rounded-full border px-3 py-1.5 text-[11px] font-bold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${
+                        active
+                          ? 'border-[#8e7dff]/55 bg-[#8e7dff]/20 text-white'
+                          : 'border-white/[0.14] bg-white/[0.05] text-white/70 hover:bg-white/[0.10] hover:text-white'
+                      }`}
+                    >
+                      {spec.name} <span className="ml-1 text-white/45">{spec.doctorCount}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-4 space-y-2.5">
+                {visibleDoctors.length === 0 && (
+                  <p className="rounded-2xl border border-white/[0.12] bg-white/[0.04] px-4 py-5 text-center text-xs text-white/55">
+                    {isLoadingDirectory
+                      ? 'Loading doctors…'
+                      : specialization === 'all'
+                        ? 'No doctors are available for booking yet.'
+                        : `No doctors are assigned to ${specialization} yet.`}
+                  </p>
+                )}
+                {visibleDoctors.map((candidate) => {
                   const selected = candidate.id === doctorId;
                   const unavailable = candidate.status === 'Unavailable';
                   return (
@@ -265,8 +414,19 @@ export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
                     >
                       <span className="flex items-start justify-between gap-3">
                         <span className="flex items-start gap-3">
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#8e7dff]/30 bg-[#8e7dff]/15 text-[#d6d2ff]"><Stethoscope className="h-4 w-4" aria-hidden="true" /></span>
-                          <span><span className="block text-sm font-bold text-white">{candidate.name}</span><span className="mt-0.5 block text-[11px] text-white/55">{candidate.department}</span></span>
+                          {candidate.photoUrl ? (
+                            <img src={candidate.photoUrl} alt="" className="h-9 w-9 shrink-0 rounded-xl border border-white/20 object-cover" />
+                          ) : (
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#8e7dff]/30 bg-[#8e7dff]/15 text-[#d6d2ff]"><Stethoscope className="h-4 w-4" aria-hidden="true" /></span>
+                          )}
+                          <span>
+                            <span className="block text-sm font-bold text-white">{candidate.name}</span>
+                            <span className="mt-0.5 block text-[11px] text-white/55">
+                              {candidate.specialization ?? candidate.department}
+                              {candidate.qualification ? ` · ${candidate.qualification}` : ''}
+                              {candidate.experienceYears ? ` · ${candidate.experienceYears} yrs` : ''}
+                            </span>
+                          </span>
                         </span>
                         <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold ${candidate.status === 'Delayed' ? 'border-amber-400/30 bg-amber-500/15 text-amber-200' : candidate.status === 'Unavailable' ? 'border-rose-400/30 bg-rose-500/15 text-rose-100' : 'border-emerald-400/30 bg-emerald-500/15 text-emerald-200'}`}>{candidate.status ?? 'Available'}{candidate.delayMinutes ? ` · +${candidate.delayMinutes}m` : ''}</span>
                       </span>
@@ -314,7 +474,7 @@ export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
 
           {step === 'confirmed' && appointment && (
             <section className="space-y-4" aria-live="polite" aria-labelledby="appointment-confirmed-title">
-              <div className="text-center"><span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-emerald-400/35 bg-emerald-500/15 text-emerald-300"><CheckCircle2 className="h-7 w-7" /></span><p className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-emerald-300">Appointment confirmed</p><h1 id="appointment-confirmed-title" className="mt-1 font-mono text-3xl font-black tracking-tight text-white">{appointment.appointmentId}</h1><span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${statusClass[appointment.status]}`}>{appointment.status}</span></div>
+              <div className="text-center"><span className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full border ${appointment.awaitingApproval ? 'border-amber-400/35 bg-amber-500/15 text-amber-200' : 'border-emerald-400/35 bg-emerald-500/15 text-emerald-300'}`}>{appointment.awaitingApproval ? <Hourglass className="h-7 w-7" /> : <CheckCircle2 className="h-7 w-7" />}</span><p className={`mt-3 text-xs font-bold uppercase tracking-[0.16em] ${appointment.awaitingApproval ? 'text-amber-200' : 'text-emerald-300'}`}>{appointment.awaitingApproval ? 'Request sent to the doctor' : 'Appointment confirmed'}</p><h1 id="appointment-confirmed-title" className="mt-1 font-mono text-3xl font-black tracking-tight text-white">{appointment.appointmentId}</h1><span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${statusClass[appointment.status]}`}>{appointment.status}</span></div>
               <dl className="overflow-hidden rounded-3xl border border-white/[0.12] bg-white/[0.045] text-sm"><DetailRow label="Doctor" value={appointment.doctor} /><DetailRow label="Department" value={appointment.department} /><DetailRow label="Date" value={formatDate(appointment.date)} /><DetailRow label="Time" value={appointment.time} /><DetailRow label="Patient" value={appointment.patientName} /><DetailRow label="Reason for Visit" value={appointment.reasonForVisit} /><DetailRow label="Phone" value={appointment.phoneMasked} /></dl>
               {appointment.notification && <div className="rounded-3xl border border-amber-400/30 bg-amber-500/10 p-4"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200">Appointment updated</p><p className="mt-1 text-xs leading-relaxed text-white/75">Your appointment with {appointment.doctor} was moved from <strong className="text-white">{appointment.notification.previousTime}</strong> to <strong className="text-white">{appointment.notification.newTime}</strong>.</p><p className="mt-2 text-[10px] text-white/45">Notification status: {appointment.notification.status}</p></div>}
               {error && <p className="rounded-2xl border border-rose-400/30 bg-rose-500/15 px-3 py-2.5 text-xs text-rose-100" role="alert">{error}</p>}

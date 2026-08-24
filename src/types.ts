@@ -3,26 +3,25 @@ export type AppView =
   | 'kiosk' 
   | 'patient-tracker' 
   | 'admin'
+  | 'super-admin'
+  | 'doctor'
   | 'visitor'
   | 'visitor-token'
   | 'visitor-appointment'
-  | 'visitor-appointment-detail';
+  | 'visitor-appointment-detail'
+  | 'visitor-queue';
 
 export type ViewMode = AppView;
 
 
-export type AdminTab = 
-  | 'overview'
-  | 'live-queue'
-  | 'crowd-intel'
-  | 'ai-predictions'
-  | 'counter-opt'
-  | 'appointments'
-  | 'doctor-schedule'
-  | 'fairness'
-  | 'analytics'
-  | 'alerts'
-  | 'settings';
+import type { CommandTab } from '../lib/permissions';
+
+/**
+ * Command Center tabs. The list lives in lib/permissions.ts so the sidebar and
+ * the API authorize against exactly the same definition.
+ */
+export type AdminTab = CommandTab;
+export type { CommandTab, Role, Permission } from '../lib/permissions';
 
 export type ServiceType = 
   | 'General Consultation'
@@ -173,4 +172,127 @@ export interface CopilotMessage {
     actionLabel?: string;
     actionKey?: string;
   };
+}
+
+export interface DoctorAppointment {
+  id: string;
+  code: string;
+  facilityId: string;
+  doctorId: string;
+  patientName: string;
+  phone: string;
+  date: string;
+  time: string;
+  reasonForVisit: string;
+  status: 'Pending' | 'Approved' | 'Denied' | 'Scheduled' | 'CheckedIn' | 'Waiting' | 'InConsultation' | 'Completed' | 'Delayed' | 'Cancelled' | 'Missed';
+  notes?: string;
+  /** Optimistic-concurrency token; send it back when changing status. */
+  version?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DoctorStats {
+  // Today
+  totalToday: number;
+  pending: number;
+  approved: number;
+  completed: number;
+  denied: number;
+  missed: number;
+  // All-time, per doctor
+  totalAppointments?: number;
+  approvedTotal?: number;
+  deniedTotal?: number;
+  pendingTotal?: number;
+  completedCheckups?: number;
+  todayPatients?: number;
+  /** Approved / (Approved + Denied) × 100. Pending is excluded. */
+  approvalRate?: number;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  /** Served path (e.g. /uploads/avatars/x.png) or a Google photo URL. */
+  avatarUrl?: string | null;
+  phone?: string | null;
+  /** Present only when the account is linked to a Doctor profile. */
+  doctorId?: string;
+}
+
+/** Public, patient-facing doctor card. Contains no account or contact data. */
+export interface PublicDoctor {
+  id: string;
+  name: string;
+  department: string;
+  specialization?: string;
+  photoUrl?: string | null;
+  qualification?: string | null;
+  experienceYears?: number;
+  consultationFee?: number;
+  bio?: string | null;
+  status?: string;
+}
+
+/** Management view of a doctor — Super Admin creates/edits, Admin may read. */
+export interface ManagedDoctor {
+  id: string;
+  name: string;
+  photoUrl?: string | null;
+  qualification?: string | null;
+  experienceYears?: number;
+  consultationFee?: number;
+  bio?: string | null;
+  isActive?: boolean;
+  departmentId: string;
+  department?: { id: string; name: string } | null;
+  user?: { id: string; email: string; name: string; role: string } | null;
+  createdAt?: string;
+}
+
+/** One row of the doctor's "My Patients" list. */
+export interface DoctorPatient {
+  id: string;
+  appointmentId: string;
+  tokenCode: string;
+  patientName: string;
+  patientAvatarUrl?: string | null;
+  phoneMasked: string;
+  date: string;
+  time: string;
+  displayTime: string;
+  reasonForVisit: string;
+  existingDiagnosis?: string | null;
+  status: string;
+  checkupStatus: string;
+  queuePosition: number | null;
+  queueToken?: { id: string; code: string; status: string; counterName?: string | null } | null;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+}
+
+export interface CameraRecord {
+  id: string;
+  facilityId: string;
+  name: string;
+  location: string;
+  type: 'webcam' | 'cctv' | 'rtsp';
+  status: 'connected' | 'disconnected' | 'error';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CameraAnalytics {
+  cameraId: string;
+  timestamp: string;
+  peopleCount: number;
+  queueCount: number;
+  zoneCounts: Record<string, number>;
+  densityLevel: 'Low' | 'Medium' | 'High';
 }

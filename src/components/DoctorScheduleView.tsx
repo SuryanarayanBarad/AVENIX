@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   AlertTriangle,
@@ -12,7 +12,6 @@ import {
   ShieldCheck,
   Sparkles,
   Stethoscope,
-  UserRound,
   Users,
   X,
 } from 'lucide-react';
@@ -52,6 +51,8 @@ interface NotificationState {
   response: 'awaiting' | 'confirmed' | 'another-time';
 }
 
+import { adminApi } from '../services/queueApi';
+
 const modalEase = [0.22, 1, 0.36, 1] as const;
 
 const statusTone: Record<DoctorStatus, string> = {
@@ -71,46 +72,6 @@ const appointmentTone = (status: string) => {
 };
 
 const isSharma = (doctor: string) => doctor.toLowerCase().includes('sharma');
-
-const previewAppointments: DoctorScheduleAppointment[] = [
-  {
-    id: 'preview-dr-2841',
-    tokenCode: 'DR-2841',
-    patientName: 'Rahul',
-    time: '11:30 AM',
-    date: '2026-08-20',
-    doctor: 'Dr. Sharma',
-    status: 'Upcoming',
-    service: 'General Medicine',
-    estWaitMin: 28,
-    phoneMasked: '••••••6789',
-    reasonForVisit: 'Fever and persistent cough for 3 days',
-  },
-  {
-    id: 'preview-dr-2842',
-    tokenCode: 'DR-2842',
-    patientName: 'Aarav Mehta',
-    time: '12:00 PM',
-    date: '2026-08-20',
-    doctor: 'Dr. Sharma',
-    status: 'Upcoming',
-    service: 'General Medicine',
-    estWaitMin: 28,
-    phoneMasked: '••••••2014',
-  },
-  {
-    id: 'preview-dr-2843',
-    tokenCode: 'DR-2843',
-    patientName: 'Nisha Singh',
-    time: '12:30 PM',
-    date: '2026-08-20',
-    doctor: 'Dr. Sharma',
-    status: 'Upcoming',
-    service: 'General Medicine',
-    estWaitMin: 28,
-    phoneMasked: '••••••4451',
-  },
-];
 
 /**
  * Staff-only schedule workspace. It purposely keeps the AI plan read-only
@@ -133,21 +94,62 @@ export const DoctorScheduleView: React.FC<DoctorScheduleViewProps> = ({
   const [localUpdates, setLocalUpdates] = useState<Record<string, DoctorScheduleAppointment>>({});
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
+  // Real schedule: doctors, their recorded availability windows, and the
+  // appointments that actually fall inside a blocked window.
+  const [schedule, setSchedule] = useState<any[]>([]);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const today = new Date().toISOString().slice(0, 10);
+    adminApi.getDoctorSchedule(today)
+      .then((result: any) => {
+        if (!mounted) return;
+        setSchedule(result?.doctors ?? []);
+        setScheduleError(null);
+      })
+      .catch((err: any) => {
+        if (mounted) setScheduleError(err?.message || 'The doctor schedule could not be loaded.');
+      });
+    return () => { mounted = false; };
+  }, []);
+
   const resolvedAppointments = useMemo(
     () => appointments.map((appointment) => localUpdates[appointment.id] ?? appointment),
     [appointments, localUpdates],
   );
 
-  const sharmaAppointments = useMemo(
-    () => resolvedAppointments.filter((appointment) => isSharma(appointment.doctor)),
-    [resolvedAppointments],
+  /** Flatten the live schedule into the row shape this view renders. */
+  const liveAppointments = useMemo<DoctorScheduleAppointment[]>(() => (
+    schedule.flatMap((entry: any) => (entry.appointments ?? []).map((apt: any) => ({
+      id: apt.id,
+      tokenCode: apt.code,
+      patientName: apt.patientName,
+      time: apt.time,
+      date: apt.date,
+      doctor: entry.doctor.name,
+      status: apt.status,
+      service: entry.doctor.department,
+      estWaitMin: 0,
+      phoneMasked: apt.maskedPhone,
+      reasonForVisit: apt.reasonForVisit,
+    })))
+  ), [schedule]);
+
+  /** Appointment ids the server flagged as sitting inside a blocked window. */
+  const conflictingIds = useMemo(
+    () => new Set(schedule.flatMap((entry: any) => entry.conflictingAppointmentIds ?? [])),
+    [schedule],
   );
 
-  // The preview scenario keeps this standalone component useful before a
-  // facility has populated its first Dr. Sharma schedule.
-  const affectedAppointments = sharmaAppointments.length >= 3
-    ? sharmaAppointments.filter((appointment) => !appointment.status.toLowerCase().includes('complete')).slice(0, 3)
-    : previewAppointments;
+  // Only genuinely affected appointments are offered for rescheduling, so a
+  // review always targets a row that exists in the database.
+  const affectedAppointments = useMemo(
+    () => liveAppointments
+      .filter((appointment) => conflictingIds.has(appointment.id))
+      .map((appointment) => localUpdates[appointment.id] ?? appointment),
+    [liveAppointments, conflictingIds, localUpdates],
+  );
 
   const recommendationRows = useMemo<RecommendationRow[]>(() => (
     affectedAppointments.slice(0, 3).map((appointment, index) => ({
@@ -157,41 +159,53 @@ export const DoctorScheduleView: React.FC<DoctorScheduleViewProps> = ({
   ), [affectedAppointments]);
 
   const selectedSchedule = useMemo(() => {
-    const matchingAppointments = resolvedAppointments.filter((appointment) => appointment.doctor === selectedDoctor);
-    if (matchingAppointments.length > 0) return matchingAppointments;
-    return selectedDoctor === 'Dr. Sharma' ? previewAppointments : [];
-  }, [resolvedAppointments, selectedDoctor]);
+    const fromLive = liveAppointments
+      .filter((appointment) => appointment.doctor === selectedDoctor)
+      .map((appointment) => localUpdates[appointment.id] ?? appointment);
+    if (fromLive.length > 0) return fromLive;
+    // Fall back to whatever the parent passed in (kept for standalone use).
+    return resolvedAppointments.filter((appointment) => appointment.doctor === selectedDoctor);
+  }, [liveAppointments, localUpdates, resolvedAppointments, selectedDoctor]);
 
-  const doctors = useMemo(() => [
-    {
-      name: 'Dr. Sharma',
-      department: 'General Medicine',
-      status: 'Unavailable' as DoctorStatus,
-      detail: 'Conflict 11:00 AM – 12:00 PM',
-      count: affectedAppointments.length,
-    },
-    {
-      name: 'Dr. Priya Nair',
-      department: 'General Medicine',
-      status: 'Available' as DoctorStatus,
-      detail: 'Can accept an alternate consultation',
-      count: resolvedAppointments.filter((appointment) => appointment.doctor === 'Dr. Priya Nair').length,
-    },
-    {
-      name: 'Dr. Arjun Mehta',
-      department: 'Pediatrics',
-      status: 'Busy' as DoctorStatus,
-      detail: 'In consultation until 12:15 PM',
-      count: resolvedAppointments.filter((appointment) => appointment.doctor === 'Dr. Arjun Mehta').length,
-    },
-    {
-      name: 'Dr. Kavya Rao',
-      department: 'Diagnostics',
-      status: 'Delayed' as DoctorStatus,
-      detail: 'Running approximately 12 minutes behind',
-      count: resolvedAppointments.filter((appointment) => appointment.doctor === 'Dr. Kavya Rao').length,
-    },
-  ], [affectedAppointments.length, resolvedAppointments]);
+  const doctors = useMemo(() => schedule.map((entry: any) => {
+    const blocked = (entry.availability ?? []).find((window: any) => window.status === 'Unavailable' || window.status === 'Delayed');
+    const detail = blocked
+      ? blocked.status === 'Delayed'
+        ? `Running ${blocked.delayMinutes ?? 0} minutes behind (${blocked.displayWindow})`
+        : `Conflict ${blocked.displayWindow}`
+      : blocked?.note
+        || (entry.status === 'Busy' ? 'In consultation' : 'No conflicts recorded today');
+
+    return {
+      name: entry.doctor.name,
+      department: entry.doctor.department,
+      status: entry.status as DoctorStatus,
+      detail,
+      count: (entry.appointments ?? []).length,
+    };
+  }), [schedule]);
+
+  // Keep the selection pointing at a doctor that actually exists.
+  useEffect(() => {
+    if (doctors.length > 0 && !doctors.some((doc) => doc.name === selectedDoctor)) {
+      setSelectedDoctor(doctors[0].name);
+    }
+  }, [doctors, selectedDoctor]);
+
+  /** The first real blocked window today, used for the alert headline. */
+  const conflictSummary = useMemo(() => {
+    for (const entry of schedule) {
+      const blocked = (entry.availability ?? []).find((w: any) => w.status === 'Unavailable' || w.status === 'Delayed');
+      if (blocked && (entry.conflictingAppointmentIds ?? []).length > 0) {
+        return {
+          headline: blocked.status === 'Delayed'
+            ? `${entry.doctor.name} is running ${blocked.delayMinutes ?? 0} minutes behind (${blocked.displayWindow}).`
+            : `${entry.doctor.name} is unavailable from ${blocked.displayWindow}.`,
+        };
+      }
+    }
+    return null;
+  }, [schedule]);
 
   const openRescheduleReview = (row: RecommendationRow) => {
     // Reviewing the suggestion is intentionally a local, non-mutating step.
@@ -299,6 +313,13 @@ export const DoctorScheduleView: React.FC<DoctorScheduleViewProps> = ({
         <MetricCard icon={<Users className="h-4 w-4 text-rose-300" />} label="Alternate capacity" value="1 doctor" detail="Dr. Priya Nair available" />
       </section>
 
+      {scheduleError && (
+        <section className="rounded-3xl border border-rose-400/35 bg-rose-500/[0.11] p-4 text-xs text-rose-200 backdrop-blur-xl">
+          {scheduleError}
+        </section>
+      )}
+
+      {conflictSummary ? (
       <section className="rounded-3xl border border-rose-400/35 bg-rose-500/[0.11] p-5 shadow-[0_12px_40px_rgba(244,63,94,0.10)] backdrop-blur-xl">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex gap-3">
@@ -307,18 +328,36 @@ export const DoctorScheduleView: React.FC<DoctorScheduleViewProps> = ({
             </span>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-rose-200">Doctor availability conflict</p>
-              <h2 className="mt-1 font-display text-base font-bold text-white">Dr. Sharma is unavailable from 11:00 AM – 12:00 PM.</h2>
-              <p className="mt-1 text-xs leading-relaxed text-white/72"><strong className="text-white">{affectedAppointments.length} appointments are affected.</strong> Review the proposed changes before communicating a new consultation time.</p>
+              <h2 className="mt-1 font-display text-base font-bold text-white">{conflictSummary.headline}</h2>
+              <p className="mt-1 text-xs leading-relaxed text-white/72"><strong className="text-white">{affectedAppointments.length} appointment{affectedAppointments.length === 1 ? ' is' : 's are'} affected.</strong> Review the proposed changes before communicating a new consultation time.</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2 lg:justify-end">
-            <button type="button" onClick={() => openRescheduleReview(recommendationRows[0])} className="rounded-xl border border-rose-200/25 bg-white/[0.09] px-3 py-2 text-[11px] font-bold text-white hover:bg-white/[0.15] cursor-pointer">Reschedule affected</button>
+            <button type="button" disabled={recommendationRows.length === 0} onClick={() => recommendationRows[0] && openRescheduleReview(recommendationRows[0])} className="rounded-xl border border-rose-200/25 bg-white/[0.09] px-3 py-2 text-[11px] font-bold text-white hover:bg-white/[0.15] disabled:opacity-50 cursor-pointer">Reschedule affected</button>
             <button type="button" onClick={() => showActionNotice('Dr. Priya Nair has been surfaced as an alternate option. No appointment was changed.', 'schedule.find-alternate-doctor')} className="rounded-xl border border-white/[0.14] bg-white/[0.05] px-3 py-2 text-[11px] font-semibold text-white/85 hover:bg-white/[0.12] cursor-pointer">Find another doctor</button>
             <button type="button" onClick={() => showActionNotice('An extension request is ready for management review. No schedule was changed.', 'schedule.request-consultation-extension')} className="rounded-xl border border-white/[0.14] bg-white/[0.05] px-3 py-2 text-[11px] font-semibold text-white/85 hover:bg-white/[0.12] cursor-pointer">Extend hours</button>
           </div>
         </div>
         {actionNotice && <p className="mt-4 rounded-2xl border border-white/[0.12] bg-black/10 px-3.5 py-2.5 text-[11px] text-white/75" role="status">{actionNotice}</p>}
       </section>
+      ) : (
+        <section className="rounded-3xl border border-emerald-400/25 bg-emerald-500/[0.08] p-5 backdrop-blur-xl">
+          <div className="flex gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-500/15 text-emerald-300">
+              <CalendarClock className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-200">Availability</p>
+              <h2 className="mt-1 font-display text-base font-bold text-white">No availability conflicts today.</h2>
+              <p className="mt-1 text-xs leading-relaxed text-white/70">
+                Every appointment on today's schedule sits inside its doctor's available hours. Mark a doctor Delayed or
+                Unavailable to see the affected appointments listed here.
+              </p>
+              {actionNotice && <p className="mt-3 rounded-2xl border border-white/[0.12] bg-black/10 px-3.5 py-2.5 text-[11px] text-white/75" role="status">{actionNotice}</p>}
+            </div>
+          </div>
+        </section>
+      )}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
         <section className="space-y-4 xl:col-span-8">
@@ -422,9 +461,18 @@ export const DoctorScheduleView: React.FC<DoctorScheduleViewProps> = ({
                     <h2 className="mt-1 font-display text-base font-bold text-white">Reviewable recovery plan</h2>
                   </div>
                 </div>
-                <p className="mt-4 text-xs leading-relaxed text-white/72">Dr. Sharma is currently running <strong className="text-white">28 minutes behind</strong>. The following changes are recommendations only; nothing updates until management approves each change.</p>
+                <p className="mt-4 text-xs leading-relaxed text-white/72">
+                  {conflictSummary
+                    ? <>{conflictSummary.headline} The following changes are recommendations only; nothing updates until management approves each change.</>
+                    : <>No appointments are currently affected by an availability conflict.</>}
+                </p>
 
                 <div className="mt-4 space-y-2.5">
+                  {recommendationRows.length === 0 && (
+                    <p className="rounded-2xl border border-white/[0.12] bg-black/10 px-3.5 py-3 text-[11px] text-white/55">
+                      Nothing to reschedule right now.
+                    </p>
+                  )}
                   {recommendationRows.map((row) => (
                     <button key={row.appointment.id} type="button" onClick={() => openRescheduleReview(row)} className="flex w-full items-center justify-between gap-3 rounded-2xl border border-white/[0.12] bg-black/10 px-3.5 py-3 text-left hover:bg-white/[0.08] cursor-pointer">
                       <span>
@@ -440,7 +488,7 @@ export const DoctorScheduleView: React.FC<DoctorScheduleViewProps> = ({
                   <span className="text-white/55">Expected disruption</span>
                   <span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2 py-0.5 font-bold text-emerald-300">Low</span>
                 </div>
-                <button type="button" onClick={() => openRescheduleReview(recommendationRows[0])} className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-4 py-3 text-xs font-bold text-white shadow-lg shadow-[#4F46E5]/20 cursor-pointer">
+                <button type="button" disabled={recommendationRows.length === 0} onClick={() => recommendationRows[0] && openRescheduleReview(recommendationRows[0])} className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-4 py-3 text-xs font-bold text-white shadow-lg shadow-[#4F46E5]/20 disabled:opacity-50 cursor-pointer">
                   Review first affected appointment <ChevronRight className="h-4 w-4" aria-hidden="true" />
                 </button>
               </motion.section>

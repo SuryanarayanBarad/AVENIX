@@ -1,0 +1,417 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Pooled connection for the running app. Serverless Postgres (Supabase/Neon)
+  // puts a pooler in front, which cannot run DDL.
+  url       = env("DATABASE_URL")
+  // Direct connection, used only by `prisma migrate` for schema changes.
+  // Locally this can be the same value as DATABASE_URL.
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  STAFF
+  DOCTOR
+  VISITOR
+}
+
+enum QueueStatus {
+  Waiting
+  Approaching
+  Serving
+  Completed
+  Cancelled
+}
+
+enum AppointmentStatus {
+  Pending
+  Approved
+  Denied
+  Scheduled
+  CheckedIn
+  Waiting
+  InConsultation
+  Completed
+  Delayed
+  Cancelled
+  Missed
+}
+
+enum DoctorStatus {
+  Available
+  Busy
+  Delayed
+  Unavailable
+}
+
+enum NotificationType {
+  appointment_rescheduled
+  appointment_requested
+  appointment_approved
+  appointment_denied
+  appointment_reminder
+  patient_waiting
+}
+
+enum NotificationChannel {
+  mock
+  sms
+  email
+  push
+}
+
+enum DeliveryStatus {
+  queued
+  mock_dispatched
+  dispatched
+  failed
+}
+
+enum NotificationResponse {
+  confirmed
+  request_another_time
+}
+
+enum CameraType {
+  webcam
+  cctv
+  rtsp
+}
+
+enum CameraStatus {
+  connected
+  disconnected
+  error
+}
+
+enum DensityLevel {
+  Low
+  Medium
+  High
+}
+
+// ---------------------------------------------------------------------------
+// Core Models
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  name         String
+  passwordHash String    @map("password_hash")
+  role         Role      @default(VISITOR)
+  facilityId   String?   @map("facility_id")
+  facility     Facility? @relation(fields: [facilityId], references: [id])
+  // Public profile fields — safe to display, never security material.
+  avatarUrl    String?   @map("avatar_url")
+  phone        String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  auditLogs    AuditLog[]
+  tokens       Token[]
+  appointments Appointment[] // Appointments booked by this user as the patient
+  doctor       Doctor?       // One-to-one: a DOCTOR user is linked to a Doctor profile
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model Facility {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  address   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Sequence counters for concurrency-safe token/appointment numbering.
+  // These use raw SQL increment via Prisma.$executeRaw for atomicity.
+  nextWalkInNumber      Int @default(1) @map("next_walkin_number")
+  nextAppointmentNumber Int @default(1) @map("next_appointment_number")
+
+  departments  Department[]
+  doctors      Doctor[]
+  services     Service[]
+  tokens       Token[]
+  appointments Appointment[]
+  cameras      Camera[]
+  users        User[]
+
+  @@map("facilities")
+}
+
+model Department {
+  id         String   @id @default(uuid())
+  name       String
+  facilityId String   @map("facility_id")
+  facility   Facility @relation(fields: [facilityId], references: [id])
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  doctors Doctor[]
+
+  @@unique([facilityId, name])
+  @@map("departments")
+}
+
+model Doctor {
+  id           String     @id @default(uuid())
+  name         String
+  userId       String?    @unique @map("user_id")
+  user         User?      @relation(fields: [userId], references: [id])
+  facilityId   String     @map("facility_id")
+  facility     Facility   @relation(fields: [facilityId], references: [id])
+  departmentId String     @map("department_id")
+  department   Department @relation(fields: [departmentId], references: [id])
+  // Profile — assigned by SUPER_ADMIN. photoUrl is a served path, never a blob.
+  photoUrl        String?  @map("photo_url")
+  qualification   String?
+  experienceYears Int      @default(0) @map("experience_years")
+  consultationFee Int      @default(0) @map("consultation_fee")
+  bio             String?
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  appointments Appointment[]
+  availability DoctorAvailability[]
+  tokens       Token[]
+
+  @@index([facilityId])
+  @@map("doctors")
+}
+
+model Service {
+  id                   String   @id @default(uuid())
+  name                 String
+  description          String?
+  estimatedWaitMinutes Int      @default(10) @map("estimated_wait_minutes")
+  peopleWaiting        Int      @default(0) @map("people_waiting")
+  defaultCounterName   String?  @map("default_counter_name")
+  facilityId           String   @map("facility_id")
+  facility             Facility @relation(fields: [facilityId], references: [id])
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  tokens Token[]
+
+  @@unique([facilityId, name])
+  @@map("services")
+}
+
+// ---------------------------------------------------------------------------
+// Queue & Appointments
+// ---------------------------------------------------------------------------
+
+model Token {
+  id            String      @id @default(uuid())
+  code          String // e.g. "A-184"
+  facilityId    String      @map("facility_id")
+  facility      Facility    @relation(fields: [facilityId], references: [id])
+  serviceId     String      @map("service_id")
+  service       Service     @relation(fields: [serviceId], references: [id])
+  userId        String?     @map("user_id")
+  user          User?       @relation(fields: [userId], references: [id])
+  // Explicit doctor ownership so queue tokens can be filtered per doctor.
+  doctorId      String?     @map("doctor_id")
+  doctor        Doctor?     @relation(fields: [doctorId], references: [id])
+  appointmentId String?     @map("appointment_id")
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id])
+  visitorName   String?     @map("visitor_name")
+  phone         String?
+  issuedAt      DateTime    @default(now()) @map("issued_at")
+  status        QueueStatus @default(Waiting)
+  counterName   String?     @map("counter_name")
+  accessKeyHash String      @map("access_key_hash")
+  deletedAt     DateTime?   @map("deleted_at")
+
+  // A token code must be unique within its facility. The sequence counter is
+  // already atomic; this makes the guarantee structural rather than procedural.
+  @@unique([facilityId, code])
+  @@index([facilityId, status])
+  @@index([serviceId, status])
+  @@index([doctorId, status])
+  @@index([userId, status])
+  @@index([code])
+  @@map("tokens")
+}
+
+model Appointment {
+  id                String            @id @default(uuid())
+  code              String // e.g. "DR-2841"
+  facilityId        String            @map("facility_id")
+  facility          Facility          @relation(fields: [facilityId], references: [id])
+  doctorId          String            @map("doctor_id")
+  doctor            Doctor            @relation(fields: [doctorId], references: [id])
+  patientName       String            @map("patient_name")
+  userId            String?           @map("user_id")
+  user              User?             @relation(fields: [userId], references: [id])
+  // Optional so a desk-booked patient without a phone can still be seen. The
+  // public booking route still demands one — see bookedAtDesk below.
+  phone             String?
+  // True only when an authenticated STAFF/MANAGER/ADMIN/SUPER_ADMIN created the
+  // appointment on a patient's behalf. Set server-side from the verified role,
+  // never from the request body.
+  bookedAtDesk      Boolean           @default(false) @map("booked_at_desk")
+  date              String // YYYY-MM-DD
+  time              String // HH:MM (24h)
+  reasonForVisit    String            @map("reason_for_visit")
+  existingDiagnosis String?           @map("existing_diagnosis")
+  // Every booking starts life as a request the doctor must approve or deny.
+  // Legacy rows carry `Scheduled`, which lib/appointmentState.ts treats as approved.
+  status            AppointmentStatus @default(Pending)
+  // Why the last status change was made — chiefly the doctor's denial reason,
+  // which the patient is shown instead of a bare "Declined".
+  statusReason      String?           @map("status_reason")
+  accessKeyHash     String            @map("access_key_hash")
+  version           Int               @default(1)
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  deletedAt         DateTime?         @map("deleted_at")
+
+  scheduleChanges ScheduleChange[]
+  notifications   Notification[]
+  tokens          Token[]
+
+  // Prevent double-booking: one doctor can only have one active appointment per slot.
+  @@unique([doctorId, date, time])
+  @@unique([facilityId, code])
+  @@index([facilityId])
+  // Drives the queue board and the doctor schedule, both of which read one
+  // facility's appointments for a single day.
+  @@index([facilityId, date, status])
+  @@index([doctorId, date])
+  @@index([doctorId, status])
+  @@index([userId])
+  @@index([code])
+  @@map("appointments")
+}
+
+model DoctorAvailability {
+  id           String       @id @default(uuid())
+  doctorId     String       @map("doctor_id")
+  doctor       Doctor       @relation(fields: [doctorId], references: [id])
+  date         String // YYYY-MM-DD
+  startTime    String       @map("start_time") // HH:MM
+  endTime      String       @map("end_time") // HH:MM
+  status       DoctorStatus
+  delayMinutes Int?         @map("delay_minutes")
+  note         String?
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  updatedBy    String       @map("updated_by")
+
+  @@index([doctorId, date])
+  // The public doctor directory reads every doctor's windows for one date.
+  @@index([date])
+  @@map("doctor_availability")
+}
+
+model ScheduleChange {
+  id               String      @id @default(uuid())
+  appointmentId    String      @map("appointment_id")
+  appointment      Appointment @relation(fields: [appointmentId], references: [id])
+  previousDoctorId String      @map("previous_doctor_id")
+  previousDate     String      @map("previous_date")
+  previousTime     String      @map("previous_time")
+  newDoctorId      String      @map("new_doctor_id")
+  newDate          String      @map("new_date")
+  newTime          String      @map("new_time")
+  approvedBy       String      @map("approved_by")
+  approvedAt       DateTime    @default(now()) @map("approved_at")
+
+  @@index([appointmentId])
+  @@map("schedule_changes")
+}
+
+model Notification {
+  id                   String                @id @default(uuid())
+  appointmentId        String                @map("appointment_id")
+  appointment          Appointment           @relation(fields: [appointmentId], references: [id])
+  type                 NotificationType
+  title                String
+  message              String
+  previousTime         String?               @map("previous_time")
+  newTime              String?               @map("new_time")
+  channel              NotificationChannel   @default(mock)
+  deliveryStatus       DeliveryStatus        @default(queued) @map("delivery_status")
+  recipientPhoneMasked String?               @map("recipient_phone_masked")
+  recipientEmail       String?               @map("recipient_email")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  dispatchedAt         DateTime?             @map("dispatched_at")
+  response             NotificationResponse?
+  respondedAt          DateTime?             @map("responded_at")
+
+  @@index([appointmentId])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  occurredAt DateTime @default(now()) @map("occurred_at")
+  actorId    String   @map("actor_id")
+  actor      User?    @relation(fields: [actorId], references: [id])
+  actorRole  String   @map("actor_role")
+  action     String
+  targetType String   @map("target_type")
+  targetId   String   @map("target_id")
+  outcome    String   @default("success")
+  metadata   Json?
+
+  @@index([occurredAt])
+  // The Super Admin queue-activity feed filters by action within a time window.
+  @@index([action, occurredAt])
+  @@index([actorId])
+  @@index([targetType, targetId])
+  @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Camera & Sensor Monitoring
+// ---------------------------------------------------------------------------
+
+model Camera {
+  id         String       @id @default(uuid())
+  facilityId String       @map("facility_id")
+  facility   Facility     @relation(fields: [facilityId], references: [id])
+  name       String
+  location   String
+  type       CameraType   @default(webcam)
+  status     CameraStatus @default(disconnected)
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  analytics CameraAnalytics[]
+
+  @@index([facilityId])
+  @@map("cameras")
+}
+
+model CameraAnalytics {
+  id           String       @id @default(uuid())
+  cameraId     String       @map("camera_id")
+  camera       Camera       @relation(fields: [cameraId], references: [id])
+  timestamp    DateTime     @default(now())
+  peopleCount  Int          @default(0) @map("people_count")
+  queueCount   Int          @default(0) @map("queue_count")
+  zoneCounts   Json         @default("{}") @map("zone_counts")
+  densityLevel DensityLevel @default(Low) @map("density_level")
+
+  @@index([cameraId, timestamp])
+  @@map("camera_analytics")
+}

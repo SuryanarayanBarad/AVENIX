@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(lsof -ti:3000)",
+      "Bash(xargs kill -9)",
+      "Bash(nohup npx tsx server.ts)",
+      "Read(//private/tmp/**)",
+      "Bash(curl -s localhost:3000/api/health)",
+      "Bash(node /private/tmp/claude-501/-Users-surya-Downloads-queuemind-ai/4bf2ada9-5aaa-413a-ae87-108d6851a0de/scratchpad/state.mjs)",
+      "Bash(python3 -)",
+      "Bash(echo \"TSC=$?\")",
+      "Bash(npm run *)"
+    ]
+  }
+}

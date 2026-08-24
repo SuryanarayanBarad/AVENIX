@@ -1,0 +1,60 @@
+# Render deployment for QueueMind AI.
+#
+# Secrets are NOT defined here. Every value below is marked `sync: false`, which
+# tells Render to ask for it in the dashboard and store it there — nothing
+# sensitive belongs in a git repository.
+#
+# One instance is deliberate: live updates are delivered over SSE from an
+# in-process event bus, so a second instance would only reach the clients
+# connected to it. Scaling out needs a shared broker first.
+services:
+  - type: web
+    name: queuemind-ai
+    runtime: node
+    plan: free
+    region: singapore          # same region as the Supabase database
+    numInstances: 1
+    branch: main
+
+    buildCommand: npm install && npm run build
+    # Migrations run before the server accepts traffic. `migrate deploy` only
+    # applies pending migrations — it never resets or drops data.
+    startCommand: npm run deploy:migrate && npm start
+
+    healthCheckPath: /api/health
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Supabase: pooled (6543) for the app, direct (5432) for migrations.
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      # Auth
+      - key: JWT_SECRET
+        sync: false
+      - key: SUPER_ADMIN_EMAIL
+        sync: false
+      - key: SUPER_ADMIN_PASSWORD
+        sync: false
+      # Google OAuth — the redirect URI must match this service's public URL.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: APP_URL
+        sync: false
+      # Supabase Storage — without these, uploads fall back to local disk,
+      # which Render wipes on every deploy.
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: queue-images
+      # Optional
+      - key: GEMINI_API_KEY
+        sync: false

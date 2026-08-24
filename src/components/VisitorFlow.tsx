@@ -29,6 +29,7 @@ export interface PublicQueueToken {
   estimatedWaitMinutes: number;
   status: 'Waiting' | 'Approaching' | 'Serving' | 'Completed' | 'Cancelled';
   counterName?: string | null;
+  isOwn?: boolean;
   issuedAt?: string;
 }
 
@@ -43,7 +44,7 @@ export interface VisitorServiceOption {
 export interface WalkInTokenRequest {
   serviceId: string;
   name?: string;
-  phone?: string;
+  phone: string;
 }
 
 export interface VisitorStartProps {
@@ -54,6 +55,8 @@ export interface VisitorStartProps {
 }
 
 export interface WalkInTokenFlowProps {
+  /** When a visitor is signed in, their details pre-fill the token form. */
+  user?: { name?: string; phone?: string | null } | null;
   /** Service data should come from the facility API when available. */
   services?: VisitorServiceOption[];
   facilityName?: string;
@@ -213,6 +216,7 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
   onTokenCreated,
   onBack,
   onBookAppointment,
+  user = null,
 }) => {
   const [step, setStep] = useState<'service' | 'details' | 'token'>(initialToken ? 'token' : 'service');
   const [selectedServiceId, setSelectedServiceId] = useState(services[0]?.id ?? '');
@@ -220,6 +224,13 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
   const [phone, setPhone] = useState('');
   const [token, setToken] = useState<PublicQueueToken | null>(initialToken);
   const [error, setError] = useState<string | null>(null);
+
+  // A signed-in visitor should not retype what their account already holds.
+  useEffect(() => {
+    if (!user) return;
+    setName((current) => current || user.name || '');
+    setPhone((current) => current || user.phone || '');
+  }, [user]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -243,13 +254,24 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
     event.preventDefault();
     if (!selectedServiceId || isSubmitting) return;
 
+    if (!phone.trim()) {
+      setError('A phone number is required to receive queue notifications.');
+      return;
+    }
+    
+    // Basic phone number validation
+    if (!/^\+?[0-9\s\-()]{7,15}$/.test(phone.trim())) {
+      setError('Please enter a valid phone number (e.g., +91 98765 43210).');
+      return;
+    }
+
     setError(null);
     setIsSubmitting(true);
     try {
       const createdToken = await onCreateToken({
         serviceId: selectedServiceId,
         name: name.trim() || undefined,
-        phone: phone.trim() || undefined,
+        phone: phone.trim(),
       });
       setToken(createdToken);
       setStep('token');
@@ -383,7 +405,7 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
                 Change service
               </button>
               <h1 id="walk-in-details-title" className="font-display text-2xl font-bold tracking-tight text-white">A few optional details</h1>
-              <p className="mt-1 text-xs leading-relaxed text-white/60">Your token is for <span className="font-semibold text-white">{selectedService?.name ?? 'your selected service'}</span>. We only use a phone number for queue updates.</p>
+              <p className="mt-1 text-xs leading-relaxed text-white/60">Your token is for <span className="font-semibold text-white">{selectedService?.name ?? 'your selected service'}</span>. We require a phone number for queue updates.</p>
 
               <div className="mt-5 space-y-4">
                 <label className="block">
@@ -399,15 +421,15 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
                 </label>
 
                 <label className="block">
-                  <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-white/80"><Phone className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" />Phone number <span className="font-normal text-white/40">(optional)</span></span>
+                  <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-white/80"><Phone className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" />Phone number <span className="font-bold text-rose-400">*</span></span>
                   <input
                     value={phone}
                     onChange={(event) => setPhone(event.target.value)}
                     inputMode="tel"
                     autoComplete="tel"
                     maxLength={30}
-                    placeholder="For queue notifications"
-                    className="glass-input w-full rounded-2xl px-4 py-3 text-sm placeholder:text-white/35"
+                    placeholder="For queue notifications (Required)"
+                    className="glass-input w-full rounded-2xl px-4 py-3 text-sm placeholder:text-white/35 border-white/20 focus:border-emerald-400/50"
                   />
                 </label>
               </div>

@@ -13,9 +13,16 @@ import {
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
-  Sparkles
+  Camera,
+  Ticket,
+  ClipboardCheck,
+  Stethoscope,
+  UserCog,
+  FileText,
+  UserRound
 } from 'lucide-react';
 import { AdminTab } from '../types';
+import { visibleTabs } from '../../lib/permissions';
 
 interface SidebarProps {
   currentTab?: AdminTab;
@@ -24,8 +31,19 @@ interface SidebarProps {
   onTabChange?: (tab: AdminTab) => void;
   waitingCount?: number;
   alertCount?: number;
+  /** Pending appointment requests, shown as a badge on the doctor's tab. */
+  requestCount?: number;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  /** Drives which destinations exist at all. */
+  role?: string | null;
+}
+
+interface TabMeta {
+  label: string;
+  icon: React.FC<{ className?: string }>;
+  badge?: string | number;
+  badgeColor?: string;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -34,8 +52,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectTab,
   onTabChange,
   waitingCount = 147,
+  requestCount = 0,
   collapsed = false,
   onToggleCollapse,
+  role = 'ADMIN',
 }) => {
   const selectedTab = currentTab || activeTab || 'overview';
   const handleTabClick = (tab: AdminTab) => {
@@ -43,22 +63,38 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (onTabChange) onTabChange(tab);
   };
 
-  const menuItems: { id: AdminTab; label: string; icon: React.FC<{ className?: string }>; badge?: string | number; badgeColor?: string }[] = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'live-queue', label: 'Live Queue', icon: Users, badge: waitingCount, badgeColor: 'bg-[#8e7dff]/20 text-[#8e7dff] border border-[#8e7dff]/30' },
-    { id: 'crowd-intel', label: 'Crowd Intelligence', icon: Radar, badge: 'LiDAR/Thermal', badgeColor: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' },
-    { id: 'ai-predictions', label: 'AI Predictions', icon: TrendingUp },
-    { id: 'counter-opt', label: 'Counter Optimization', icon: SlidersHorizontal, badge: 'AI Balancer', badgeColor: 'bg-violet-500/20 text-violet-300 border border-violet-500/30' },
-    { id: 'appointments', label: 'Appointments', icon: Calendar, badge: 142, badgeColor: 'bg-white/10 text-white/90 border border-white/15' },
-    { id: 'fairness', label: 'Fairness & Priority', icon: Scale, badge: '94/100', badgeColor: 'bg-blue-500/20 text-blue-300 border border-blue-500/30' },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-  ];
+  // Labels and badges per destination. Which of these appear is decided by the
+  // shared capability matrix, never by this component.
+  const tabMeta: Record<AdminTab, TabMeta> = {
+    'my-visit': { label: 'My Visit', icon: Ticket },
+    'overview': { label: 'Overview', icon: LayoutDashboard },
+    'live-queue': { label: 'Live Queue', icon: Users, badge: waitingCount, badgeColor: 'bg-[#8e7dff]/20 text-[#8e7dff] border border-[#8e7dff]/30' },
+    'requests': {
+      label: 'Requests',
+      icon: ClipboardCheck,
+      ...(requestCount > 0 ? { badge: requestCount, badgeColor: 'bg-amber-500/20 text-amber-300 border border-amber-500/30' } : {}),
+    },
+    'my-patients': { label: 'My Patients', icon: UserRound },
+    'appointments': { label: 'Appointments', icon: Calendar },
+    'doctor-schedule': { label: 'Doctor Schedule', icon: Calendar },
+    'doctors': { label: 'Doctors', icon: Stethoscope },
+    'crowd-intel': { label: 'Crowd Intelligence', icon: Radar, badge: 'Simulated', badgeColor: 'bg-white/10 text-white/60 border border-white/15' },
+    'ai-predictions': { label: 'AI Predictions', icon: TrendingUp, badge: 'Simulated', badgeColor: 'bg-white/10 text-white/60 border border-white/15' },
+    'counter-opt': { label: 'Counter Optimization', icon: SlidersHorizontal, badge: 'Simulated', badgeColor: 'bg-white/10 text-white/60 border border-white/15' },
+    'fairness': { label: 'Fairness & Priority', icon: Scale, badge: 'Simulated', badgeColor: 'bg-white/10 text-white/60 border border-white/15' },
+    'analytics': { label: 'Analytics', icon: BarChart3 },
+    'camera-monitor': { label: 'Camera Monitor', icon: Camera, badge: 'Live', badgeColor: 'bg-red-500/20 text-red-300 border border-red-500/30' },
+    'users': { label: 'Users & Roles', icon: UserCog },
+    'audit': { label: 'Audit Logs', icon: FileText },
+  };
+
+  const menuItems = visibleTabs(role).map((tab) => ({ id: tab, ...tabMeta[tab] }));
 
   return (
-    <aside className={`${collapsed ? 'w-20' : 'w-64'} h-full bg-white/[0.04] backdrop-blur-2xl text-white/80 flex flex-col shrink-0 border-r border-white/[0.12] transition-[width] duration-200 ease-out`}>
-      
+    <aside className={`${collapsed ? 'w-16 sm:w-20' : 'w-64'} h-full bg-white/[0.04] backdrop-blur-2xl text-white/80 flex flex-col shrink-0 border-r border-white/[0.12] transition-[width] duration-200 ease-out`}>
+
       {/* Navigation header & toggle */}
-      <div className="p-4 flex items-center justify-between border-b border-white/[0.08]">
+      <div className={`p-3 sm:p-4 flex items-center justify-between border-b border-white/[0.08] ${collapsed && !onToggleCollapse ? 'hidden' : ''}`}>
         {!collapsed && (
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold uppercase tracking-wider text-white/50">
@@ -78,7 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
       
       {/* Menu items list */}
-      <div className="p-3 flex-1 space-y-1.5 overflow-y-auto">
+      <div className="p-2 sm:p-3 flex-1 space-y-1.5 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = selectedTab === item.id;
@@ -86,7 +122,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               key={item.id}
               onClick={() => handleTabClick(item.id)}
-              className={`w-full flex items-center ${collapsed ? 'justify-center' : 'justify-between'} px-3.5 py-3 rounded-2xl text-xs font-medium transition-[transform,background-color,border-color,color,box-shadow] duration-200 ease-out cursor-pointer ${
+              className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-3.5'} py-3 rounded-2xl text-xs font-medium transition-[transform,background-color,border-color,color,box-shadow] duration-200 ease-out cursor-pointer ${
                 isActive
                   ? 'bg-gradient-to-r from-[#8e7dff]/30 to-purple-500/20 text-white font-bold border border-[#8e7dff]/50 shadow-[0_0_20px_rgba(142,125,255,0.3)]'
                   : 'text-white/70 hover:text-white hover:bg-white/[0.08] border border-transparent'

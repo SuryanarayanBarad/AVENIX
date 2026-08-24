@@ -1,8 +1,27 @@
+# Dependencies & build output
 node_modules/
 build/
 dist/
 coverage/
+
+# Secrets — every .env variant is ignored; only the example is tracked.
+.env
+.env.*
+!.env.example
+
+# Credentials and keys of any kind
+*.pem
+*.key
+*.p12
+*.pfx
+service-account*.json
+serviceAccount*.json
+
+# User uploads (served from Supabase Storage in production)
+uploads/
+
+# Local noise
 .DS_Store
 *.log
-.env*
-!.env.example
+.vscode/
+.idea/

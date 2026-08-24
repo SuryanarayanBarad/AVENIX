@@ -1,3 +1,17 @@
+/**
+ * ---------------------------------------------------------------------------
+ * Simulation data
+ * ---------------------------------------------------------------------------
+ * Live queues, appointments, doctors and users all come from the API now. What
+ * remains here backs the four tabs that model hardware this deployment does not
+ * have — Crowd Intelligence (LiDAR/thermal zones), AI Predictions (forecast
+ * series), Counter Optimization and Fairness. Those tabs are labelled
+ * "Simulated" in the sidebar so nobody mistakes them for live readings.
+ *
+ * `mockTokens` is the one exception: it seeds the Command Center's first paint
+ * only, and is replaced by real data as soon as the queue fetch returns.
+ */
+
 import { 
   Token, 
   Counter, 
@@ -10,7 +24,7 @@ import {
   DecisionLogEntry 
 } from '../types';
 
-export const INITIAL_COUNTERS: Counter[] = [
+const INITIAL_COUNTERS: Counter[] = [
   {
     id: 'c1',
     name: 'Counter 01',
@@ -117,7 +131,7 @@ export const INITIAL_COUNTERS: Counter[] = [
   },
 ];
 
-export const INITIAL_TOKENS: Token[] = [
+const INITIAL_TOKENS: Token[] = [
   {
     id: 't-184',
     code: 'A-184',
@@ -264,7 +278,7 @@ export const INITIAL_TOKENS: Token[] = [
   },
 ];
 
-export const INITIAL_ZONES: FacilityZone[] = [
+const INITIAL_ZONES: FacilityZone[] = [
   {
     id: 'z-waiting',
     name: 'Main Waiting Lounge',
@@ -342,7 +356,7 @@ export const INITIAL_ZONES: FacilityZone[] = [
   },
 ];
 
-export const SENSOR_NODES: SensorNode[] = [
+const SENSOR_NODES: SensorNode[] = [
   { id: 'sn-1', type: 'LiDAR', zoneId: 'z-waiting', x: 22, y: 40, status: 'Online', activeReadings: 48 },
   { id: 'sn-2', type: 'LiDAR', zoneId: 'z-waiting', x: 34, y: 42, status: 'Online', activeReadings: 56 },
   { id: 'sn-3', type: 'LiDAR', zoneId: 'z-waiting', x: 46, y: 50, status: 'Online', activeReadings: 62 },
@@ -355,7 +369,7 @@ export const SENSOR_NODES: SensorNode[] = [
   { id: 'sn-10', type: 'Thermal', zoneId: 'z-billing', x: 28, y: 80, status: 'Online', activeReadings: 14 },
 ];
 
-export const INITIAL_ALERTS: AlertItem[] = [
+const INITIAL_ALERTS: AlertItem[] = [
   {
     id: 'alt-1',
     severity: 'CRITICAL',
@@ -413,7 +427,7 @@ export const INITIAL_ALERTS: AlertItem[] = [
   },
 ];
 
-export const PREDICTION_SERIES: PredictionPoint[] = [
+const PREDICTION_SERIES: PredictionPoint[] = [
   { timeSlot: '09:00', historicalArrivals: 35, predictedArrivals: 38, predictedWaitMin: 12, confidencePct: 96, lowerBoundWait: 10, upperBoundWait: 14, crowdIndex: 45 },
   { timeSlot: '10:00', historicalArrivals: 58, predictedArrivals: 64, predictedWaitMin: 18, confidencePct: 94, lowerBoundWait: 15, upperBoundWait: 21, crowdIndex: 68 },
   { timeSlot: '11:00', historicalArrivals: 72, predictedArrivals: 82, predictedWaitMin: 24, confidencePct: 95, lowerBoundWait: 21, upperBoundWait: 28, crowdIndex: 88 },
@@ -424,7 +438,7 @@ export const PREDICTION_SERIES: PredictionPoint[] = [
   { timeSlot: '16:00', historicalArrivals: 30, predictedArrivals: 32, predictedWaitMin: 10, confidencePct: 97, lowerBoundWait: 8, upperBoundWait: 12, crowdIndex: 38 },
 ];
 
-export const INITIAL_APPOINTMENTS: Appointment[] = [
+const INITIAL_APPOINTMENTS: Appointment[] = [
   {
     id: 'apt-101',
     tokenCode: 'A-180',
@@ -511,7 +525,7 @@ export const INITIAL_APPOINTMENTS: Appointment[] = [
   },
 ];
 
-export const INITIAL_FAIRNESS_WEIGHTS: FairnessWeight[] = [
+const INITIAL_FAIRNESS_WEIGHTS: FairnessWeight[] = [
   {
     id: 'fw-1',
     name: 'Emergency & Acute Symptoms Escalation',
@@ -554,7 +568,7 @@ export const INITIAL_FAIRNESS_WEIGHTS: FairnessWeight[] = [
   },
 ];
 
-export const INITIAL_DECISION_LOGS: DecisionLogEntry[] = [
+const INITIAL_DECISION_LOGS: DecisionLogEntry[] = [
   {
     id: 'dl-1',
     timestamp: '10:46:12 AM',

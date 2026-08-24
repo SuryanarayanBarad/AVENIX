@@ -1,18 +1,19 @@
 import React from 'react';
-import { 
-  Activity, 
-  ArrowRight, 
-  Sparkles, 
-  Radar, 
-  SlidersHorizontal, 
-  CheckCircle2, 
-  Building2, 
-  HeartPulse, 
-  EyeOff, 
+import {
+  Activity,
+  ArrowRight,
+  Sparkles,
+  Radar,
+  SlidersHorizontal,
+  CheckCircle2,
+  Building2,
+  HeartPulse,
+  EyeOff,
   Cpu,
   Monitor,
   Smartphone,
-  LayoutDashboard
+  LayoutDashboard,
+  Globe
 } from 'lucide-react';
 import { AppView, ViewMode } from '../types';
 
@@ -21,24 +22,27 @@ interface LandingPageProps {
   onLaunchKiosk?: () => void;
   onLaunchAdmin?: () => void;
   onLaunchTracker?: () => void;
+  onLaunchVisitor?: () => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ 
+export const LandingPage: React.FC<LandingPageProps> = ({
   onLaunchApp,
   onLaunchKiosk,
   onLaunchAdmin,
-  onLaunchTracker
+  onLaunchTracker,
+  onLaunchVisitor,
 }) => {
   const launch = (mode: AppView) => {
     if (mode === 'admin' && onLaunchAdmin) return onLaunchAdmin();
     if (mode === 'kiosk' && onLaunchKiosk) return onLaunchKiosk();
     if (mode === 'patient-tracker' && onLaunchTracker) return onLaunchTracker();
+    if (mode === 'visitor' && onLaunchVisitor) return onLaunchVisitor();
     if (onLaunchApp) return onLaunchApp(mode);
   };
 
   return (
     <div className="min-h-screen text-white selection:bg-[#8e7dff] selection:text-white pb-16">
-      
+
       {/* Top Banner Notice - Frosted Glass Bar */}
       <div className="bg-white/[0.04] border-b border-white/[0.10] backdrop-blur-xl px-4 py-2.5 text-center text-xs text-white/80">
         <span className="font-semibold text-white">✨ Next-Generation Healthcare Operations:</span> QueueMind AI is actively deployed across hospital networks, reducing patient wait times by 48%.
@@ -46,14 +50,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* Hero Section */}
       <div className="relative overflow-hidden pt-12 pb-16 lg:pt-16 lg:pb-24">
-        
+
         {/* Glow backdrop bubbles */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-[#8e7dff]/15 blur-[140px] pointer-events-none rounded-full" />
         <div className="absolute top-1/3 left-1/4 -translate-y-1/2 w-[450px] h-[300px] bg-[#ff7db8]/10 blur-[130px] pointer-events-none rounded-full" />
-        
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center max-w-3xl mx-auto space-y-6">
-            
+
             {/* Tag pill */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.08] border border-white/[0.16] text-xs font-medium text-white/90 shadow-lg backdrop-blur-xl">
               <Sparkles className="w-3.5 h-3.5 text-[#8e7dff]" />
@@ -99,11 +103,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <Smartphone className="w-4 h-4 text-[#ff7db8]" />
                 <span>Live Patient Token (A-184)</span>
               </button>
+
+              <button
+                onClick={() => launch('visitor')}
+                className="px-6 py-3.5 rounded-2xl bg-white/[0.05] hover:bg-white/[0.10] border border-white/[0.12] backdrop-blur-xl text-white/90 font-semibold text-sm flex items-center gap-2 transition-all cursor-pointer shadow-sm"
+              >
+                <Globe className="w-4 h-4 text-emerald-400" />
+                <span>Mobile Visitor App</span>
+              </button>
             </div>
 
             {/* Live Metrics Strip - Frosted Glass Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-8 max-w-4xl mx-auto">
-              
+
               <div className="glass-panel p-5 rounded-3xl text-left relative overflow-hidden group">
                 <div className="text-xs uppercase tracking-wider text-white/50 font-semibold mb-1">Wait Duration</div>
                 <div className="text-3xl font-light text-white font-display">-48%</div>
@@ -176,7 +188,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          
+
           {/* Step 1 */}
           <div className="glass-panel p-6 rounded-3xl relative group hover:border-[#8e7dff]/50 transition-all">
             <div className="w-11 h-11 rounded-2xl bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center mb-4 shadow-inner">

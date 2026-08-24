@@ -1,9 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { 
-  Bell, 
-  Search, 
-  Sparkles, 
+import {
+  Bell,
+  Search,
+  Sparkles,
   ExternalLink,
   Activity
 } from 'lucide-react';
@@ -14,20 +14,31 @@ import { CrowdIntelligenceView } from './CrowdIntelligenceView';
 import { AIPredictionsView } from './AIPredictionsView';
 import { CounterOptimizationView } from './CounterOptimizationView';
 import { AppointmentsView } from './AppointmentsView';
+import { DoctorScheduleView } from './DoctorScheduleView';
 import { FairnessLogicView } from './FairnessLogicView';
 import { AnalyticsView } from './AnalyticsView';
+import { CameraMonitorView } from './CameraMonitorView';
 import { CopilotDrawer } from './CopilotDrawer';
-import { 
-  AdminTab, 
-  Counter, 
-  FacilityZone, 
-  PredictionPoint, 
-  Token, 
-  Appointment, 
-  FairnessWeight, 
-  DecisionLogEntry, 
-  SensorNode, 
-  AlertItem 
+import { MyVisitView } from './command/MyVisitView';
+import { MyPatientsView } from './command/MyPatientsView';
+import { RequestsView } from './command/RequestsView';
+import { DoctorDirectoryView } from './command/DoctorDirectoryView';
+import { UsersRolesView } from './command/UsersRolesView';
+import { AuditLogView } from './command/AuditLogView';
+import { canAccessTab, defaultTabForRole } from '../../lib/permissions';
+import { adminApi } from '../services/queueApi';
+import {
+  AdminTab,
+  User,
+  Counter,
+  FacilityZone,
+  PredictionPoint,
+  Token,
+  Appointment,
+  FairnessWeight,
+  DecisionLogEntry,
+  SensorNode,
+  AlertItem
 } from '../types';
 
 interface AdminDashboardProps {
@@ -50,6 +61,8 @@ interface AdminDashboardProps {
   onApplyCounterOptimization: (updatedCounters: Counter[]) => void;
   onNavigateToKiosk: () => void;
   onNavigateToVisitorTracker: () => void;
+  /** Decides which tabs exist and which data each one loads. */
+  user?: User | null;
 }
 
 interface SearchResult {
@@ -82,8 +95,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onApplyCounterOptimization,
   onNavigateToKiosk,
   onNavigateToVisitorTracker,
+  user = null,
 }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isCompactViewport, setIsCompactViewport] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches,
+  );
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [copilotInitialPrompt, setCopilotInitialPrompt] = useState<string | undefined>(undefined);
   const [recommendationApplied, setRecommendationApplied] = useState(false);
@@ -91,6 +108,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const shouldReduceMotion = useReducedMotion();
+
+  // Below lg the sidebar drops to its icon rail so the content keeps room to
+  // breathe; the manual collapse toggle stays in charge on wider screens.
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 1023px)');
+    const sync = (event: MediaQueryList | MediaQueryListEvent) => setIsCompactViewport(event.matches);
+    sync(query);
+    query.addEventListener('change', sync);
+    return () => query.removeEventListener('change', sync);
+  }, []);
+
+  const railCollapsed = sidebarCollapsed || isCompactViewport;
+
+  const role = user?.role ?? null;
+  const isDoctor = role === 'DOCTOR';
+  const canManageDoctors = role === 'SUPER_ADMIN';
+
+  // If the current tab is not available to this role (a role change, or a stale
+  // selection), fall back to that role's home tab. The API refuses the data
+  // either way; this just keeps the screen coherent.
+  useEffect(() => {
+    if (!role) return;
+    if (!canAccessTab(role, currentTab)) {
+      onSelectTab(defaultTabForRole(role));
+    }
+  }, [role, currentTab, onSelectTab]);
 
   const searchResults = useMemo<SearchResult[]>(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -178,23 +221,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     onApplyCounterOptimization(updated);
   };
 
+  const handleAdminAction = async (action: string, payload: any) => {
+    try {
+      if (action === 'appointment.reschedule.approved') {
+        const result = await adminApi.rescheduleAppointment(payload.appointmentId, payload);
+        onUpdateAppointment({
+          ...appointments.find(a => a.id === payload.appointmentId)!,
+          time: payload.newTime,
+          doctor: payload.newDoctor,
+          status: 'Scheduled',
+          estWaitMin: 0,
+        });
+        return result;
+      }
+      return null;
+    } catch (error) {
+      console.error('Admin action failed:', error);
+      throw error;
+    }
+  };
+
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden text-white">
-      
+
       {/* Sidebar Navigation */}
       <Sidebar
         currentTab={currentTab}
         onSelectTab={onSelectTab}
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        collapsed={railCollapsed}
+        onToggleCollapse={isCompactViewport ? undefined : () => setSidebarCollapsed(!sidebarCollapsed)}
+        role={role}
       />
 
       {/* Main Content Area */}
       <div className="flex-1 flex min-h-0 min-w-0 flex-col overflow-x-hidden">
-        
+
         {/* Top Operational Bar (Frosted Glass Header) */}
-        <header className="shrink-0 bg-white/[0.04] border-b border-white/[0.10] backdrop-blur-2xl px-6 py-3.5 flex items-center justify-between z-20 shadow-md">
-          
+        <header className="shrink-0 bg-white/[0.04] border-b border-white/[0.10] backdrop-blur-2xl px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between gap-3 z-20 shadow-md">
+
           <div className="flex items-center gap-4 flex-1 max-w-xl">
             <div className="relative w-full">
               <Search className="w-4 h-4 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -263,7 +327,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
-            
+
             {/* Direct Switch to Visitor Facing screens */}
             <button
               onClick={onNavigateToKiosk}
@@ -280,7 +344,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               title="Open Mobile Patient Token Live Tracker"
             >
               <Activity className="w-3.5 h-3.5 text-[#ff7db8]" />
-              <span>Patient Tracker (A-184)</span>
+              <span>Patient Tracker</span>
             </button>
 
             {/* Notifications Button & Dropdown */}
@@ -320,9 +384,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       {alerts.map((al) => (
                         <div key={al.id} className="p-2.5 rounded-xl bg-white/[0.05] border border-white/[0.08] space-y-0.5">
                           <div className="flex items-center justify-between">
-                            <span className={`font-bold text-[11px] ${
-                              al.severity === 'critical' || al.severity === 'CRITICAL' ? 'text-rose-400' : 'text-amber-400'
-                            }`}>
+                            <span className={`font-bold text-[11px] ${al.severity === 'critical' || al.severity === 'CRITICAL' ? 'text-rose-400' : 'text-amber-400'
+                              }`}>
                               {al.title}
                             </span>
                             <span className="text-[9px] text-white/40 font-mono">{al.time || al.timestamp}</span>
@@ -341,7 +404,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </header>
 
         {/* Tab Body */}
-        <main className="flex-1 min-h-0 overflow-y-auto p-6 max-w-7xl w-full mx-auto">
+        <main className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 max-w-7xl w-full mx-auto">
           <AnimatePresence initial={false} mode="wait">
             <motion.section
               key={currentTab}
@@ -352,71 +415,110 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               transition={{ duration: shouldReduceMotion ? 0 : 0.16, ease: panelEase }}
             >
               {currentTab === 'overview' && (
-            <AdminOverview
-              counters={counters}
-              zones={zones}
-              predictions={predictions}
-              tokens={tokens}
-              onNavigateTab={onSelectTab}
-              onOpenCopilot={handleOpenCopilotWithPrompt}
-              onApplyRecommendation={handleApplyRecommendation}
-              recommendationApplied={recommendationApplied}
-            />
-          )}
+                <AdminOverview
+                  counters={counters}
+                  zones={zones}
+                  predictions={predictions}
+                  tokens={tokens}
+                  onNavigateTab={onSelectTab}
+                  onOpenCopilot={handleOpenCopilotWithPrompt}
+                  onApplyRecommendation={handleApplyRecommendation}
+                  recommendationApplied={recommendationApplied}
+                />
+              )}
 
-          {currentTab === 'live-queue' && (
-            <LiveQueueView
-              tokens={tokens}
-              counters={counters}
-              onUpdateToken={onUpdateToken}
-              onAddToken={onAddToken}
-            />
-          )}
+              {currentTab === 'live-queue' && (
+                <LiveQueueView
+                  tokens={tokens}
+                  counters={counters}
+                  onUpdateToken={onUpdateToken}
+                  onAddToken={onAddToken}
+                />
+              )}
 
-          {currentTab === 'crowd-intel' && (
-            <CrowdIntelligenceView
-              zones={zones}
-              sensors={sensors}
-            />
-          )}
+              {currentTab === 'crowd-intel' && (
+                <CrowdIntelligenceView
+                  zones={zones}
+                  sensors={sensors}
+                />
+              )}
 
-          {currentTab === 'ai-predictions' && (
-            <AIPredictionsView
-              predictions={predictions}
-              onOpenCopilot={handleOpenCopilotWithPrompt}
-              onNavigateCounterOpt={() => onSelectTab('counter-opt')}
-            />
-          )}
+              {currentTab === 'ai-predictions' && (
+                <AIPredictionsView
+                  predictions={predictions}
+                  onOpenCopilot={handleOpenCopilotWithPrompt}
+                  onNavigateCounterOpt={() => onSelectTab('counter-opt')}
+                />
+              )}
 
-          {currentTab === 'counter-opt' && (
-            <CounterOptimizationView
-              counters={counters}
-              onApplyOptimization={onApplyCounterOptimization}
-              onOpenCopilot={handleOpenCopilotWithPrompt}
-            />
-          )}
+              {currentTab === 'counter-opt' && (
+                <CounterOptimizationView
+                  counters={counters}
+                  onApplyOptimization={onApplyCounterOptimization}
+                  onOpenCopilot={handleOpenCopilotWithPrompt}
+                />
+              )}
 
-          {currentTab === 'appointments' && (
-            <AppointmentsView
-              appointments={appointments}
-              onUpdateAppointment={onUpdateAppointment}
-              onAddAppointment={onAddAppointment}
-              onOpenCopilot={handleOpenCopilotWithPrompt}
-            />
-          )}
+              {currentTab === 'appointments' && (
+                <AppointmentsView
+                  appointments={appointments}
+                  onUpdateAppointment={onUpdateAppointment}
+                  onAddAppointment={onAddAppointment}
+                  onOpenCopilot={handleOpenCopilotWithPrompt}
+                />
+              )}
 
-          {currentTab === 'fairness' && (
-            <FairnessLogicView
-              weights={fairnessWeights}
-              decisionLogs={decisionLogs}
-              onUpdateWeight={onUpdateFairnessWeight}
-              onOpenCopilot={handleOpenCopilotWithPrompt}
-            />
-          )}
+              {currentTab === 'doctor-schedule' && (
+                <DoctorScheduleView
+                  appointments={appointments.map((a) => ({
+                    id: a.id,
+                    tokenCode: a.tokenCode,
+                    patientName: a.patientName,
+                    time: a.time,
+                    date: a.date,
+                    doctor: a.doctor,
+                    status: a.status,
+                    service: a.service,
+                    estWaitMin: a.estWaitMin,
+                  }))}
+                  onAppointmentUpdated={onUpdateAppointment}
+                  onAdminAction={handleAdminAction}
+                />
+              )}
+
+              {currentTab === 'fairness' && (
+                <FairnessLogicView
+                  weights={fairnessWeights}
+                  decisionLogs={decisionLogs}
+                  onUpdateWeight={onUpdateFairnessWeight}
+                  onOpenCopilot={handleOpenCopilotWithPrompt}
+                />
+              )}
 
               {currentTab === 'analytics' && (
                 <AnalyticsView />
               )}
+
+              {currentTab === 'camera-monitor' && (
+                <CameraMonitorView />
+              )}
+
+              {/* Patient */}
+              {currentTab === 'my-visit' && (
+                <MyVisitView
+                  onGetToken={onNavigateToKiosk}
+                  onBookAppointment={onNavigateToVisitorTracker}
+                />
+              )}
+
+              {/* Doctor — both views are scoped to the signed-in doctor by the API */}
+              {currentTab === 'requests' && <RequestsView />}
+              {currentTab === 'my-patients' && <MyPatientsView />}
+
+              {/* Management */}
+              {currentTab === 'doctors' && <DoctorDirectoryView canManage={canManageDoctors} />}
+              {currentTab === 'users' && <UsersRolesView />}
+              {currentTab === 'audit' && <AuditLogView />}
             </motion.section>
           </AnimatePresence>
         </main>

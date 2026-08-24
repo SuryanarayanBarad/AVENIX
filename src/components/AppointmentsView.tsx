@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { 
   Search, 
@@ -9,6 +9,8 @@ import {
   PhoneCall
 } from 'lucide-react';
 import { Appointment, ServiceType, DemographicType } from '../types';
+import { visitorApi } from '../services/queueApi';
+import type { DoctorOption, SpecializationOption } from './AppointmentFlow';
 
 const modalEase = [0.22, 1, 0.36, 1] as const;
 
@@ -25,7 +27,11 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   onAddAppointment,
   onOpenCopilot,
 }) => {
-  const [selectedDate, setSelectedDate] = useState<number>(24);
+  const today = new Date();
+  const [selectedDate, setSelectedDate] = useState<number>(today.getDate());
+  const [currentMonth, setCurrentMonth] = useState<number>(today.getMonth());
+  const [currentYear, setCurrentYear] = useState<number>(today.getFullYear());
+  const [showMonthSelector, setShowMonthSelector] = useState(false);
   const [selectedService, setSelectedService] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -33,10 +39,55 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
   // New appointment form state
   const [newPatient, setNewPatient] = useState('');
-  const [newDoctor, setNewDoctor] = useState('Dr. Sarah Jenkins');
-  const [newService, setNewService] = useState<ServiceType>('General Consultation');
+  const [newPhone, setNewPhone] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [newDoctorId, setNewDoctorId] = useState('');
+  const [newSpecialization, setNewSpecialization] = useState<string>('All');
+  const [newReason, setNewReason] = useState('');
   const [newTime, setNewTime] = useState('02:00 PM');
   const [newDemographic] = useState<DemographicType>('Standard');
+  const [isBooking, setIsBooking] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+
+  // The physician and specialty lists are the facility's real records, loaded
+  // when the modal opens so a doctor assigned moments ago is bookable here too.
+  const [directory, setDirectory] = useState<DoctorOption[]>([]);
+  const [specializations, setSpecializations] = useState<SpecializationOption[]>([]);
+  const [isLoadingDirectory, setIsLoadingDirectory] = useState(false);
+
+  useEffect(() => {
+    if (!showAddModal) return;
+    let mounted = true;
+    setIsLoadingDirectory(true);
+    Promise.all([
+      visitorApi.getDoctorDirectory(),
+      visitorApi.getSpecializations().catch(() => []),
+    ])
+      .then(([docs, specs]) => {
+        if (!mounted) return;
+        setDirectory(docs as DoctorOption[]);
+        setSpecializations(specs);
+      })
+      .catch(() => {
+        if (mounted) setBookingError('The doctor list could not be loaded.');
+      })
+      .finally(() => {
+        if (mounted) setIsLoadingDirectory(false);
+      });
+    return () => { mounted = false; };
+  }, [showAddModal]);
+
+  /** Physicians matching the chosen specialty; "All" shows every doctor. */
+  const selectableDoctors = newSpecialization === 'All'
+    ? directory
+    : directory.filter((doc) => (doc.specialization ?? doc.department) === newSpecialization);
+
+  // Never leave a physician selected who is filtered out of view.
+  useEffect(() => {
+    if (newDoctorId && !selectableDoctors.some((doc) => doc.id === newDoctorId)) {
+      setNewDoctorId('');
+    }
+  }, [selectableDoctors, newDoctorId]);
 
   const filteredAppointments = appointments.filter((apt) => {
     const matchesSearch = apt.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -64,26 +115,94 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
     });
   };
 
-  const handleCreateAppointmentSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newApt: Appointment = {
-      id: `apt-${Date.now()}`,
-      tokenCode: `A-${Math.floor(200 + Math.random() * 700)}`,
-      patientName: newPatient.trim() || 'New Patient',
-      time: newTime,
-      date: `2023-10-${selectedDate}`,
-      service: newService,
-      doctor: newDoctor,
-      demographic: newDemographic,
-      priority: newDemographic !== 'Standard' ? 'Priority' : 'Normal',
-      status: 'Scheduled',
-      estWaitMin: 15,
-      notes: 'Scheduled via hospital desk intake',
-    };
+  const handlePrevMonth = () => {
+    if (currentYear === today.getFullYear() && currentMonth === today.getMonth()) return;
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
+  };
 
-    onAddAppointment(newApt);
-    setShowAddModal(false);
-    setNewPatient('');
+  const handleNextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
+  };
+
+  /**
+   * Book a real appointment.
+   *
+   * This used to fabricate an id and a random token code and drop the result
+   * into local state, so nothing was ever persisted and the booking vanished on
+   * refresh. It now goes through the same booking service the patient flow
+   * uses, which means slot-conflict protection, a real token code, and the
+   * doctor's approval step all apply.
+   */
+  const handleCreateAppointmentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isBooking) return;
+
+    // Desk booking: a patient with no mobile can still be booked in. Staff hand
+    // over the printed appointment code instead. A number that IS given must
+    // still be valid, so a typo is not silently accepted as "no contact".
+    const cleanPhone = newPhone.replace(/[\s-()]/g, '');
+    if (cleanPhone && !/^\d{10,}$/.test(cleanPhone)) {
+      setPhoneError('Enter a valid phone number (min 10 digits), or leave it blank for a walk-up patient.');
+      return;
+    }
+    setPhoneError('');
+
+    const doctor = directory.find((doc) => doc.id === newDoctorId);
+    if (!doctor) {
+      setBookingError('Choose an attending physician.');
+      return;
+    }
+
+    const date = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`;
+
+    setIsBooking(true);
+    setBookingError(null);
+    try {
+      const created = await visitorApi.createAppointment({
+        doctorId: doctor.id,
+        date,
+        time: newTime,
+        patientName: newPatient.trim() || 'New Patient',
+        phone: cleanPhone || undefined,
+        reasonForVisit: newReason.trim() || 'Booked at the front desk',
+      } as any);
+
+      // Mirror the saved appointment into the on-screen list straight away.
+      onAddAppointment({
+        id: created.id,
+        tokenCode: created.appointmentId ?? created.id,
+        patientName: newPatient.trim() || 'New Patient',
+        time: newTime,
+        date,
+        service: (doctor.specialization ?? doctor.department) as ServiceType,
+        doctor: doctor.name,
+        demographic: newDemographic,
+        priority: newDemographic !== 'Standard' ? 'Priority' : 'Normal',
+        status: 'Scheduled',
+        estWaitMin: 15,
+        notes: `Phone: ${newPhone}`,
+      });
+
+      setShowAddModal(false);
+      setNewPatient('');
+      setNewPhone('');
+      setNewReason('');
+      setNewDoctorId('');
+    } catch (err: any) {
+      setBookingError(err?.message || 'That appointment could not be booked.');
+    } finally {
+      setIsBooking(false);
+    }
   };
 
   return (
@@ -121,12 +240,56 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           {/* Calendar Widget (Frosted Glass Panel) */}
           <div className="glass-panel-elevated rounded-3xl p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-sm text-white font-display">October 2023</span>
+              <div className="relative">
+                <button 
+                  onClick={() => setShowMonthSelector(!showMonthSelector)}
+                  className="font-bold text-sm text-white font-display flex items-center gap-1 hover:text-white/80 cursor-pointer"
+                >
+                  {new Date(currentYear, currentMonth).toLocaleString('default', { month: 'long', year: 'numeric' })}
+                </button>
+                {showMonthSelector && (
+                  <div className="absolute top-full left-0 mt-2 w-52 p-3 rounded-2xl bg-[#12122b] border border-white/[0.25] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] z-50">
+                    <div className="flex items-center justify-between mb-3 px-1">
+                       <button onClick={() => {
+                         if (currentYear > today.getFullYear()) setCurrentYear(currentYear - 1);
+                       }} disabled={currentYear <= today.getFullYear()} className={`p-1 rounded-md ${currentYear <= today.getFullYear() ? 'text-white/20 cursor-not-allowed' : 'text-white/70 hover:bg-white/[0.1] hover:text-white cursor-pointer'}`}>
+                         <ChevronLeft className="w-4 h-4" />
+                       </button>
+                       <span className="text-xs font-bold text-white">{currentYear}</span>
+                       <button onClick={() => setCurrentYear(currentYear + 1)} className="p-1 text-white/70 hover:bg-white/[0.1] hover:text-white rounded-md cursor-pointer">
+                         <ChevronRight className="w-4 h-4" />
+                       </button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {Array.from({ length: 12 }, (_, i) => {
+                        const isDisabled = currentYear === today.getFullYear() && i < today.getMonth();
+                        return (
+                          <button
+                            key={i}
+                            disabled={isDisabled}
+                            onClick={() => {
+                              setCurrentMonth(i);
+                              setShowMonthSelector(false);
+                            }}
+                            className={`text-xs py-1.5 rounded-lg font-medium ${isDisabled ? 'text-white/20 cursor-not-allowed' : currentMonth === i ? 'bg-[#8e7dff] text-white' : 'text-white/70 hover:bg-white/[0.08] hover:text-white cursor-pointer'}`}
+                          >
+                            {new Date(2000, i).toLocaleString('default', { month: 'short' })}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="flex items-center gap-1">
-                <button className="p-1.5 text-white/50 hover:text-white rounded-xl hover:bg-white/[0.08] transition-colors cursor-pointer">
+                <button 
+                  onClick={handlePrevMonth}
+                  disabled={currentYear === today.getFullYear() && currentMonth === today.getMonth()}
+                  className={`p-1.5 rounded-xl transition-colors ${currentYear === today.getFullYear() && currentMonth === today.getMonth() ? 'text-white/20 cursor-not-allowed' : 'text-white/50 hover:text-white hover:bg-white/[0.08] cursor-pointer'}`}
+                >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <button className="p-1.5 text-white/50 hover:text-white rounded-xl hover:bg-white/[0.08] transition-colors cursor-pointer">
+                <button onClick={handleNextMonth} className="p-1.5 text-white/50 hover:text-white rounded-xl hover:bg-white/[0.08] transition-colors cursor-pointer">
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
@@ -139,10 +302,10 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
             {/* Dates Grid */}
             <div className="grid grid-cols-7 gap-1 text-center text-xs">
-              {[...Array(31)].map((_, index) => {
+              {[...Array(new Date(currentYear, currentMonth + 1, 0).getDate())].map((_, index) => {
                 const day = index + 1;
                 const isSelected = selectedDate === day;
-                const isToday = day === 24;
+                const isToday = day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear();
 
                 return (
                   <button
@@ -157,7 +320,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                     }`}
                   >
                     <span>{day}</span>
-                    {day === 24 && !isSelected && (
+                    {isToday && !isSelected && (
                       <span className="w-1 h-1 rounded-full bg-[#8e7dff] mx-auto block mt-0.5" />
                     )}
                   </button>
@@ -375,6 +538,23 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                 />
               </div>
 
+              <div>
+                <label className="block text-white/80 font-bold mb-1.5">Phone Number <span className="font-normal text-white/45">(optional)</span></label>
+                <input
+                  type="tel"
+                  placeholder="Optional — leave blank if the patient has no phone"
+                  value={newPhone}
+                  onChange={(e) => {
+                    setNewPhone(e.target.value);
+                    if (phoneError) setPhoneError('');
+                  }}
+                  className={`w-full px-4 py-2.5 glass-input rounded-2xl placeholder-white/40 text-white ${phoneError ? 'border-red-500/50 focus:border-red-500' : ''}`}
+                />
+                {phoneError && (
+                  <p className="text-red-400 mt-1.5 text-[10px] font-medium">{phoneError}</p>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-white/80 font-bold mb-1.5">Time Slot</label>
@@ -390,14 +570,24 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                 <div>
                   <label className="block text-white/80 font-bold mb-1.5">Specialty Service</label>
                   <select
-                    value={newService}
-                    onChange={(e) => setNewService(e.target.value as ServiceType)}
+                    value={newSpecialization}
+                    onChange={(e) => setNewSpecialization(e.target.value)}
                     className="w-full px-4 py-2.5 glass-input rounded-2xl text-white font-medium bg-[#12122b]"
                   >
-                    <option value="General Consultation" className="bg-[#12122b] text-white">General Consultation</option>
-                    <option value="Pediatrics" className="bg-[#12122b] text-white">Pediatrics</option>
-                    <option value="Specialist Appointments" className="bg-[#12122b] text-white">Specialist Appointments</option>
-                    <option value="Billing & Discharge" className="bg-[#12122b] text-white">Billing</option>
+                    {/* Every specialization the facility has, All first. */}
+                    <option value="All" className="bg-[#12122b] text-white">
+                      All specializations ({directory.length})
+                    </option>
+                    {specializations.map((spec) => (
+                      <option
+                        key={spec.id}
+                        value={spec.name}
+                        disabled={spec.doctorCount === 0}
+                        className="bg-[#12122b] text-white"
+                      >
+                        {spec.name} ({spec.doctorCount})
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -405,15 +595,44 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               <div>
                 <label className="block text-white/80 font-bold mb-1.5">Attending Physician</label>
                 <select
-                  value={newDoctor}
-                  onChange={(e) => setNewDoctor(e.target.value)}
-                  className="w-full px-4 py-2.5 glass-input rounded-2xl text-white font-medium bg-[#12122b]"
+                  required
+                  value={newDoctorId}
+                  onChange={(e) => setNewDoctorId(e.target.value)}
+                  disabled={isLoadingDirectory || selectableDoctors.length === 0}
+                  className="w-full px-4 py-2.5 glass-input rounded-2xl text-white font-medium bg-[#12122b] disabled:opacity-60"
                 >
-                  <option value="Dr. Sarah Jenkins" className="bg-[#12122b] text-white">Dr. Sarah Jenkins (General OPD)</option>
-                  <option value="Dr. Marcus Vance" className="bg-[#12122b] text-white">Dr. Marcus Vance (Pediatrics)</option>
-                  <option value="Dr. Robert Zhao" className="bg-[#12122b] text-white">Dr. Robert Zhao (Specialist)</option>
+                  <option value="" className="bg-[#12122b] text-white">
+                    {isLoadingDirectory
+                      ? 'Loading physicians…'
+                      : selectableDoctors.length === 0
+                        ? 'No physician assigned to this specialty'
+                        : 'Select a physician…'}
+                  </option>
+                  {selectableDoctors.map((doc) => (
+                    <option key={doc.id} value={doc.id} className="bg-[#12122b] text-white">
+                      {doc.name} ({doc.specialization ?? doc.department})
+                      {doc.status && doc.status !== 'Available' ? ` — ${doc.status}` : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
+
+              <div>
+                <label className="block text-white/80 font-bold mb-1.5">Reason for Visit</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Follow-up on blood pressure"
+                  value={newReason}
+                  onChange={(e) => setNewReason(e.target.value)}
+                  className="w-full px-4 py-2.5 glass-input rounded-2xl placeholder-white/40 text-white"
+                />
+              </div>
+
+              {bookingError && (
+                <p className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-2.5 text-[11px] font-medium text-red-300">
+                  {bookingError}
+                </p>
+              )}
 
               <div className="pt-4 flex items-center justify-end gap-2.5">
                 <button
@@ -425,9 +644,10 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#8e7dff] to-purple-600 hover:opacity-90 text-white font-bold shadow-lg shadow-[#8e7dff]/30 cursor-pointer border border-white/20"
+                  disabled={isBooking}
+                  className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#8e7dff] to-purple-600 hover:opacity-90 disabled:opacity-60 text-white font-bold shadow-lg shadow-[#8e7dff]/30 cursor-pointer border border-white/20"
                 >
-                  Confirm Booking
+                  {isBooking ? 'Booking…' : 'Confirm Booking'}
                 </button>
               </div>
             </form>

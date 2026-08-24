@@ -21,8 +21,28 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
   const [timeHorizon, setTimeHorizon] = useState<'15m' | '30m' | '1h' | '4h' | 'today'>('1h');
   const [surgeMultiplier, setSurgeMultiplier] = useState<number>(1.0);
 
+  // How many hourly slots each horizon covers. The series is hourly, so the
+  // sub-hour horizons both show the next slot — they differ in the surge window
+  // the copilot reasons about, not in how much of the curve is drawn.
+  const HORIZON_SLOTS: Record<typeof timeHorizon, number> = {
+    '15m': 1,
+    '30m': 1,
+    '1h': 2,
+    '4h': 5,
+    today: predictions.length,
+  };
+
+  // The horizon pills used to change only their own highlight — the chart below
+  // always drew the full day regardless of which one was selected. They now
+  // actually narrow the forecast window.
+  const horizonPredictions = predictions.slice(0, Math.max(1, HORIZON_SLOTS[timeHorizon]));
+
+  // Bar spacing follows the number of slots on screen so the chart fills its
+  // frame at any horizon, keeping the same look as the full-day view.
+  const barStep = Math.max(46, Math.min(58, 440 / Math.max(1, HORIZON_SLOTS[timeHorizon])));
+
   // Scaled prediction based on simulated surge
-  const scaledPredictions = predictions.map((p) => ({
+  const scaledPredictions = horizonPredictions.map((p) => ({
     ...p,
     predictedArrivals: Math.round(p.predictedArrivals * surgeMultiplier),
     predictedWaitMin: Math.round(p.predictedWaitMin * (1 + (surgeMultiplier - 1) * 1.4)),
@@ -170,7 +190,7 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
               <line x1="0" y1="120" x2="500" y2="120" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
 
               {scaledPredictions.map((pt, i) => {
-                const x = 30 + i * 58;
+                const x = 30 + i * barStep;
                 const histHeight = pt.historicalArrivals * 1.2;
                 const predHeight = pt.predictedArrivals * 1.2;
 
@@ -245,7 +265,7 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
 
               {/* Data points */}
               {scaledPredictions.map((pt, i) => {
-                const x = 30 + i * 58;
+                const x = 30 + i * barStep;
                 const y = 160 - pt.predictedWaitMin * 3.5;
                 const isOverSLA = pt.predictedWaitMin > 20;
 

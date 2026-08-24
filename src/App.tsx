@@ -1,33 +1,50 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Navbar } from './components/Navbar';
 import { LandingPage } from './components/LandingPage';
+import { AuthModal } from './components/AuthModal';
+import { ProfileModal } from './components/ProfileModal';
+import { authApi } from './services/authApi';
+import { User } from './types';
 import { VisitorKiosk } from './components/VisitorKiosk';
 import { VisitorTokenView } from './components/VisitorTokenView';
+import { PatientTrackerCarousel } from './components/PatientTrackerCarousel';
 import { AdminDashboard } from './components/AdminDashboard';
-import { 
-  AppView, 
-  AdminTab, 
-  Token, 
-  Counter, 
-  FacilityZone, 
-  SensorNode, 
-  PredictionPoint, 
-  Appointment, 
-  FairnessWeight, 
-  DecisionLogEntry, 
-  AlertItem 
+import { SuperAdminDashboard } from './components/SuperAdminDashboard';
+import { DoctorDashboard } from './components/DoctorDashboard';
+import { VisitorStart, WalkInTokenFlow } from './components/VisitorFlow';
+
+import type { PublicQueueToken } from './components/VisitorFlow';
+import { AppointmentFlow } from './components/AppointmentFlow';
+import type { PublicAppointment, DoctorOption } from './components/AppointmentFlow';
+import { visitorApi, adminApi } from './services/queueApi';
+import { doctorApi } from './services/doctorApi';
+import { useLiveUpdates } from './hooks/useLiveUpdates';
+import { defaultTabForRole } from '../lib/permissions';
+import { cameraService } from './services/cameraService';
+import {
+  AppView,
+  AdminTab,
+  Token,
+  Counter,
+  FacilityZone,
+  SensorNode,
+  PredictionPoint,
+  Appointment,
+  FairnessWeight,
+  DecisionLogEntry,
+  AlertItem
 } from './types';
-import { 
-  mockCounters, 
-  mockZones, 
-  mockSensors, 
-  mockPredictions, 
-  mockTokens, 
-  mockAppointments, 
-  mockFairnessWeights, 
-  mockDecisionLogs, 
-  mockAlerts 
+import {
+  mockCounters,
+  mockZones,
+  mockSensors,
+  mockPredictions,
+  mockTokens,
+  mockAppointments,
+  mockFairnessWeights,
+  mockDecisionLogs,
+  mockAlerts
 } from './data/mockData';
 
 const screenEase = [0.22, 1, 0.36, 1] as const;
@@ -37,12 +54,116 @@ export default function App() {
   const [currentAdminTab, setCurrentAdminTab] = useState<AdminTab>('overview');
   const shouldReduceMotion = useReducedMotion();
 
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  // Live visitor flow state (API-backed)
+  const [liveToken, setLiveToken] = useState<PublicQueueToken | null>(null);
+  const [liveAppointment, setLiveAppointment] = useState<PublicAppointment | null>(null);
+  const [doctorList, setDoctorList] = useState<DoctorOption[]>([]);
+
+  useEffect(() => {
+    // Check for Google OAuth callback params in URL hash
+    const hash = window.location.hash.substring(1);
+    if (hash) {
+      const params = new URLSearchParams(hash);
+      const hashToken = params.get('auth_token');
+      const hashUserStr = params.get('auth_user');
+      const hashError = params.get('auth_error');
+
+      if (hashToken && hashUserStr) {
+        try {
+          const hashUser = JSON.parse(decodeURIComponent(hashUserStr));
+          window.localStorage.setItem('auth_token', hashToken);
+          setUser(hashUser);
+          
+          if (hashUser.role === 'VISITOR') {
+            visitorApi.getMyActiveToken().then(token => {
+              if (token) setLiveToken(token);
+            }).catch(() => {});
+          }
+          
+          // Clear hash
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          setIsAuthLoading(false);
+          return;
+        } catch (e) {
+          console.error("Failed to parse user from hash");
+        }
+      } else if (hashError) {
+        // Clear hash but maybe we want to show it in UI? For now just clear it.
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        // Could pass to a global error state here if needed
+      }
+    }
+
+    authApi.verify()
+      .then(res => {
+        setUser(res.user);
+        // Try restoring token for authenticated user
+        if (res.user.role === 'VISITOR') {
+          visitorApi.getMyActiveToken().then(token => {
+            if (token) setLiveToken(token);
+          }).catch(() => {});
+        }
+      })
+      .catch(() => {
+        setUser(null);
+        // Fallback for unauthenticated user: check localStorage
+        const storedTokenId = window.localStorage.getItem('queuemind:active-visitor-token');
+        if (storedTokenId) {
+          visitorApi.getToken(storedTokenId)
+            .then(token => {
+              if (token.status === 'Waiting' || token.status === 'Approaching' || token.status === 'Serving') {
+                setLiveToken(token);
+              } else {
+                window.localStorage.removeItem('queuemind:active-visitor-token');
+              }
+            })
+            .catch(() => window.localStorage.removeItem('queuemind:active-visitor-token'));
+        }
+      })
+      .finally(() => setIsAuthLoading(false));
+  }, []);
+
+  const handleLogout = () => {
+    authApi.logout();
+    cameraService.stop();
+    setUser(null);
+    setLiveToken(null);
+    setIsProfileModalOpen(false);
+    if (currentView === 'super-admin' || currentView === 'admin' || currentView === 'doctor') {
+      setCurrentView('visitor');
+    }
+  };
+
+  useEffect(() => {
+    if (!user) {
+      if (currentView === 'super-admin' || currentView === 'admin' || currentView === 'doctor') {
+        setCurrentView('visitor');
+      }
+    } else if (currentView === 'super-admin' && user.role !== 'SUPER_ADMIN') {
+      setCurrentView('visitor');
+    } else if (currentView === 'doctor' && user.role !== 'DOCTOR') {
+      setCurrentView('visitor');
+    }
+  }, [user, currentView]);
+
+
   // Application Data States
   const [counters, setCounters] = useState<Counter[]>(mockCounters);
   const [zones, setZones] = useState<FacilityZone[]>(mockZones);
   const [sensors, setSensors] = useState<SensorNode[]>(mockSensors);
   const [predictions, setPredictions] = useState<PredictionPoint[]>(mockPredictions);
+  // The live queue is real data. mockTokens only seeds the first paint so the
+  // Command Center is never blank while the first fetch is in flight — this is
+  // what made the board disagree with the visitor's own "people ahead" count.
   const [tokens, setTokens] = useState<Token[]>(mockTokens);
+  // Lets the live stream trigger the same refetch the poller uses.
+  const queueRefetchRef = useRef<(() => void) | null>(null);
+
   const [appointments, setAppointments] = useState<Appointment[]>(mockAppointments);
   const [fairnessWeights, setFairnessWeights] = useState<FairnessWeight[]>(mockFairnessWeights);
   const [decisionLogs, setDecisionLogs] = useState<DecisionLogEntry[]>(mockDecisionLogs);
@@ -51,21 +172,123 @@ export default function App() {
   // Active visitor token (default to A-184 for instant tracking)
   const [activeVisitorToken, setActiveVisitorToken] = useState<Token>(mockTokens[0]);
 
+  // Selected token for detail view in patient-tracker carousel
+  const [selectedTrackerToken, setSelectedTrackerToken] = useState<Token | null>(null);
+
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, [currentView]);
 
+  // Keep the Command Center on the real queue. Doctors read their own scoped
+  // queue; staff and above read the facility board. Patients never poll it.
+  useEffect(() => {
+    const role = user?.role;
+    if (!role || role === 'VISITOR') return;
+
+    let mounted = true;
+    const fetchQueue = async () => {
+      try {
+        const live = role === 'DOCTOR'
+          ? await doctorApi.getQueue()
+          : await adminApi.getTokens();
+        if (!mounted) return;
+        setTokens(live as Token[]);
+      } catch {
+        // Leave the last good list in place rather than emptying the board.
+      }
+    };
+
+    fetchQueue();
+    // Polling is the safety net; the live stream below is what makes changes
+    // appear at once.
+    const interval = setInterval(fetchQueue, 10000);
+    queueRefetchRef.current = fetchQueue;
+    return () => {
+      mounted = false;
+      queueRefetchRef.current = null;
+      clearInterval(interval);
+    };
+  }, [user?.role]);
+
+  // Any queue or appointment change anywhere refreshes the board immediately.
+  useLiveUpdates(() => queueRefetchRef.current?.(), { enabled: !!user && user.role !== 'VISITOR' });
+
+  // A signed-in visitor's own token drives the nav pill, so it has to track the
+  // real one — including the moment it is issued, edited or cancelled.
+  const refreshMyToken = async () => {
+    try {
+      const mine = await visitorApi.getMyActiveToken();
+      setLiveToken(mine);
+    } catch {
+      // Keep whatever we already had rather than blanking the pill.
+    }
+  };
+
+  useEffect(() => {
+    if (!user || user.role !== 'VISITOR') return;
+    refreshMyToken();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  useLiveUpdates(() => refreshMyToken(), { enabled: !!user && user.role === 'VISITOR' });
+
+  const isAdminOrAbove = (u: User | null) => u?.role === 'ADMIN' || u?.role === 'SUPER_ADMIN';
+
   const navigateToView = (view: AppView) => {
-    if (view !== currentView) {
-      setCurrentView(view);
+    let targetView = view;
+
+    // The Command Center is role-aware, so opening it always starts on the tab
+    // that role owns (patients land on My Visit, staff on the live queue).
+    if (view === 'admin' && user) {
+      setCurrentAdminTab(defaultTabForRole(user.role));
+    }
+
+    // Role-based routing for Live Queue
+    if (view === 'patient-tracker') {
+      // A doctor gets the tracker scoped to their own queue by the API.
+      if (!isAdminOrAbove(user) && user?.role !== 'DOCTOR') {
+        if (liveToken) {
+          targetView = 'visitor-queue';
+        } else {
+          targetView = 'visitor'; // Or Kiosk if we prefer, but visitor walk-in is safer
+        }
+      }
+    }
+
+    if (targetView !== currentView) {
+      if (currentView === 'patient-tracker') {
+        setSelectedTrackerToken(null);
+      }
+      setCurrentView(targetView);
     }
   };
 
   // Handler when user generates a token in the kiosk
-  const handleTokenCreatedInKiosk = (newToken: Token) => {
+  /** A token was issued at the kiosk. Record it, but stay on the ticket screen. */
+  const handleTokenIssuedAtKiosk = (newToken: Token) => {
     setTokens(prev => [newToken, ...prev]);
     setActiveVisitorToken(newToken);
-    navigateToView('patient-tracker');
+    // Keeps the nav pill current without waiting for the next poll.
+    refreshMyToken();
+  };
+
+  /**
+   * "Track on mobile" from the kiosk ticket. Loads the token's public view and
+   * opens the live tracker on it. Going via `patient-tracker` sent anonymous
+   * visitors to the start screen and admins to the facility board — neither
+   * showed the token that was just issued.
+   */
+  const handleTrackKioskToken = async (newToken: Token) => {
+    handleTokenIssuedAtKiosk(newToken);
+    try {
+      const publicToken = await visitorApi.getToken(newToken.id);
+      setLiveToken(publicToken);
+      window.localStorage.setItem('queuemind:active-visitor-token', publicToken.id);
+      setCurrentView('visitor-queue');
+    } catch {
+      // Without the access key we cannot open the private view; the kiosk
+      // ticket stays on screen rather than dumping the visitor somewhere blank.
+    }
   };
 
   // Handler for updating token status
@@ -101,16 +324,49 @@ export default function App() {
     setCounters(updatedCounters);
   };
 
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a16] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#8e7dff] via-indigo-500 to-[#ff7db8] flex items-center justify-center text-white shadow-lg shadow-[#8e7dff]/25 animate-pulse">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+          </div>
+          <p className="text-white/60 font-medium text-sm tracking-wide">Initializing QueueMind AI...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen frosted-canvas text-white flex flex-col font-sans antialiased selection:bg-[#8e7dff] selection:text-white">
-      
+
       {/* Global Navigation Header */}
       <Navbar
         currentView={currentView}
         onSelectView={navigateToView}
-        activeTokenCode={activeVisitorToken?.code}
+        user={user}
+        onLoginClick={() => setIsAuthModalOpen(true)}
+        onLogout={handleLogout}
+        onProfileClick={() => setIsProfileModalOpen(true)}
       />
 
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        user={user}
+        onClose={() => setIsProfileModalOpen(false)}
+        onSaved={(updated) => setUser(updated)}
+      />
+
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+        onLoginSuccess={(u) => {
+          setUser(u);
+          if (u.role === 'SUPER_ADMIN') setCurrentView('super-admin');
+          else if (u.role === 'ADMIN') setCurrentView('admin');
+          else if (u.role === 'DOCTOR') setCurrentView('doctor');
+        }} 
+      />
       {/* Main View Switcher */}
       <div className="relative flex-1 overflow-x-clip">
         <AnimatePresence initial={false} mode="wait">
@@ -130,21 +386,113 @@ export default function App() {
                   navigateToView('admin');
                 }}
                 onLaunchTracker={() => navigateToView('patient-tracker')}
+                onLaunchVisitor={() => navigateToView('visitor')}
               />
             )}
 
             {currentView === 'kiosk' && (
               <VisitorKiosk
-                onTokenGenerated={handleTokenCreatedInKiosk}
+                user={user}
+                onIssueToken={handleTokenIssuedAtKiosk}
+                onTokenGenerated={handleTrackKioskToken}
                 onBackToHome={() => navigateToView('landing')}
               />
             )}
 
             {currentView === 'patient-tracker' && (
+              selectedTrackerToken ? (
+                <VisitorTokenView
+                  token={selectedTrackerToken}
+                  onUpdateToken={(updated) => {
+                    handleUpdateToken(updated);
+                    setSelectedTrackerToken(updated);
+                  }}
+                  onBackToKiosk={() => setSelectedTrackerToken(null)}
+                  onGetNewToken={() => navigateToView('kiosk')}
+                />
+              ) : (
+                <PatientTrackerCarousel
+                  tokens={tokens}
+                  onUpdateToken={handleUpdateToken}
+                  onSelectToken={(token) => setSelectedTrackerToken(token)}
+                  onBack={() => navigateToView('landing')}
+                  user={user}
+                />
+              )
+            )}
+
+            {currentView === 'visitor-queue' && liveToken && (
               <VisitorTokenView
-                token={activeVisitorToken}
-                onUpdateToken={handleUpdateToken}
-                onBackToKiosk={() => navigateToView('kiosk')}
+                token={liveToken}
+                onBackToKiosk={() => navigateToView('landing')}
+                onGetNewToken={() => navigateToView('kiosk')}
+              />
+            )}
+
+            {/* Visitor QR Flow — Walk-in Token */}
+            {currentView === 'visitor' && (
+              <VisitorStart
+                facilityName="CityCare Hospital"
+                onStartWalkIn={() => navigateToView('visitor-token')}
+                onStartAppointment={() => {
+                  visitorApi.getDoctors(new Date().toISOString().slice(0, 10))
+                    .then(setDoctorList)
+                    .catch(() => {});
+                  navigateToView('visitor-appointment');
+                }}
+              />
+            )}
+
+            {currentView === 'visitor-token' && (
+              <WalkInTokenFlow
+                user={user}
+                facilityName="CityCare Hospital"
+                initialToken={liveToken}
+                onCreateToken={async (request) => {
+                  const token = await visitorApi.createToken(request);
+                  setLiveToken(token);
+                  window.localStorage.setItem('queuemind:active-visitor-token', token.id);
+                  return token;
+                }}
+                onRefreshToken={async (tokenId) => {
+                  const token = await visitorApi.getToken(tokenId);
+                  setLiveToken(token);
+                  return token;
+                }}
+                onBack={() => navigateToView('visitor')}
+                onBookAppointment={() => {
+                  visitorApi.getDoctors(new Date().toISOString().slice(0, 10))
+                    .then(setDoctorList)
+                    .catch(() => {});
+                  navigateToView('visitor-appointment');
+                }}
+              />
+            )}
+
+            {currentView === 'visitor-appointment' && (
+              <AppointmentFlow
+                user={user}
+                doctors={doctorList}
+                initialAppointment={liveAppointment}
+                onGetSlots={(doctorId, date) =>
+                  visitorApi.getAvailableTimes(doctorId, date)
+                }
+                onCreateAppointment={async (request) => {
+                  const appointment = await visitorApi.createAppointment(request);
+                  setLiveAppointment(appointment);
+                  return appointment;
+                }}
+                onRefreshAppointment={async (appointmentId) => {
+                  const appointment = await visitorApi.getAppointment(appointmentId);
+                  setLiveAppointment(appointment);
+                  return appointment;
+                }}
+                onRequestAnotherTime={async (appointment) => {
+                  const updated = await visitorApi.requestAnotherAppointmentTime(appointment);
+                  setLiveAppointment(updated);
+                  return updated;
+                }}
+                onBack={() => navigateToView('visitor')}
               />
             )}
 
@@ -168,8 +516,17 @@ export default function App() {
                 onUpdateFairnessWeight={handleUpdateFairnessWeight}
                 onApplyCounterOptimization={handleApplyCounterOptimization}
                 onNavigateToKiosk={() => navigateToView('kiosk')}
-                onNavigateToVisitorTracker={() => navigateToView('patient-tracker')}
+                onNavigateToVisitorTracker={() => navigateToView('visitor-appointment')}
+                user={user}
               />
+            )}
+
+            {currentView === 'super-admin' && (
+              <SuperAdminDashboard />
+            )}
+
+            {currentView === 'doctor' && (
+              <DoctorDashboard user={user as User} onLogout={handleLogout} />
             )}
           </motion.main>
         </AnimatePresence>

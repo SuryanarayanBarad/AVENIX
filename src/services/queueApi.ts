@@ -1,5 +1,7 @@
 import type { AppointmentRequest, DoctorOption, PublicAppointment } from '../components/AppointmentFlow';
 import type { PublicQueueToken, VisitorServiceOption, WalkInTokenRequest } from '../components/VisitorFlow';
+import type { PublicDoctor } from '../types';
+import { apiFetch, authHeaders } from './apiClient';
 
 const TOKEN_KEY_PREFIX = 'queuemind:visitor-token:';
 const APPOINTMENT_KEY_PREFIX = 'queuemind:visitor-appointment:';
@@ -23,24 +25,18 @@ const storeKey = (prefix: string, id: string, accessKey?: string) => {
   }
 };
 
-const request = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
-  const response = await fetch(path, {
+const request = <T>(path: string, init: RequestInit = {}): Promise<T> =>
+  apiFetch<T>(path, {
     ...init,
-    headers: {
-      Accept: 'application/json',
-      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(init.headers ?? {}),
-    },
+    auth: false,
+    fallback: 'The facility service could not complete your request',
+  }).catch((error: any) => {
+    // Slot collisions get a plain-language message instead of a raw 409.
+    if (error?.status === 409) {
+      throw new Error('That appointment time is no longer available. Please choose another time.');
+    }
+    throw error;
   });
-
-  const payload = await response.json().catch(() => ({} as ApiErrorPayload));
-  if (!response.ok) {
-    const detail = (payload as ApiErrorPayload).message || (payload as ApiErrorPayload).error;
-    if (response.status === 409) throw new Error('That appointment time is no longer available. Please choose another time.');
-    throw new Error(detail || 'The facility service could not complete your request.');
-  }
-  return payload as T;
-};
 
 const mapAppointment = (raw: any, accessKey?: string): PublicAppointment => ({
   id: raw.id,
@@ -53,7 +49,11 @@ const mapAppointment = (raw: any, accessKey?: string): PublicAppointment => ({
   patientName: raw.patientName,
   reasonForVisit: raw.reasonForVisit ?? 'Your visit details are protected.',
   phoneMasked: raw.phoneMasked ?? raw.maskedPhone ?? '••••••••',
-  status: raw.status === 'Scheduled' ? 'Scheduled' : raw.status === 'Updated' ? 'Updated' : raw.status === 'Cancelled' ? 'Cancelled' : 'Confirmed',
+  // Pass the server's own wording through. Collapsing unknown values to
+  // "Confirmed" used to tell patients an unapproved request was confirmed.
+  status: (raw.status ?? 'Confirmed') as PublicAppointment['status'],
+  lifecycleStatus: raw.lifecycleStatus,
+  awaitingApproval: raw.awaitingApproval ?? raw.lifecycleStatus === 'Pending',
   accessKey,
   notification: raw.notification,
 });
@@ -68,20 +68,128 @@ export const visitorApi = {
     const token = await request<PublicQueueToken & { accessKey?: string }>('/api/visitor/tokens', {
       method: 'POST',
       body: JSON.stringify(input),
+      headers: {
+        'Authorization': `Bearer ${window.localStorage.getItem('auth_token') || ''}`,
+      }
     });
     storeKey(TOKEN_KEY_PREFIX, token.id, token.accessKey);
     return token;
   },
 
+  async getMyActiveToken(): Promise<PublicQueueToken | null> {
+    try {
+      const result = await request<{ token: PublicQueueToken | null }>('/api/visitor/my-token', {
+        headers: {
+          'Authorization': `Bearer ${window.localStorage.getItem('auth_token') || ''}`,
+        }
+      });
+      return result.token;
+    } catch {
+      return null;
+    }
+  },
+
   async getToken(tokenId: string, accessKey?: string): Promise<PublicQueueToken> {
     const key = accessKey || getStoredKey(TOKEN_KEY_PREFIX, tokenId);
-    if (!key) throw new Error('This private token link is missing its access key.');
-    const result = await request<PublicQueueToken>(`/api/visitor/tokens/${encodeURIComponent(tokenId)}?accessKey=${encodeURIComponent(key)}`);
+    const authHeader = window.localStorage.getItem('auth_token');
+    if (!key && !authHeader) throw new Error('This private token link is missing its access key or authentication.');
+    
+    let url = `/api/visitor/tokens/${encodeURIComponent(tokenId)}`;
+    if (key) url += `?accessKey=${encodeURIComponent(key)}`;
+    
+    const result = await request<PublicQueueToken>(url, {
+      headers: authHeader ? { 'Authorization': `Bearer ${authHeader}` } : undefined
+    });
+    return result;
+  },
+
+  /** Correct your own token. Changing service re-queues you at the back. */
+  async updateToken(tokenId: string, changes: { name?: string; phone?: string; serviceId?: string }): Promise<PublicQueueToken & { requeued?: boolean }> {
+    const key = getStoredKey(TOKEN_KEY_PREFIX, tokenId);
+    const authHeader = window.localStorage.getItem('auth_token');
+    let url = `/api/visitor/tokens/${encodeURIComponent(tokenId)}`;
+    if (key) url += `?accessKey=${encodeURIComponent(key)}`;
+    return request<PublicQueueToken & { requeued?: boolean }>(url, {
+      method: 'PATCH',
+      body: JSON.stringify(changes),
+      headers: authHeader ? { Authorization: `Bearer ${authHeader}` } : undefined,
+    });
+  },
+
+  /**
+   * Confirm the consultation is finished. Frees the slot and, if this token was
+   * the one being served, calls the next person forward.
+   */
+  async completeToken(tokenId: string): Promise<{ completed: PublicQueueToken; calledNext: { code: string } | null; wasBeingServed?: boolean }> {
+    const key = getStoredKey(TOKEN_KEY_PREFIX, tokenId);
+    const authHeader = window.localStorage.getItem('auth_token');
+    let url = `/api/visitor/tokens/${encodeURIComponent(tokenId)}/complete`;
+    if (key) url += `?accessKey=${encodeURIComponent(key)}`;
+    return request(url, {
+      method: 'POST',
+      headers: authHeader ? { Authorization: `Bearer ${authHeader}` } : undefined,
+    });
+  },
+
+  /** Give up your place in the queue. A new token starts at the back. */
+  async cancelToken(tokenId: string): Promise<{ cancelled: boolean; id: string }> {
+    const key = getStoredKey(TOKEN_KEY_PREFIX, tokenId);
+    const authHeader = window.localStorage.getItem('auth_token');
+    let url = `/api/visitor/tokens/${encodeURIComponent(tokenId)}`;
+    if (key) url += `?accessKey=${encodeURIComponent(key)}`;
+    return request<{ cancelled: boolean; id: string }>(url, {
+      method: 'DELETE',
+      headers: authHeader ? { Authorization: `Bearer ${authHeader}` } : undefined,
+    });
+  },
+
+  async getQueuePosition(tokenId: string, accessKey?: string): Promise<any> {
+    const key = accessKey || getStoredKey(TOKEN_KEY_PREFIX, tokenId);
+    const authHeader = window.localStorage.getItem('auth_token');
+    if (!key && !authHeader) throw new Error('This private token link is missing its access key or authentication.');
+    
+    let url = `/api/visitor/tokens/${encodeURIComponent(tokenId)}/queue-position`;
+    if (key) url += `?accessKey=${encodeURIComponent(key)}`;
+
+    const result = await request<any>(url, {
+      headers: authHeader ? { 'Authorization': `Bearer ${authHeader}` } : undefined
+    });
     return result;
   },
 
   async getDoctors(date: string): Promise<DoctorOption[]> {
     const result = await request<{ doctors: DoctorOption[] }>(`/api/visitor/doctors?date=${encodeURIComponent(date)}`);
+    return result.doctors;
+  },
+
+  /** Every specialization the facility has, with its assigned doctor count. */
+  async getSpecializations(): Promise<{ id: string; name: string; doctorCount: number }[]> {
+    const result = await request<{ specializations: { id: string; name: string; doctorCount: number }[] }>(
+      '/api/visitor/specializations',
+    );
+    return result.specializations;
+  },
+
+  /** The signed-in patient's own bookings. Scoped server-side by account. */
+  async getMyAppointments(): Promise<any[]> {
+    const result = await apiFetch<{ appointments: any[] }>('/api/visitor/my-appointments', {
+      fallback: 'Your appointments could not be loaded',
+    });
+    return result.appointments;
+  },
+
+  /** Appointments and walk-in visits together — the full visit history. */
+  async getMyVisitHistory(): Promise<{ appointments: any[]; visits: any[] }> {
+    const result = await apiFetch<{ appointments: any[]; visits: any[] }>('/api/visitor/my-appointments', {
+      fallback: 'Your visit history could not be loaded',
+    });
+    return { appointments: result.appointments ?? [], visits: result.visits ?? [] };
+  },
+
+  /** Public doctor directory (photo, specialization, experience). No account data. */
+  async getDoctorDirectory(date?: string): Promise<PublicDoctor[]> {
+    const day = date ?? new Date().toISOString().slice(0, 10);
+    const result = await request<{ doctors: PublicDoctor[] }>(`/api/visitor/doctors?date=${encodeURIComponent(day)}`);
     return result.doctors;
   },
 
@@ -122,7 +230,9 @@ export const visitorApi = {
   },
 };
 
-const staffHeaders = { 'X-QueueMind-Role': 'manager' };
+// Admin calls are authenticated with the session JWT (see services/apiClient).
+// The server derives the caller's role from that token; the browser never
+// asserts its own role.
 
 export interface AdminScheduleAppointment {
   id: string;
@@ -140,14 +250,20 @@ export interface AdminScheduleAppointment {
 }
 
 export const adminApi = {
+  async getTokens(search?: string): Promise<any> {
+    const url = search ? `/api/admin/tokens?search=${encodeURIComponent(search)}` : '/api/admin/tokens';
+    const result = await request<{ tokens: any[] }>(url, { headers: authHeaders() });
+    return result.tokens;
+  },
+
   async getDoctorSchedule(date: string): Promise<any> {
-    return request(`/api/admin/doctor-schedule?date=${encodeURIComponent(date)}`, { headers: staffHeaders });
+    return request(`/api/admin/doctor-schedule?date=${encodeURIComponent(date)}`, { headers: authHeaders() });
   },
 
   async updateDoctorAvailability(doctorId: string, availability: Record<string, unknown>): Promise<any> {
     return request(`/api/admin/doctors/${encodeURIComponent(doctorId)}/availability`, {
       method: 'PATCH',
-      headers: staffHeaders,
+      headers: authHeaders(),
       body: JSON.stringify(availability),
     });
   },
@@ -155,9 +271,14 @@ export const adminApi = {
   async rescheduleAppointment(appointmentId: string, payload: Record<string, unknown>): Promise<any> {
     return request(`/api/admin/appointments/${encodeURIComponent(appointmentId)}/reschedule`, {
       method: 'POST',
-      headers: staffHeaders,
+      headers: authHeaders(),
       body: JSON.stringify(payload),
     });
+  },
+
+  /** Read-only doctor directory for ADMIN / MANAGER / SUPER_ADMIN. */
+  async getDoctors(): Promise<{ doctors: any[]; canManage: boolean }> {
+    return request(`/api/admin/doctors`, { headers: authHeaders() });
   },
 };
 
