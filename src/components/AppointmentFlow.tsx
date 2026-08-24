@@ -186,11 +186,27 @@ export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
 
   const doctor = useMemo(() => availableDoctors.find((candidate) => candidate.id === doctorId), [doctorId, availableDoctors]);
 
-  // Filtering away the selected doctor clears the selection, so the flow can
-  // never carry a doctor the patient can no longer see.
+  /**
+   * Keep the selected doctor consistent with what is on screen.
+   *
+   * This was two effects that fought each other: one cleared the selection when
+   * a specialization filter hid the chosen doctor, the other immediately
+   * re-selected doctors[0] — which the same filter hid again. Whenever the
+   * filter excluded the first doctor the pair ping-ponged every render, and the
+   * whole form visibly flickered while the patient was typing their name or
+   * picking a date.
+   *
+   * One effect, and it converges: it only ever selects a doctor that is
+   * visible, so the next run finds nothing to change.
+   */
   useEffect(() => {
-    if (doctorId && !visibleDoctors.some((candidate) => candidate.id === doctorId)) {
-      setDoctorId('');
+    if (visibleDoctors.length === 0) {
+      if (doctorId) setDoctorId('');
+      return;
+    }
+    const stillVisible = visibleDoctors.some((candidate) => candidate.id === doctorId);
+    if (!stillVisible) {
+      setDoctorId(visibleDoctors[0].id);
     }
   }, [visibleDoctors, doctorId]);
 
@@ -208,9 +224,7 @@ export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
     }
   }, [initialAppointment]);
 
-  useEffect(() => {
-    if (!doctorId && doctors[0]) setDoctorId(doctors[0].id);
-  }, [doctorId, doctors]);
+
 
   const loadSlots = async () => {
     if (!doctorId || !date) return;
