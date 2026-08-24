@@ -8,6 +8,41 @@
   --breakpoint-xs: 26.25rem; /* 420px */
 }
 
+/* ---------------------------------------------------------------------------
+   Preclinic palette
+   ---------------------------------------------------------------------------
+   Sampled directly from the Preclinic UI kit cover art rather than guessed, so
+   these are the kit's actual values. It is a LIGHT theme — white cards on a
+   near-white page, deep indigo as the primary, teal as the accent — which is
+   the opposite of the dark glass the rest of the app still uses. Both sets live
+   here during the migration so a screen can be moved over one at a time
+   instead of the whole app changing at once.
+--------------------------------------------------------------------------- */
+:root {
+  --pc-primary: #2E37A4;
+  --pc-primary-hover: #262E8C;
+  --pc-primary-soft: #4B54B1;
+  --pc-primary-bright: #3438CD;
+  --pc-accent: #00D3C7;
+  --pc-accent-soft: #2ABADB;
+
+  --pc-surface: #FFFFFF;
+  --pc-page: #F5F6F8;
+  --pc-tint-lilac: #EDEDF7;
+  --pc-tint-mint: #E9F5F5;
+  --pc-tint-pink: #F9F0F6;
+
+  --pc-text: #1B1D2A;
+  --pc-text-muted: #6B7280;
+  --pc-border: #E4E7EC;
+  --pc-border-strong: #C1C5CE;
+
+  --pc-success: #40AA9E;
+  --pc-warning: #E04F16;
+  --pc-danger: #E5484D;
+  --pc-danger-soft: #F78F8E;
+}
+
 :root {
   --glass-bg: rgba(255, 255, 255, 0.07);
   --glass-bg-hover: rgba(255, 255, 255, 0.12);
@@ -169,6 +204,81 @@
   color: #ffffff;
   box-shadow: 0 0 15px rgba(142, 125, 255, 0.35);
 }
+
+/* ---------------------------------------------------------------------------
+   Preclinic surfaces
+   ---------------------------------------------------------------------------
+   Light counterparts to the glass-* utilities, so a screen can be moved to the
+   new design by swapping class names rather than rewriting its markup.
+--------------------------------------------------------------------------- */
+.pc-card {
+  background: var(--pc-surface);
+  border: 1px solid var(--pc-border);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 12px 32px -8px rgba(46, 55, 164, 0.10);
+}
+
+.pc-input {
+  background: var(--pc-surface);
+  border: 1px solid var(--pc-border);
+  color: var(--pc-text);
+  transition-property: background-color, border-color, box-shadow;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--motion-ease);
+}
+
+.pc-input::placeholder { color: var(--pc-border-strong); }
+
+.pc-input:focus {
+  border-color: var(--pc-primary);
+  box-shadow: 0 0 0 4px rgba(46, 55, 164, 0.12);
+  outline: none;
+}
+
+.pc-input:focus-visible { outline: none; }
+
+/* The primary action. The lift is on transform and shadow only, so it stays
+   cheap to animate on a mid-range phone. */
+.pc-btn-primary {
+  background: var(--pc-primary);
+  color: #fff;
+  border: 1px solid transparent;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 8px 20px -6px rgba(46, 55, 164, 0.45);
+  transition-property: transform, background-color, box-shadow, opacity;
+  transition-duration: var(--motion-standard);
+  transition-timing-function: var(--motion-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pc-btn-primary:not(:disabled):hover {
+    background: var(--pc-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(16, 24, 40, 0.06), 0 14px 28px -8px rgba(46, 55, 164, 0.55);
+    filter: none;
+  }
+}
+
+.pc-btn-primary:not(:disabled):active { transform: translateY(0) scale(0.985); }
+.pc-btn-primary:disabled { opacity: 0.6; box-shadow: none; }
+
+.pc-btn-ghost {
+  background: var(--pc-surface);
+  color: var(--pc-text);
+  border: 1px solid var(--pc-border);
+  transition-property: transform, background-color, border-color, box-shadow;
+  transition-duration: var(--motion-standard);
+  transition-timing-function: var(--motion-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pc-btn-ghost:not(:disabled):hover {
+    background: var(--pc-page);
+    border-color: var(--pc-border-strong);
+    transform: translateY(-1px);
+    filter: none;
+  }
+}
+
+.pc-btn-ghost:not(:disabled):active { transform: translateY(0) scale(0.985); }
 
 /* Animations */
 @keyframes pulse-subtle {

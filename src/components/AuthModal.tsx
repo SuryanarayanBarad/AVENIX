@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { Mail, Lock, User as UserIcon, Shield } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, Shield, Plus, ArrowRight } from 'lucide-react';
 import { authApi } from '../services/authApi';
 import { wakeServer } from '../services/apiClient';
 import { User } from '../types';
@@ -13,14 +13,22 @@ interface AuthModalProps {
 
 const modalEase = [0.22, 1, 0.36, 1] as const;
 
+/**
+ * Sign in / create account.
+ *
+ * Styled from the Preclinic UI kit — light surface, deep indigo primary, teal
+ * accent — using the tokens sampled from that kit in index.css. The behaviour
+ * underneath is unchanged and entirely ours: the same endpoints, the same
+ * VISITOR-only registration rule, the same cold-start handling.
+ */
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
   const shouldReduceMotion = useReducedMotion();
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -62,7 +70,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
     e.preventDefault();
     setError('');
     setLoading(true);
-    
+
     try {
       let res;
       if (mode === 'login') {
@@ -94,127 +102,205 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
 
   if (!isOpen) return null;
 
+  const isRegister = mode === 'register';
+
   return (
     <AnimatePresence initial={false}>
       <motion.div
-        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md"
+        className="fixed inset-0 z-[60] flex items-center justify-center bg-[#0F1330]/55 p-4 backdrop-blur-sm"
         initial={shouldReduceMotion ? false : { opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: shouldReduceMotion ? 0 : 0.14, ease: modalEase }}
+        transition={{ duration: shouldReduceMotion ? 0 : 0.16, ease: modalEase }}
         onClick={onClose}
       >
         <motion.div
-          className="w-full max-w-sm overflow-hidden rounded-3xl border border-white/[0.20] bg-[#12122b]/95 text-white shadow-2xl glass-panel-elevated backdrop-blur-2xl"
+          className="w-full max-w-[400px] overflow-hidden rounded-3xl pc-card"
           role="dialog"
           aria-modal="true"
-          initial={shouldReduceMotion ? false : { opacity: 0, y: 14, scale: 0.97 }}
+          aria-labelledby="auth-title"
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 16, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 8, scale: 0.98 }}
-          transition={{ duration: shouldReduceMotion ? 0 : 0.2, ease: modalEase }}
+          exit={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 10, scale: 0.98 }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.24, ease: modalEase }}
           onClick={(event) => event.stopPropagation()}
         >
-          <div className="p-6 pb-4">
-            <h3 className="font-bold text-xl font-display text-white text-center">
-              {mode === 'login' ? 'Welcome Back' : 'Create Account'}
-            </h3>
-            <p className="text-xs text-white/60 text-center mt-1">
-              {mode === 'login' ? 'Sign in to access the QueueMind Dashboard' : 'Sign up to manage operations'}
-            </p>
+          {/* Brand header — the kit's indigo, with its teal accent on the mark */}
+          <div className="relative overflow-hidden bg-[var(--pc-primary)] px-6 pt-6 pb-7 text-white">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-[var(--pc-accent)]/25 blur-2xl"
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -left-10 bottom-[-3rem] h-28 w-28 rounded-full bg-white/10 blur-2xl"
+            />
+
+            <div className="relative flex items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25">
+                <Plus className="h-5 w-5 text-[var(--pc-accent)]" strokeWidth={3} />
+              </span>
+              <span className="font-display text-base font-bold tracking-tight">QueueMind</span>
+            </div>
+
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={mode}
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: -4 }}
+                transition={{ duration: shouldReduceMotion ? 0 : 0.18, ease: modalEase }}
+                className="relative mt-4"
+              >
+                <h3 id="auth-title" className="font-display text-xl font-bold tracking-tight">
+                  {isRegister ? 'Create your account' : 'Welcome back'}
+                </h3>
+                <p className="mt-1 text-xs text-white/70">
+                  {isRegister
+                    ? 'Sign up to book appointments and track your visit.'
+                    : 'Sign in to continue to your dashboard.'}
+                </p>
+              </motion.div>
+            </AnimatePresence>
           </div>
 
-          <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-4 text-xs">
-            {error && (
-              <div className="bg-red-500/20 border border-red-500/50 text-red-300 px-4 py-2.5 rounded-xl font-medium text-center">
-                {error}
-              </div>
-            )}
+          <form onSubmit={handleSubmit} className="space-y-4 px-6 py-6 text-sm">
+            <AnimatePresence initial={false}>
+              {error && (
+                <motion.div
+                  role="alert"
+                  initial={shouldReduceMotion ? false : { opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                  transition={{ duration: shouldReduceMotion ? 0 : 0.18, ease: modalEase }}
+                  className="overflow-hidden"
+                >
+                  <p className="rounded-xl border border-[var(--pc-danger-soft)] bg-[#FEF3F2] px-3.5 py-2.5 text-xs font-medium text-[var(--pc-danger)]">
+                    {error}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {mode === 'register' && (
-              <div>
-                <label className="block text-white/80 font-bold mb-1.5">Full Name</label>
-                <div className="relative">
-                  <UserIcon className="w-4 h-4 text-white/40 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Dr. Julian Sarah"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2.5 glass-input rounded-2xl placeholder-white/40 text-white"
-                  />
-                </div>
-              </div>
-            )}
+            <AnimatePresence initial={false}>
+              {isRegister && (
+                <motion.div
+                  initial={shouldReduceMotion ? false : { opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                  transition={{ duration: shouldReduceMotion ? 0 : 0.2, ease: modalEase }}
+                  className="overflow-hidden"
+                >
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-semibold text-[var(--pc-text)]">Full name</span>
+                    <span className="relative block">
+                      <UserIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--pc-border-strong)]" />
+                      <input
+                        type="text"
+                        required={isRegister}
+                        autoComplete="name"
+                        placeholder="e.g. Julian Sarah"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="pc-input w-full rounded-xl py-3 pl-10 pr-4 text-sm"
+                      />
+                    </span>
+                  </label>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            <div>
-              <label className="block text-white/80 font-bold mb-1.5">Email Address</label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-white/40 absolute left-3 top-1/2 -translate-y-1/2" />
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold text-[var(--pc-text)]">Email address</span>
+              <span className="relative block">
+                <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--pc-border-strong)]" />
                 <input
                   type="email"
                   required
+                  autoComplete="email"
                   placeholder="name@hospital.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 glass-input rounded-2xl placeholder-white/40 text-white"
+                  className="pc-input w-full rounded-xl py-3 pl-10 pr-4 text-sm"
                 />
-              </div>
-            </div>
+              </span>
+            </label>
 
-            <div>
-              <label className="block text-white/80 font-bold mb-1.5">Password</label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-white/40 absolute left-3 top-1/2 -translate-y-1/2" />
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold text-[var(--pc-text)]">Password</span>
+              <span className="relative block">
+                <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--pc-border-strong)]" />
                 <input
                   type="password"
                   required
+                  autoComplete={isRegister ? 'new-password' : 'current-password'}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 glass-input rounded-2xl placeholder-white/40 text-white"
+                  className="pc-input w-full rounded-xl py-3 pl-10 pr-4 text-sm"
                 />
-              </div>
-            </div>
+              </span>
+            </label>
 
-            {mode === 'register' && (
-              <p className="flex items-start gap-2 rounded-2xl border border-white/[0.10] bg-white/[0.04] px-3.5 py-2.5 text-[11px] leading-relaxed text-white/60">
-                <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-white/40" />
-                New accounts start as a visitor. Staff and clinical access is granted by an administrator.
-              </p>
-            )}
+            <AnimatePresence initial={false}>
+              {isRegister && (
+                <motion.div
+                  initial={shouldReduceMotion ? false : { opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                  transition={{ duration: shouldReduceMotion ? 0 : 0.2, ease: modalEase }}
+                  className="overflow-hidden"
+                >
+                  <p className="flex items-start gap-2 rounded-xl bg-[var(--pc-tint-lilac)] px-3.5 py-2.5 text-[11px] leading-relaxed text-[var(--pc-text-muted)]">
+                    <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--pc-primary)]" />
+                    New accounts start as a visitor. Staff and clinical access is granted by an administrator.
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            <div className="pt-2">
+            <div className="pt-1">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full px-5 py-3 rounded-2xl bg-gradient-to-r from-[#8e7dff] to-purple-600 hover:opacity-90 text-white font-bold shadow-lg shadow-[#8e7dff]/30 cursor-pointer border border-white/20 disabled:opacity-50"
+                className="pc-btn-primary group flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold cursor-pointer"
               >
-                {loading ? busyLabel : mode === 'login' ? 'Sign In' : 'Create Account'}
+                <span>{loading ? busyLabel : isRegister ? 'Create account' : 'Sign in'}</span>
+                {!loading && (
+                  <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                )}
               </button>
 
-              {loading && waitStage > 0 && (
-                <p className="mt-2 text-center text-[11px] leading-relaxed text-white/50">
-                  {waitStage === 2
-                    ? 'This host sleeps when nobody is using it. The first request wakes it, which can take up to a minute — nothing has been lost.'
-                    : 'Free hosting pauses when idle. Hang on a few seconds while it starts back up.'}
-                </p>
-              )}
+              <AnimatePresence initial={false}>
+                {loading && waitStage > 0 && (
+                  <motion.p
+                    initial={shouldReduceMotion ? false : { opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: shouldReduceMotion ? 0 : 0.18, ease: modalEase }}
+                    className="mt-2.5 text-center text-[11px] leading-relaxed text-[var(--pc-text-muted)]"
+                  >
+                    {waitStage === 2
+                      ? 'This host sleeps when nobody is using it. The first request wakes it, which can take up to a minute — nothing has been lost.'
+                      : 'Free hosting pauses when idle. Hang on a few seconds while it starts back up.'}
+                  </motion.p>
+                )}
+              </AnimatePresence>
             </div>
 
-            <div className="relative flex items-center py-2">
-              <div className="flex-grow border-t border-white/[0.1]"></div>
-              <span className="flex-shrink-0 mx-4 text-white/40 font-medium text-[10px] uppercase">or</span>
-              <div className="flex-grow border-t border-white/[0.1]"></div>
+            <div className="flex items-center gap-3 py-1">
+              <span className="h-px flex-grow bg-[var(--pc-border)]" />
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--pc-text-muted)]">or</span>
+              <span className="h-px flex-grow bg-[var(--pc-border)]" />
             </div>
 
             <button
               type="button"
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 px-5 py-3 rounded-2xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.15] text-white font-semibold text-sm transition-all cursor-pointer disabled:opacity-50"
+              className="pc-btn-ghost flex w-full items-center justify-center gap-3 rounded-xl px-5 py-3.5 text-sm font-semibold cursor-pointer disabled:opacity-60"
             >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -223,18 +309,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
               Continue with Google
             </button>
 
-            <div className="text-center pt-2">
+            <p className="pt-1 text-center text-xs text-[var(--pc-text-muted)]">
+              {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}
               <button
                 type="button"
                 onClick={() => {
-                  setMode(mode === 'login' ? 'register' : 'login');
+                  setMode(isRegister ? 'login' : 'register');
                   setError('');
                 }}
-                className="text-white/60 hover:text-white font-medium underline decoration-white/30 hover:decoration-white transition-all cursor-pointer"
+                className="font-bold text-[var(--pc-primary)] underline decoration-transparent underline-offset-2 transition-colors hover:decoration-[var(--pc-primary)] cursor-pointer"
               >
-                {mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+                {isRegister ? 'Sign in' : 'Sign up'}
               </button>
-            </div>
+            </p>
           </form>
         </motion.div>
       </motion.div>
