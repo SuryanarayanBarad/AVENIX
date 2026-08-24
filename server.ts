@@ -36,6 +36,7 @@ import {
   APPROVED_STATUSES,
   DENIAL_REASONS,
   QUEUE_ELIGIBLE_STATUSES,
+  TERMINAL_STATUSES,
   resolveDenialReason,
   approvalRate,
   canTransition,
@@ -313,6 +314,37 @@ function requireVisitorAccess(req: express.Request, accessKeyHash: string, targe
   if (!accessKeyMatches(accessKeyFromRequest(req), accessKeyHash)) {
     recordAudit({ id: 'visitor', role: 'visitor-capability' }, 'visitor_access', targetType, targetId, 'denied');
     throw new ApiError(403, 'VISITOR_ACCESS_DENIED', 'A valid private access key is required.');
+  }
+}
+
+/**
+ * Staff who operate the queue may read any token on it.
+ *
+ * Ownership checks previously admitted only the token's owner or somebody
+ * holding its private access key, so an admin clicking a row on the live board
+ * — a board built for them, listing that exact token — was told "a valid
+ * private access key is required". The role is read from the database, never
+ * from the JWT claim, so a stale token cannot grant this.
+ */
+async function callerRunsTheQueue(req: express.Request): Promise<boolean> {
+  const authHeader = req.header('authorization');
+  if (!authHeader?.startsWith('Bearer ')) return false;
+  try {
+    const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as { userId: string };
+    // getCachedUser is a cache probe, not a loader: it returns undefined on a
+    // miss, which is the normal case. Read through to the database, exactly as
+    // the other role checks do, or a cold cache silently denies every admin.
+    let user: any = getCachedUser(payload.userId);
+    if (user === undefined) {
+      user = await prisma.user.findFirst({
+        where: { id: payload.userId, deletedAt: null },
+        include: { doctor: { select: { id: true } } },
+      });
+      setCachedUser(payload.userId, user);
+    }
+    return !!user && hasPermission(user.role, 'queue:read');
+  } catch {
+    return false;
   }
 }
 
@@ -897,7 +929,12 @@ function dispatchNotification(): NotificationDispatchResult {
 }
 
 async function createNotification(
-  appointment: { id: string; doctorId: string; phone: string | null; code: string },
+  appointment: {
+    id: string; doctorId: string; phone: string | null; code: string;
+    // Optional so existing callers are unaffected; used only to make the
+    // doctor's notice say who moved and to when.
+    patientName?: string; date?: string;
+  },
   previousTime: string,
   newTime: string,
 ) {
@@ -933,7 +970,62 @@ async function createNotification(
     dispatchedAt,
   });
 
+  // The doctor is the other party to this change and was never told about it.
+  // Their queue, their day, their patient — a reschedule that only reaches the
+  // patient leaves the doctor working from a stale schedule.
+  await notifyDoctorOfReschedule(appointment, doctor, previousTime, newTime);
+
   return notification;
+}
+
+/**
+ * Tell the doctor their schedule moved.
+ *
+ * Push if they have subscribed, email if an address is on file, and a console
+ * line either way so the change is traceable when neither is configured.
+ * Never throws: a failed notice must not roll back a completed reschedule.
+ */
+async function notifyDoctorOfReschedule(
+  appointment: { id: string; code: string; date?: string; patientName?: string; time?: string },
+  doctor: { id: string; name: string; userId?: string | null },
+  previousTime: string,
+  newTime: string,
+): Promise<void> {
+  try {
+    if (!doctor.userId) {
+      console.log(`\u2139\uFE0F  Dr. ${doctor.name} has no linked login; reschedule notice not delivered for ${appointment.code}.`);
+      return;
+    }
+
+    const account = await prisma.user.findFirst({
+      where: { id: doctor.userId, deletedAt: null },
+      select: { email: true },
+    });
+
+    const detail = {
+      patientName: appointment.patientName ?? 'A patient',
+      date: appointment.date ?? serviceDayKey(),
+      previousTime,
+      newTime,
+      code: appointment.code,
+    };
+
+    const { pushService } = await import('./lib/pushService.js');
+    await pushService.sendToUser(
+      doctor.userId,
+      'Schedule changed',
+      `${detail.patientName} (${appointment.code}) moved to ${formatTime(newTime)}.`,
+      { appointmentId: appointment.id },
+    ).catch(() => undefined);
+
+    if (account?.email) {
+      const { emailService } = await import('./lib/emailService.js');
+      await emailService.notifyDoctorRescheduled(account.email, doctor.name, detail).catch(() => undefined);
+    }
+  } catch (error) {
+    // A failed notice must never roll back a reschedule that already happened.
+    console.error('Failed to notify doctor of reschedule:', error);
+  }
 }
 
 function notificationPublicView(notification: { id: string; type: string; title: string; message: string; previousTime: string; newTime: string; deliveryStatus: string; createdAt: Date | string; response: string | null }) {
@@ -984,6 +1076,15 @@ async function findNextRecommendedSlot(
 const apiKey = process.env.GEMINI_API_KEY;
 let ai: GoogleGenAI | null = null;
 
+/**
+ * Newest Flash model available on this key, confirmed against the models list
+ * rather than assumed. Flash over Pro on purpose: the copilot summarises a
+ * small factual snapshot, which is exactly what Flash is fast and cheap at.
+ */
+const COPILOT_MODEL = 'gemini-3.7-flash';
+/** Used only when the primary is momentarily overloaded (503 UNAVAILABLE). */
+const COPILOT_FALLBACK_MODEL = 'gemini-3.6-flash';
+
 if (apiKey) {
   ai = new GoogleGenAI({
     apiKey,
@@ -995,113 +1096,218 @@ if (apiKey) {
   });
 }
 
-// System prompt for QueueMind Copilot
-const COPILOT_SYSTEM_INSTRUCTION = `
-You are QueueMind Copilot, an expert AI crowd intelligence and queue optimization assistant for CityCare Hospital.
-You have real-time visibility into the hospital's LiDAR and thermal sensor matrix, active service counters, visitor tokens, wait time SLAs, and priority fairness rules.
+/**
+ * QueueMind Copilot
+ * ---------------------------------------------------------------------------
+ * The instruction used to carry a fabricated hospital in its own text: 147
+ * waiting patients, eight counters, 42 LiDAR nodes, a fairness score of 94.
+ * None of it came from the database, so the assistant answered confidently
+ * about a hospital that did not exist while the real queue held five tokens.
+ * The client then layered mock counters and zones on top of that.
+ *
+ * Now the server builds its own snapshot from live tables and the model is told
+ * to use nothing else. That is also what makes it cheap: a compact factual
+ * snapshot costs a fraction of the invented prose it replaces, so replies are
+ * both true and faster.
+ */
+const COPILOT_SYSTEM_INSTRUCTION = `You are QueueMind Copilot, the queue assistant for a hospital's operations team.
 
-Current Hospital Operating Context:
-- Total Waiting Patients: 147
-- Active Counters: 8 (Counter 01 General Triage [High Load: 24 people, 22m wait], Counter 02 Pediatrics [Optimal: 12 people, 14m wait], Counter 03 Pharmacy [Overloaded: 35 people, 28m wait], Counter 04 Specialist [Underutilized: 8 people, 11m wait], Counter 05 Registration [Idle], Counter 06 Billing [Optimal], Counter 07 Emergency [Active], Counter 08 General [Closed/Backup]).
-- Zone Densities: Main Waiting Lounge 90% (Critical), Emergency 80%, Pharmacy 85%, Registration 20%, Billing 20%.
-- Sensors: 42 Active Nodes (18 LiDAR point-cloud nodes, 24 Thermal privacy-first sensors).
-- Fairness Score: 94/100 (Protected elderly 2.0x, pediatric 1.75x, emergency immediate override).
+Answer ONLY from the SNAPSHOT provided with each question. It is the live state of this hospital.
+If the snapshot does not contain what is needed, say so plainly and name what is missing. Never invent counters, sensors, patient counts, wait times, or scores.
 
-Respond in a concise, authoritative, and data-backed manner.
-Whenever applicable, provide:
-1. Direct answer with clear statistics
-2. Root-cause explanation
-3. Recommended actionable step (e.g. Open Counter 05, Reallocate Counter 04 to General Consultation, Dispatch Pharmacy runner)
-4. Estimated Impact (e.g. Reduce average wait from 18m to 9m, prevent SLA breach).
-Keep responses clear and formatted with markdown bullet points.
-`;
+Style:
+- Lead with the direct answer in one sentence.
+- Then at most three short bullets of supporting numbers, drawn from the snapshot.
+- If action is warranted, end with one line starting "Do this:" naming a single concrete step.
+- Use plain markdown. No headings. Under 120 words.
+- If the queue is empty or quiet, say that instead of manufacturing a problem.`;
+
+/** How many recent turns to send. Older context is rarely worth its tokens. */
+const COPILOT_HISTORY_TURNS = 4;
+
+/**
+ * A compact, factual snapshot of the facility right now.
+ *
+ * Deliberately terse: every field is one the assistant can be asked about, and
+ * nothing is included that it cannot act on. Held briefly so a burst of
+ * questions does not re-query the database for each one.
+ */
+let copilotSnapshotCache: { at: number; value: any } | null = null;
+const COPILOT_SNAPSHOT_TTL_MS = 10_000;
+
+async function buildCopilotSnapshot() {
+  if (copilotSnapshotCache && Date.now() - copilotSnapshotCache.at < COPILOT_SNAPSHOT_TTL_MS) {
+    return copilotSnapshotCache.value;
+  }
+
+  const facility = await getCachedFacility();
+  if (!facility) return { error: 'No facility configured.' };
+
+  const today = serviceDayKey();
+  const [tokens, services, appointments, doctors] = await Promise.all([
+    TokenRepo.findAllActiveForFacility(facility.id),
+    getCachedServices(facility.id),
+    prisma.appointment.findMany({
+      where: { facilityId: facility.id, date: today, deletedAt: null },
+      select: { status: true, doctorId: true },
+    }),
+    prisma.doctor.findMany({
+      where: { facilityId: facility.id, isActive: true },
+      select: { id: true, name: true, department: { select: { name: true } } },
+    }),
+  ]);
+
+  const aheadByToken = computeAheadCounts(tokens as any);
+  const waits = tokens
+    .filter((t: any) => t.status === 'Waiting')
+    .map((t: any) => (aheadByToken.get(t.id) ?? 0) * 1.7);
+
+  // Per service, only where somebody is actually queueing.
+  const byService = services
+    .map((svc: any) => {
+      const queued = tokens.filter((t: any) => t.serviceId === svc.id && t.status === 'Waiting').length;
+      const serving = tokens.filter((t: any) => t.serviceId === svc.id && t.status === 'Serving').length;
+      return { service: svc.name, counter: svc.defaultCounterName ?? null, waiting: queued, serving };
+    })
+    .filter((row: any) => row.waiting > 0 || row.serving > 0);
+
+  const apptByStatus: Record<string, number> = {};
+  for (const a of appointments) apptByStatus[a.status] = (apptByStatus[a.status] || 0) + 1;
+
+  const value = {
+    facility: facility.name,
+    serviceDay: today,
+    queue: {
+      waiting: tokens.filter((t: any) => t.status === 'Waiting').length,
+      serving: tokens.filter((t: any) => t.status === 'Serving').length,
+      longestWaitMin: waits.length ? Math.round(Math.max(...waits)) : 0,
+      byService,
+    },
+    appointmentsToday: { total: appointments.length, ...apptByStatus },
+    // Capped: the roster is context, not the subject. A long list is tokens
+    // spent on names the question did not mention.
+    doctorCount: doctors.length,
+    doctors: doctors.slice(0, 12).map((d) => ({ name: d.name, department: d.department?.name ?? null })),
+  };
+
+  copilotSnapshotCache = { at: Date.now(), value };
+  return value;
+}
+
+/**
+ * Follow-up questions worth asking, chosen from what the snapshot actually
+ * shows. The previous three were hardcoded and identical on every reply, so
+ * they suggested reassigning a counter that does not exist.
+ */
+function copilotSuggestions(snapshot: any): string[] {
+  const out: string[] = [];
+  const q = snapshot?.queue;
+  if (!q) return ['What is the current queue status?'];
+
+  if (q.waiting === 0 && q.serving === 0) {
+    return ['Is anything waiting right now?', 'What is booked for today?', 'Which doctors are on today?'];
+  }
+  const busiest = [...(q.byService ?? [])].sort((a: any, b: any) => b.waiting - a.waiting)[0];
+  if (busiest && busiest.waiting > 0) out.push(`Why is ${busiest.service} the longest queue?`);
+  if (q.longestWaitMin >= 15) out.push('Who has been waiting longest, and what should I do?');
+  if (snapshot.appointmentsToday?.Pending) out.push(`Which ${snapshot.appointmentsToday.Pending} appointments still need approval?`);
+  out.push('Summarise the queue right now');
+  return out.slice(0, 3);
+}
 
 // API endpoint for QueueMind Copilot Chat
-app.post('/api/copilot/chat', async (req, res) => {
-  try {
-    const prompt = req.body.prompt || req.body.message;
-    const context = req.body.context;
-
-    if (!prompt) {
-      return res.status(400).json({ error: 'Prompt is required' });
-    }
-
-    if (ai) {
-      try {
-        const contents: any[] = [];
-        if (req.body.history && Array.isArray(req.body.history)) {
-          contents.push(...req.body.history);
-        }
-
-        const lastMessageText = `${context ? `Additional Live Telemetry:\n${JSON.stringify(context, null, 2)}\n\n` : ''}User Query: ${prompt}`;
-        contents.push({ role: 'user', parts: [{ text: lastMessageText }] });
-
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.7-flash',
-          contents,
-          config: {
-            systemInstruction: COPILOT_SYSTEM_INSTRUCTION,
-            temperature: 0.7,
-          },
-        });
-
-        return res.json({
-          reply: response.text || 'Recommendation formulated based on sensor telemetries.',
-          confidence: 94,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        });
-      } catch (geminiError) {
-        console.warn('Gemini API call failed, using intelligent simulation engine:', geminiError);
-      }
-    }
-
-    // Fallback intelligent reasoning simulation
-    const lower = prompt.toLowerCase();
-    let reply = '';
-    let confidence = 94;
-    let reasoningCard: any = null;
-
-    if (lower.includes('which counter') || lower.includes('open counter') || lower.includes('recommendation')) {
-      reply = `**Recommendation: Open Counter 05 for General Consultation Overflow**\n\n- **Current Bottleneck:** Counter 01 (General Triage) is at 88% capacity with 24 patients waiting (22m avg wait).\n- **Underutilized Capacity:** Counter 05 (Registration) has zero backlog and staff Ava is currently idle.\n- **Action:** Transition Counter 05 to dual General Consultation / Registration mode.\n- **Simulated Impact:** Average wait drops from **18 mins → 9 mins** (-50% reduction) within 15 minutes of execution.`;
-      reasoningCard = {
-        title: 'Open Counter 05 (Overflow)',
-        confidence: 96,
-        recommendation: 'Reassign Counter 05 to General Consultation triage',
-        impactWait: '-50% (18m → 9m)',
-        impactFairness: '94 → 98 Score',
-        actionLabel: 'Apply Counter 05 Reassignment',
-        actionKey: 'open_counter_5',
-      };
-    } else if (lower.includes('20%') || lower.includes('demand') || lower.includes('increase') || lower.includes('surge')) {
-      reply = `**Simulated Impact of +20% Demand Surge:**\n\n- **Projected Inflow:** 176 total active patients (up from 147).\n- **Primary Failure Point:** Pharmacy (Counter 03) will exceed 45 min wait time by 11:45 AM.\n- **Mitigation Protocol:** \n  1. Activate Counter 08 (Backup Doctor Alan Morales).\n  2. Enable automated prescription pre-batching for RX tokens.\n  3. Divert mild pediatric triage to Counter 02.\n- **Net Outcome:** Maintains wait times under 15m SLA with 92% fairness retention.`;
-      reasoningCard = {
-        title: '+20% Surge Mitigation',
-        confidence: 92,
-        recommendation: 'Activate Counter 08 Backup & Pre-batch Pharmacy',
-        impactWait: 'Stabilizes at 14m max',
-        impactFairness: 'Maintains 92/100',
-        actionLabel: 'Deploy Surge Protocol',
-        actionKey: 'deploy_surge',
-      };
-    } else if (lower.includes('peak') || lower.includes('hours') || lower.includes('arrivals')) {
-      reply = `**Today's Peak Inflow Analysis:**\n\n- **Primary Peak:** 11:30 AM – 12:30 PM (Expected peak rate: **86 arrivals/hour**).\n- **Secondary Peak:** 2:30 PM – 3:30 PM (Post-lunch specialist appointments, ~54 arrivals/hour).\n- **LiDAR Crowd Velocity:** Inflow acceleration is currently +12.4% faster than historical baseline for Tuesday mornings.\n- **Proactive Staffing:** Ensure all 8 counters are staffed continuously between 11:15 AM and 1:00 PM.`;
-    } else if (lower.includes('priorit') || lower.includes('fairness') || lower.includes('why')) {
-      reply = `**QueueMind Fairness Transparency Engine:**\n\nPrioritization decisions are calculated using a multi-factor dynamic score:\n- **Clinical Urgency (10.0x):** Emergency triage (e.g., E-007) immediately bypasses standard queues.\n- **Protected Demographics (2.0x):** Elderly (80+ yrs) and mobility-impaired patients are adjusted +3 to +5 positions to reduce waiting room stress.\n- **Pediatric Fast-Track (1.75x):** Young children under 6 are routed to Counter 02.\n- **Anti-Starvation SLA (1.8x):** Any patient waiting >35 minutes is progressively escalated to prevent wait-time degradation.`;
-    } else {
-      reply = `**QueueMind Telemetry Summary:**\n\n- **Overall Status:** System is managing 147 active patients with an average wait of 18 minutes.\n- **LiDAR & Thermal Sensors:** 42 active nodes detecting 64% total facility occupancy.\n- **Hotspots:** Main Waiting Lounge (90% capacity) and Pharmacy Dispensing (85% capacity).\n- **Optimization Status:** Real-time dynamic load rebalancing active. All counter adjustments pass fairness parity audit (Score: 94/100).`;
-    }
-
-    return res.json({
-      reply,
-      confidence,
-      reasoningCard,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+app.post('/api/copilot/chat', apiRoute(async (req, res) => {
+  // The snapshot is facility-wide operational data, so this is staff-only.
+  // It was previously open to anyone who could reach the URL.
+  const user = await requireAuthUser(req, res);
+  if (!user) return;
+  if (!hasPermission(user.role, 'queue:read')) {
+    res.status(403).json({
+      error: 'AUTHORIZATION_DENIED',
+      message: 'The copilot reports on facility operations and is available to staff.',
     });
-  } catch (error) {
-    console.error('Copilot Chat Error:', error);
-    return res.status(500).json({ error: 'Internal copilot processing error' });
+    return;
   }
-});
+  if (!enforceRateLimit(req, res, 'copilot', 20, 60_000)) return;
+
+  const body = bodyAsObject(req);
+  const prompt = requiredString(body.prompt ?? body.message, 'Question', 500);
+
+  const snapshot = await buildCopilotSnapshot();
+  const suggestions = copilotSuggestions(snapshot);
+
+  if (!ai) {
+    res.json({
+      reply: 'The assistant is not configured on this server (no GEMINI_API_KEY), so I cannot answer questions. The live figures are in the panels behind this drawer.',
+      snapshot,
+      suggestions,
+      timestamp: new Date().toISOString(),
+    });
+    return;
+  }
+
+  try {
+    const history = Array.isArray(body.history)
+      ? body.history.slice(-COPILOT_HISTORY_TURNS * 2)
+      : [];
+
+    const contents = [
+      ...history,
+      { role: 'user', parts: [{ text: `SNAPSHOT:\n${JSON.stringify(snapshot)}\n\nQUESTION: ${prompt}` }] },
+    ];
+    const config = {
+      systemInstruction: COPILOT_SYSTEM_INSTRUCTION,
+      // Low temperature: this reports on operational data, where a confident
+      // invention is worse than a dull fact.
+      temperature: 0.2,
+      maxOutputTokens: 400,
+    };
+
+    let response;
+    try {
+      response = await ai.models.generateContent({ model: COPILOT_MODEL, contents, config });
+    } catch (primaryError: any) {
+      // The newest Flash model gets busy. That is a queue on Google's side, not
+      // a fault here, and one retry on the previous generation answers the same
+      // question from the same snapshot rather than showing the user an error.
+      const overloaded = /503|UNAVAILABLE|high demand|overloaded/i.test(
+        primaryError?.message ?? String(primaryError),
+      );
+      if (!overloaded) throw primaryError;
+      console.warn(`Copilot: ${COPILOT_MODEL} busy, retrying on ${COPILOT_FALLBACK_MODEL}`);
+      response = await ai.models.generateContent({ model: COPILOT_FALLBACK_MODEL, contents, config });
+    }
+
+    res.json({
+      reply: response.text?.trim() || 'I could not produce an answer for that.',
+      snapshot,
+      suggestions,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    // No silent fallback to invented prose — saying the assistant is
+    // unavailable is honest; answering from fiction is not.
+    console.error('Copilot request failed:', error?.message ?? error);
+    res.status(503).json({
+      error: 'COPILOT_UNAVAILABLE',
+      message: 'The assistant could not be reached just now. The live figures are still accurate in the panels behind this drawer.',
+      snapshot,
+      suggestions,
+    });
+  }
+}));
+
+/** Suggested questions for an empty conversation, from live state. */
+app.get('/api/copilot/suggestions', apiRoute(async (req, res) => {
+  const user = await requireAuthUser(req, res);
+  if (!user) return;
+  if (!hasPermission(user.role, 'queue:read')) {
+    res.status(403).json({ error: 'AUTHORIZATION_DENIED', message: 'Staff only.' });
+    return;
+  }
+  const snapshot = await buildCopilotSnapshot();
+  res.json({ suggestions: copilotSuggestions(snapshot), snapshot });
+}));
 
 // Run Counter AI Optimization Simulation API
 app.post('/api/copilot/optimize', (req, res) => {
@@ -2179,9 +2385,12 @@ app.get('/api/visitor/tokens/:id', apiRoute(async (req, res) => {
     } catch { }
   }
 
-  // Security: visitor must prove ownership with their access key, OR they must be the authenticated owner.
+  // The owner, somebody holding the private key, or the staff who run this
+  // queue. Anyone else is refused.
   if (!userId || userId !== token.userId) {
-    requireVisitorAccess(req, token.accessKeyHash, 'token', token.id);
+    if (!(await callerRunsTheQueue(req))) {
+      requireVisitorAccess(req, token.accessKeyHash, 'token', token.id);
+    }
   }
   const publicToken = await toPublicToken(token);
   res.json(publicToken);
@@ -2439,9 +2648,12 @@ app.get('/api/visitor/tokens/:id/queue-position', apiRoute(async (req, res) => {
     } catch { }
   }
 
-  // Security: visitor must prove ownership with their access key, OR they must be the authenticated owner.
+  // The owner, somebody holding the private key, or the staff who run this
+  // queue. Anyone else is refused.
   if (!userId || userId !== token.userId) {
-    requireVisitorAccess(req, token.accessKeyHash, 'token', token.id);
+    if (!(await callerRunsTheQueue(req))) {
+      requireVisitorAccess(req, token.accessKeyHash, 'token', token.id);
+    }
   }
 
   // Calculate real position-based metrics
@@ -2789,6 +3001,49 @@ async function requireQueueEditor(req: express.Request, res: express.Response) {
  * completed and the next person waiting for that service is called forward.
  * This is floor work, so `queue:manage` (staff and above) is enough.
  */
+/**
+ * DELETE /api/admin/tokens/:id — an administrator removes a queue entry.
+ *
+ * Soft delete, not a row deletion: the token keeps its code, its place in the
+ * day's numbering, and its audit trail, so a removal can be explained
+ * afterwards. Restricted to queue:edit (ADMIN, MANAGER, SUPER_ADMIN) — the same
+ * authority as editing, since removing somebody is the larger act of the two.
+ */
+app.delete('/api/admin/tokens/:id', apiRoute(async (req, res) => {
+  const user = await requireQueueEditor(req, res);
+  if (!user) return;
+
+  const token = await TokenRepo.findById(req.params.id);
+  if (!token) {
+    throw new ApiError(404, 'TOKEN_NOT_FOUND', 'That token no longer exists.');
+  }
+
+  const reason = optionalString(bodyAsObject(req).reason, 'Reason', 200) ?? null;
+
+  await prisma.token.update({
+    where: { id: token.id },
+    data: { status: 'Cancelled', deletedAt: new Date() },
+  });
+
+  // The Super Admin's queue-activity feed reads these rows: an admin cannot
+  // remove somebody from the queue unobserved.
+  await prisma.auditLog.create({
+    data: {
+      actorId: user.id,
+      actorRole: user.role,
+      action: 'delete_token',
+      targetType: 'token',
+      targetId: token.id,
+      metadata: { code: token.code, visitorName: token.visitorName, reason },
+    },
+  });
+
+  invalidateReferenceCache();
+  publishEvent({ type: 'token.status', tokenId: token.id, status: 'Cancelled', facilityId: token.facilityId });
+
+  res.json({ deleted: true, code: token.code });
+}));
+
 app.post('/api/admin/tokens/:id/complete', apiRoute(async (req, res) => {
   const user = await requireAuthUser(req, res);
   if (!user) return;
@@ -3471,6 +3726,101 @@ app.patch('/api/super-admin/users/:id/role', apiRoute(async (req, res) => {
 
   res.json(updatedUser);
 }));
+
+/**
+ * DELETE /api/super-admin/users/:id — remove a user account.
+ *
+ * Soft delete. The row stays so that tokens, appointments and audit entries
+ * that reference this person still resolve — a hard delete would either fail on
+ * the foreign keys or orphan somebody's clinical history.
+ *
+ * Three accounts can never be removed, and each refusal says which rule applied
+ * rather than a blanket "denied":
+ *   - a SUPER_ADMIN, so the role cannot be deleted out of existence
+ *   - the caller's own account, the one way to lock everybody out
+ *   - a doctor with appointments still ahead of them
+ */
+app.delete('/api/super-admin/users/:id', apiRoute(async (req, res) => {
+  const superAdmin = await requireSuperAdmin(req, res);
+  if (!superAdmin) return;
+
+  const target = await prisma.user.findUnique({
+    where: { id: req.params.id },
+    include: { doctor: { select: { id: true, name: true } } },
+  });
+  if (!target || target.deletedAt) {
+    throw new ApiError(404, 'USER_NOT_FOUND', 'That account no longer exists.');
+  }
+
+  if (target.role === 'SUPER_ADMIN') {
+    throw new ApiError(403, 'AUTHORIZATION_DENIED',
+      'A super admin account cannot be deleted. Change the role first if this account should lose its access.');
+  }
+
+  if (target.id === superAdmin.id) {
+    throw new ApiError(403, 'AUTHORIZATION_DENIED', 'You cannot delete your own account.');
+  }
+
+  // A doctor with people booked in front of them is not a safe delete: those
+  // appointments would point at somebody who is gone.
+  if (target.doctor) {
+    const upcoming = await prisma.appointment.count({
+      where: {
+        doctorId: target.doctor.id,
+        date: { gte: serviceDayKey() },
+        status: { notIn: [...TERMINAL_STATUSES] },
+        deletedAt: null,
+      },
+    });
+    if (upcoming > 0) {
+      throw new ApiError(409, 'DOCTOR_HAS_APPOINTMENTS',
+        `${target.name} has ${upcoming} appointment(s) still upcoming. Reassign or cancel them before deleting this account.`);
+    }
+  }
+
+  const activeToken = await TokenRepo.findActiveForUser(target.id);
+
+  await prisma.$transaction(async (tx) => {
+    if (activeToken) {
+      // Do not leave them standing in the queue under a deleted account.
+      await tx.token.update({
+        where: { id: activeToken.id },
+        data: { status: 'Cancelled', deletedAt: new Date() },
+      });
+    }
+    if (target.doctor) {
+      await tx.doctor.update({ where: { id: target.doctor.id }, data: { isActive: false } });
+    }
+    await tx.user.update({
+      where: { id: target.id },
+      data: {
+        deletedAt: new Date(),
+        // Free the address so the same person can sign up again later.
+        email: `deleted+${target.id}@removed.local`,
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId: superAdmin.id,
+        actorRole: 'SUPER_ADMIN',
+        action: 'delete_user',
+        targetType: 'user',
+        targetId: target.id,
+        metadata: {
+          email: target.email,
+          name: target.name,
+          role: target.role,
+          hadDoctorProfile: !!target.doctor,
+          cancelledToken: activeToken?.code ?? null,
+        },
+      },
+    });
+  });
+
+  invalidateUser(target.id);
+  res.json({ deleted: true, name: target.name, email: target.email });
+}));
+
 
 /**
  * GET /api/super-admin/queue-activity — queue edits made by administrators.

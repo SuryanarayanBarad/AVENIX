@@ -160,4 +160,47 @@ export const emailService = {
     console.log(`📱 [PATIENT NOTIFICATION] ${appointment.patientName}: Your appointment (${appointment.code}) with ${appointment.doctorName} on ${dateHuman} at ${time12} has been DECLINED.${because} Please book another slot.`);
     return true;
   },
+
+  /**
+   * Tell a doctor their schedule moved.
+   *
+   * A reschedule used to notify only the patient, leaving the doctor to
+   * discover the change when the patient did not arrive at the old time.
+   */
+  async notifyDoctorRescheduled(
+    doctorEmail: string,
+    doctorName: string,
+    appointment: {
+      patientName: string;
+      date: string;
+      previousTime: string;
+      newTime: string;
+      code: string;
+    },
+  ) {
+    const from12 = formatTime12h(appointment.previousTime);
+    const to12 = formatTime12h(appointment.newTime);
+    const dateHuman = formatDateHuman(appointment.date);
+
+    return sendEmail({
+      to: doctorEmail,
+      subject: `Appointment moved — ${appointment.patientName} (${appointment.code})`,
+      text: `Dear ${doctorName},\n\nAn appointment on your schedule has been rescheduled.\n\nPatient: ${appointment.patientName}\nDate: ${dateHuman}\nWas: ${from12}\nNow: ${to12}\nToken: ${appointment.code}\n\nOpen your dashboard to see the updated day.\n\n— QueueMind AI`,
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; background: #f8f9fb; border-radius: 12px;">
+          <h2 style="color: #1a1a2e; margin-bottom: 8px;">Appointment rescheduled</h2>
+          <p style="color: #555; margin-bottom: 20px;">Dear ${doctorName},</p>
+          <p style="color: #555;">An appointment on your schedule has been moved.</p>
+          <table style="width: 100%; border-collapse: collapse; margin: 16px 0; background: white; border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb;">
+            <tr><td style="padding: 10px 14px; font-weight: 600; color: #374151; border-bottom: 1px solid #f0f0f0; width: 120px;">Patient</td><td style="padding: 10px 14px; color: #111; border-bottom: 1px solid #f0f0f0;">${appointment.patientName}</td></tr>
+            <tr><td style="padding: 10px 14px; font-weight: 600; color: #374151; border-bottom: 1px solid #f0f0f0;">Date</td><td style="padding: 10px 14px; color: #111; border-bottom: 1px solid #f0f0f0;">${dateHuman}</td></tr>
+            <tr><td style="padding: 10px 14px; font-weight: 600; color: #374151; border-bottom: 1px solid #f0f0f0;">Was</td><td style="padding: 10px 14px; color: #b91c1c; border-bottom: 1px solid #f0f0f0; text-decoration: line-through;">${from12}</td></tr>
+            <tr><td style="padding: 10px 14px; font-weight: 600; color: #374151; border-bottom: 1px solid #f0f0f0;">Now</td><td style="padding: 10px 14px; color: #047857; font-weight: 700; border-bottom: 1px solid #f0f0f0;">${to12}</td></tr>
+            <tr><td style="padding: 10px 14px; font-weight: 600; color: #374151;">Token</td><td style="padding: 10px 14px; color: #111;">${appointment.code}</td></tr>
+          </table>
+          <p style="color: #888; font-size: 13px;">— QueueMind AI</p>
+        </div>
+      `,
+    });
+  },
 };

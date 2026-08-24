@@ -9,6 +9,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { CopilotMessage, Counter, FacilityZone, Token } from '../types';
+import { apiFetch } from '../services/apiClient';
 
 interface CopilotDrawerProps {
   isOpen: boolean;
@@ -34,12 +35,16 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
     {
       id: 'm-1',
       sender: 'ai',
-      text: "Hello! I am **QueueMind Copilot**, your real-time AI hospital queue operations intelligence agent. I continuously monitor LiDAR sensor point-clouds, patient queue volumes, and doctor availability. How can I assist you with queue rebalancing or crowd forecasting today?",
+      text: "I'm **QueueMind Copilot**. I read the live queue, today's appointments and who is on shift, and answer from those figures only. Ask me anything about the current state.",
       timestamp: 'Just now',
     },
   ]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // Follow-ups are derived from live state server-side. They used to be three
+  // hardcoded strings repeated under every reply, proposing action on counters
+  // this facility does not have.
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const shouldReduceMotion = useReducedMotion();
 
@@ -52,6 +57,16 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
+
+  // Opening questions, chosen from what the queue actually shows right now.
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    apiFetch<{ suggestions: string[] }>('/api/copilot/suggestions', { fallback: 'Could not load suggestions' })
+      .then((data) => { if (!cancelled) setSuggestions(data.suggestions ?? []); })
+      .catch(() => { /* the drawer is still usable without them */ });
+    return () => { cancelled = true; };
+  }, [isOpen]);
 
   const handleSendMessage = async (textToSend?: string) => {
     const text = textToSend || inputText;
@@ -69,61 +84,43 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
     setIsLoading(true);
 
     try {
-      // Send real Gemini call to server
-      const response = await fetch('/api/copilot/chat', {
+      // The server assembles the live snapshot itself. Sending counters and
+      // zones from here meant posting mock data up and getting confident
+      // analysis of it back.
+      const data = await apiFetch<{ reply: string; suggestions?: string[] }>('/api/copilot/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        fallback: 'The copilot could not answer',
         body: JSON.stringify({
           message: text.trim(),
-          history: messages.slice(-6).map(m => ({
+          history: messages.slice(-8).map(m => ({
             role: m.sender === 'user' ? 'user' : 'model',
             parts: [{ text: m.text }],
           })),
-          context: {
-            totalWaiting: tokens.filter(t => t.status === 'waiting').length,
-            counters: counters.map(c => ({
-              id: c.id,
-              name: c.name,
-              service: c.service,
-              queue: c.queueCount,
-              wait: c.avgWaitMin,
-              status: c.status,
-            })),
-            zones: zones.map(z => ({
-              name: z.name,
-              occupancy: z.currentOccupancy,
-              capacity: z.maxCapacity,
-              density: z.densityPct,
-            })),
-          },
         }),
       });
 
-      const data = await response.json();
+      if (data.suggestions) setSuggestions(data.suggestions);
 
       const aiMsg: CopilotMessage = {
         id: `ai-${Date.now()}`,
         sender: 'ai',
-        text: data.reply || "I analyzed current sensor metrics and queue trajectories. All counters are operating within standard parameters.",
+        text: data.reply,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        suggestedActions: [
-          'Reassign Counter 05 to General Consultation',
-          'Forecast 12:00 PM rush surge',
-          'Audit fairness priority compliance',
-        ],
       };
 
       setMessages(prev => [...prev, aiMsg]);
     } catch (err) {
-      console.error('Copilot API error:', err);
-      // Fallback local intelligent response
-      const fallbackAiMsg: CopilotMessage = {
-        id: `ai-fallback-${Date.now()}`,
+      // Say the assistant is unavailable. The old fallback invented a reading —
+      // "90% capacity, 147 queued" — which was indistinguishable from a real
+      // answer and wrong every time.
+      const failureMsg: CopilotMessage = {
+        id: `ai-error-${Date.now()}`,
         sender: 'ai',
-        text: "Based on real-time LiDAR crowd feeds in the Main Waiting Lounge (90% capacity) and 147 queued patients, General Consultation is experiencing an average wait of 18 minutes. I recommend reallocating Counter 05 to absorb 35% of incoming walk-ins.",
+        text: (err as Error)?.message
+          || 'I could not reach the assistant just now. The figures in the panels behind this drawer are still live and accurate.',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
-      setMessages(prev => [...prev, fallbackAiMsg]);
+      setMessages(prev => [...prev, failureMsg]);
     } finally {
       setIsLoading(false);
     }
@@ -213,25 +210,6 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
                   {m.text}
                 </div>
 
-                {m.suggestedActions && m.suggestedActions.length > 0 && (
-                  <div className="pt-2.5 border-t border-white/[0.10] space-y-1.5">
-                    <span className="text-[10px] font-bold text-white/50 uppercase tracking-wider block">
-                      Quick Suggestions
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {m.suggestedActions.map((action, i) => (
-                        <button
-                          key={i}
-                          onClick={() => handleSendMessage(action)}
-                          className="px-3 py-1.5 rounded-xl bg-white/[0.08] hover:bg-[#8e7dff]/25 hover:border-[#8e7dff]/50 text-white text-[10px] font-medium border border-white/[0.12] transition-all text-left cursor-pointer backdrop-blur-md"
-                        >
-                          {action}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 <div
                   className={`text-[9px] text-right ${
                     m.sender === 'user' ? 'text-white/70' : 'text-white/40'
@@ -256,13 +234,35 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
               </div>
               <div className="p-4 rounded-3xl glass-panel rounded-tl-md text-white/70 flex items-center gap-2 border border-white/[0.12]">
                 <Loader2 className="w-4 h-4 animate-spin text-[#8e7dff]" />
-                <span>Analyzing LiDAR point clouds & calculating wait delta...</span>
+                <span>Reading the live queue…</span>
               </div>
             </div>
           )}
 
           <div ref={messagesEndRef} />
         </div>
+
+        {/* Quick suggestions — recomputed from live state with every reply, so
+            they always name something that exists in this facility right now. */}
+        {suggestions.length > 0 && !isLoading && (
+          <div className="px-4 pt-3 bg-white/[0.03] border-t border-white/[0.10] backdrop-blur-xl">
+            <span className="text-[10px] font-bold text-white/45 uppercase tracking-wider block mb-1.5">
+              Quick suggestions
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {suggestions.map((suggestion, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => handleSendMessage(suggestion)}
+                  className="px-3 py-1.5 rounded-xl bg-white/[0.08] hover:bg-[#8e7dff]/25 hover:border-[#8e7dff]/50 text-white text-[10px] font-medium border border-white/[0.12] transition-all text-left cursor-pointer backdrop-blur-md"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Input Bar (Frosted Glass Input Bar) */}
         <div className="p-4 bg-white/[0.03] border-t border-white/[0.10] backdrop-blur-xl">
@@ -275,7 +275,7 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
           >
             <input
               type="text"
-              placeholder="Ask Copilot (e.g. 'How can I lower General wait times?')..."
+              placeholder="Ask about the queue, today's appointments, or who is on shift…"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               className="flex-1 px-4 py-3 glass-input rounded-2xl text-xs placeholder-white/40 text-white"

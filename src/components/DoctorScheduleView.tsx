@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { visitorApi } from '../services/queueApi';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   AlertTriangle,
@@ -90,6 +91,13 @@ export const DoctorScheduleView: React.FC<DoctorScheduleViewProps> = ({
   const [newDoctor, setNewDoctor] = useState('Dr. Sharma');
   const [isSaving, setIsSaving] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+  // Real reschedule options. The dropdowns previously held five hardcoded
+  // clock times and two invented doctor names, so there was frequently no
+  // valid time to pick and the chosen doctor did not exist.
+  const [slotOptions, setSlotOptions] = useState<string[]>([]);
+  const [doctorOptions, setDoctorOptions] = useState<{ id: string; name: string; specialization?: string }[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [newDoctorId, setNewDoctorId] = useState<string>('');
   const [notification, setNotification] = useState<NotificationState | null>(null);
   const [localUpdates, setLocalUpdates] = useState<Record<string, DoctorScheduleAppointment>>({});
   const [actionNotice, setActionNotice] = useState<string | null>(null);
@@ -215,9 +223,48 @@ export const DoctorScheduleView: React.FC<DoctorScheduleViewProps> = ({
     setModalError(null);
   };
 
+  // The roster, loaded once the modal opens.
+  useEffect(() => {
+    if (!rescheduleTarget) return;
+    let cancelled = false;
+    const day = rescheduleTarget.date ?? new Date().toISOString().slice(0, 10);
+    visitorApi.getDoctors(day)
+      .then((doctors) => {
+        if (cancelled) return;
+        const options = doctors.map((d: any) => ({ id: d.id, name: d.name, specialization: d.specialization }));
+        setDoctorOptions(options);
+        // Default to the doctor the appointment is already with.
+        const current = options.find((d) => d.name === rescheduleTarget.doctor || `Dr. ${d.name}` === rescheduleTarget.doctor);
+        setNewDoctorId(current?.id ?? options[0]?.id ?? '');
+      })
+      .catch(() => { if (!cancelled) setDoctorOptions([]); });
+    return () => { cancelled = true; };
+  }, [rescheduleTarget]);
+
+  // That doctor's genuinely free times on the appointment's date.
+  useEffect(() => {
+    if (!rescheduleTarget || !newDoctorId) { setSlotOptions([]); return; }
+    let cancelled = false;
+    setSlotsLoading(true);
+    const day = rescheduleTarget.date ?? new Date().toISOString().slice(0, 10);
+    visitorApi.getAvailableTimes(newDoctorId, day)
+      .then((times) => {
+        if (cancelled) return;
+        setSlotOptions(times);
+        setNewTime(times[0] ?? '');
+      })
+      .catch(() => { if (!cancelled) setSlotOptions([]); })
+      .finally(() => { if (!cancelled) setSlotsLoading(false); });
+    return () => { cancelled = true; };
+  }, [rescheduleTarget, newDoctorId]);
+
   const handleConfirmReschedule = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!rescheduleTarget || isSaving) return;
+    if (!newTime) {
+      setModalError('Choose a time before confirming — this doctor has no free slot on that date.');
+      return;
+    }
 
     const previousTime = rescheduleTarget.time;
     const updatedAppointment: DoctorScheduleAppointment = {
@@ -238,6 +285,10 @@ export const DoctorScheduleView: React.FC<DoctorScheduleViewProps> = ({
         newTime,
         previousDoctor: rescheduleTarget.doctor,
         newDoctor,
+        // The server matches on id. Sending only a display name meant a doctor
+        // change was silently dropped and the appointment stayed put.
+        doctorId: newDoctorId,
+        date: rescheduleTarget.date,
         source: 'doctor-schedule-ai-review',
       });
 
@@ -564,16 +615,35 @@ export const DoctorScheduleView: React.FC<DoctorScheduleViewProps> = ({
 
                 <label className="block">
                   <span className="mb-1.5 block text-xs font-bold text-white/80">New Time</span>
-                  <select value={newTime} onChange={(event) => setNewTime(event.target.value)} className="glass-input w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white bg-[#12122b] cursor-pointer">
-                    {['11:30 AM', '12:00 PM', '12:30 PM', '01:00 PM', '01:30 PM'].map((time) => <option key={time} value={time} className="bg-[#12122b] text-white">{time}</option>)}
+                  <select value={newTime} onChange={(event) => setNewTime(event.target.value)} disabled={slotsLoading || slotOptions.length === 0} className="glass-input w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white bg-[#12122b] cursor-pointer disabled:opacity-60">
+                    {slotsLoading && <option value="" className="bg-[#12122b] text-white">Checking availability…</option>}
+                    {!slotsLoading && slotOptions.length === 0 && <option value="" className="bg-[#12122b] text-white">No free times on this date</option>}
+                    {slotOptions.map((time) => <option key={time} value={time} className="bg-[#12122b] text-white">{time}</option>)}
                   </select>
+                  {!slotsLoading && slotOptions.length === 0 && (
+                    <p className="mt-1.5 text-[11px] leading-relaxed text-amber-200/80">
+                      This doctor has no free slot left on {rescheduleTarget.date ?? 'this date'}. Pick a different doctor, or free a slot in their availability first.
+                    </p>
+                  )}
                 </label>
 
                 <label className="block">
                   <span className="mb-1.5 block text-xs font-bold text-white/80">Doctor</span>
-                  <select value={newDoctor} onChange={(event) => setNewDoctor(event.target.value)} className="glass-input w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white bg-[#12122b] cursor-pointer">
-                    <option value="Dr. Sharma" className="bg-[#12122b] text-white">Dr. Sharma — General Medicine</option>
-                    <option value="Dr. Priya Nair" className="bg-[#12122b] text-white">Dr. Priya Nair — Available alternate</option>
+                  <select
+                    value={newDoctorId}
+                    onChange={(event) => {
+                      setNewDoctorId(event.target.value);
+                      const picked = doctorOptions.find((d) => d.id === event.target.value);
+                      if (picked) setNewDoctor(picked.name);
+                    }}
+                    className="glass-input w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white bg-[#12122b] cursor-pointer"
+                  >
+                    {doctorOptions.length === 0 && <option value="" className="bg-[#12122b] text-white">Loading doctors…</option>}
+                    {doctorOptions.map((d) => (
+                      <option key={d.id} value={d.id} className="bg-[#12122b] text-white">
+                        {d.name}{d.specialization ? ` — ${d.specialization}` : ''}
+                      </option>
+                    ))}
                   </select>
                 </label>
 
