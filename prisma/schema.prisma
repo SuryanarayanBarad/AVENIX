@@ -290,7 +290,10 @@ model Appointment {
   tokens          Token[]
 
   // Prevent double-booking: one doctor can only have one active appointment per slot.
-  @@unique([doctorId, date, time])
+  // Slot uniqueness is a PARTIAL unique index (appointments_one_live_per_slot),
+  // written by hand in 20260825090000_free_slot_after_denial because Prisma
+  // cannot express one. A full unique here meant a denied appointment held its
+  // doctor/date/time forever and the slot could never be booked again.
   @@unique([facilityId, code])
   @@index([facilityId])
   // Drives the queue board and the doctor schedule, both of which read one

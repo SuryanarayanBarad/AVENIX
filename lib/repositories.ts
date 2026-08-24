@@ -520,7 +520,10 @@ export const AppointmentRepo = {
         date,
         time,
         deletedAt: null,
-        status: { notIn: ['Cancelled'] },
+        // The same set the partial unique index frees. A denial means the
+        // appointment is not going to happen, so the slot goes back on sale;
+        // Completed keeps its slot, because it did happen at that time.
+        status: { notIn: ['Cancelled', 'Denied', 'Missed'] },
         ...(excludeAppointmentId ? { id: { not: excludeAppointmentId } } : {}),
       },
     });

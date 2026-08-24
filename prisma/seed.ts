@@ -380,18 +380,13 @@ async function main() {
     },
   ];
 
+  // Slot uniqueness is now a partial index, so there is no compound unique key
+  // to upsert against. Find-then-create keeps the seed idempotent.
   for (const apt of sampleAppointments) {
-    await prisma.appointment.upsert({
-      where: {
-        doctorId_date_time: {
-          doctorId: apt.doctorId,
-          date: apt.date,
-          time: apt.time,
-        },
-      },
-      update: {},
-      create: apt,
+    const existing = await prisma.appointment.findFirst({
+      where: { doctorId: apt.doctorId, date: apt.date, time: apt.time, deletedAt: null },
     });
+    if (!existing) await prisma.appointment.create({ data: apt });
   }
   console.log(`  ✅ Sample appointments: ${sampleAppointments.length} created for today (${today})`);
 

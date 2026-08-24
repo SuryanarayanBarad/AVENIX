@@ -25,6 +25,8 @@ interface MyAppointment {
   reasonForVisit: string;
   status: string;
   lifecycleStatus: string;
+  /** The doctor's stated reason for a denial, shown to the patient. */
+  statusReason?: string | null;
   awaitingApproval: boolean;
   inQueue: boolean;
   upcoming: boolean;
@@ -269,17 +271,35 @@ export const MyVisitView: React.FC<MyVisitViewProps> = ({ refreshKey = 0, onGetT
               </div>
             ))}
             {past.map(apt => (
-              <div key={apt.id} className="p-4 sm:p-5 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <DoctorThumb name={apt.doctor} photoUrl={apt.doctorPhotoUrl} />
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-white truncate">{apt.doctor}</div>
-                    <div className="text-xs text-white/50 truncate">{apt.date} · {apt.time} · <span className="font-mono">{apt.code}</span></div>
+              <div key={apt.id} className="p-4 sm:p-5 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <DoctorThumb name={apt.doctor} photoUrl={apt.doctorPhotoUrl} />
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-white truncate">{apt.doctor}</div>
+                      <div className="text-xs text-white/50 truncate">{apt.date} · {apt.time} · <span className="font-mono">{apt.code}</span></div>
+                    </div>
                   </div>
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border shrink-0 ${statusTone[apt.status] || 'bg-white/10 text-white/70 border-white/15'}`}>
+                    {apt.status}
+                  </span>
                 </div>
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border shrink-0 ${statusTone[apt.status] || 'bg-white/10 text-white/70 border-white/15'}`}>
-                  {apt.status}
-                </span>
+
+                {/* The doctor's reason. It was recorded and shown on the
+                    doctor's own screens, but never to the person it was about,
+                    who saw only the word "Declined" and no way to find out why
+                    or what to do next. */}
+                {(apt.lifecycleStatus === 'Denied' || apt.status === 'Declined') && (
+                  <div className="rounded-2xl border border-rose-500/25 bg-rose-500/[0.08] px-3.5 py-2.5">
+                    <p className="text-[11px] leading-relaxed text-rose-100/90">
+                      <span className="font-semibold text-rose-200">Why: </span>
+                      {apt.statusReason || 'No reason was given.'}
+                    </p>
+                    <p className="mt-1 text-[11px] text-white/55">
+                      That time is free again — you can book another appointment whenever you like.
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
             </>
