@@ -9,38 +9,49 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Preclinic palette
+   Preclinic design tokens
    ---------------------------------------------------------------------------
-   Sampled directly from the Preclinic UI kit cover art rather than guessed, so
-   these are the kit's actual values. It is a LIGHT theme — white cards on a
-   near-white page, deep indigo as the primary, teal as the accent — which is
-   the opposite of the dark glass the rest of the app still uses. Both sets live
-   here during the migration so a screen can be moved over one at a time
-   instead of the whole app changing at once.
+   Read from the Figma file itself via the REST API (file tyVgu0sMYjXUTz2pCkrI8m,
+   node 223:184784), not sampled from a screenshot — so these are the kit's
+   actual values, including the ones an earlier pixel-sample got wrong: the text
+   navy, the border grey, danger, success, the corner radii and the typeface.
+
+   It is a LIGHT system: white surfaces on #F5F6F8, deep indigo primary, teal
+   accent, 6px corners and one very soft shadow. That is the opposite of the
+   dark glass the rest of the app still uses, so both sets live here while
+   screens move over one at a time.
 --------------------------------------------------------------------------- */
 :root {
-  --pc-primary: #2E37A4;
-  --pc-primary-hover: #262E8C;
-  --pc-primary-soft: #4B54B1;
-  --pc-primary-bright: #3438CD;
-  --pc-accent: #00D3C7;
-  --pc-accent-soft: #2ABADB;
+  --pc-primary: #2E37A4;         /* brand indigo, 36 uses */
+  --pc-primary-bright: #3538CD;  /* charts, active states */
+  --pc-primary-hover: #262E8C;   /* derived: primary darkened for hover */
+  --pc-accent: #00D3C7;          /* teal */
+  --pc-accent-cyan: #06AED4;     /* secondary cyan */
 
   --pc-surface: #FFFFFF;
   --pc-page: #F5F6F8;
-  --pc-tint-lilac: #EDEDF7;
-  --pc-tint-mint: #E9F5F5;
-  --pc-tint-pink: #F9F0F6;
+  --pc-tint-lilac: #EDEDFB;
+  --pc-tint-rose: #FCD2D2;
 
-  --pc-text: #1B1D2A;
-  --pc-text-muted: #6B7280;
-  --pc-border: #E4E7EC;
-  --pc-border-strong: #C1C5CE;
+  --pc-text: #0A1B39;            /* headings and primary copy */
+  --pc-text-strong: #111827;
+  --pc-text-muted: #6C7688;
+  --pc-text-subtle: #858D9C;
 
-  --pc-success: #40AA9E;
-  --pc-warning: #E04F16;
-  --pc-danger: #E5484D;
-  --pc-danger-soft: #F78F8E;
+  --pc-border: #E7E8EB;          /* the most-used colour in the whole frame */
+  --pc-border-strong: #CED1D7;
+
+  --pc-success: #27AE60;
+  --pc-danger: #EF1E1E;
+
+  /* 6px is the kit's default corner; 20px is used for pills and larger cards. */
+  --pc-radius: 6px;
+  --pc-radius-lg: 20px;
+
+  /* The kit uses exactly one drop shadow, and it is very light. */
+  --pc-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+
+  --pc-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 :root {
@@ -208,41 +219,49 @@
 /* ---------------------------------------------------------------------------
    Preclinic surfaces
    ---------------------------------------------------------------------------
-   Light counterparts to the glass-* utilities, so a screen can be moved to the
-   new design by swapping class names rather than rewriting its markup.
+   Light counterparts to the glass-* utilities, so a screen moves to the new
+   design by swapping class names rather than rewriting its markup. Radius,
+   shadow and typeface all come from the tokens above, which come from the file.
 --------------------------------------------------------------------------- */
+.pc { font-family: var(--pc-font); }
+
 .pc-card {
   background: var(--pc-surface);
   border: 1px solid var(--pc-border);
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 12px 32px -8px rgba(46, 55, 164, 0.10);
+  border-radius: var(--pc-radius-lg);
+  box-shadow: var(--pc-shadow);
 }
 
 .pc-input {
   background: var(--pc-surface);
   border: 1px solid var(--pc-border);
+  border-radius: var(--pc-radius);
   color: var(--pc-text);
-  transition-property: background-color, border-color, box-shadow;
+  font-family: var(--pc-font);
+  transition-property: border-color, box-shadow;
   transition-duration: var(--motion-fast);
   transition-timing-function: var(--motion-ease);
 }
 
-.pc-input::placeholder { color: var(--pc-border-strong); }
+.pc-input::placeholder { color: var(--pc-text-subtle); }
 
 .pc-input:focus {
   border-color: var(--pc-primary);
-  box-shadow: 0 0 0 4px rgba(46, 55, 164, 0.12);
+  box-shadow: 0 0 0 3px rgba(46, 55, 164, 0.12);
   outline: none;
 }
 
 .pc-input:focus-visible { outline: none; }
 
-/* The primary action. The lift is on transform and shadow only, so it stays
+/* The primary action. Motion is on transform and shadow only, so it stays
    cheap to animate on a mid-range phone. */
 .pc-btn-primary {
   background: var(--pc-primary);
   color: #fff;
   border: 1px solid transparent;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 8px 20px -6px rgba(46, 55, 164, 0.45);
+  border-radius: var(--pc-radius);
+  font-family: var(--pc-font);
+  box-shadow: var(--pc-shadow);
   transition-property: transform, background-color, box-shadow, opacity;
   transition-duration: var(--motion-standard);
   transition-timing-function: var(--motion-ease);
@@ -250,9 +269,9 @@
 
 @media (hover: hover) and (pointer: fine) {
   .pc-btn-primary:not(:disabled):hover {
-    background: var(--pc-primary-hover);
+    background: var(--pc-primary-bright);
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(16, 24, 40, 0.06), 0 14px 28px -8px rgba(46, 55, 164, 0.55);
+    box-shadow: 0 4px 12px -2px rgba(46, 55, 164, 0.35);
     filter: none;
   }
 }
@@ -264,7 +283,9 @@
   background: var(--pc-surface);
   color: var(--pc-text);
   border: 1px solid var(--pc-border);
-  transition-property: transform, background-color, border-color, box-shadow;
+  border-radius: var(--pc-radius);
+  font-family: var(--pc-font);
+  transition-property: transform, background-color, border-color;
   transition-duration: var(--motion-standard);
   transition-timing-function: var(--motion-ease);
 }

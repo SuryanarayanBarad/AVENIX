@@ -17,9 +17,12 @@ const modalEase = [0.22, 1, 0.36, 1] as const;
  * Sign in / create account.
  *
  * Styled from the Preclinic UI kit — light surface, deep indigo primary, teal
- * accent — using the tokens sampled from that kit in index.css. The behaviour
- * underneath is unchanged and entirely ours: the same endpoints, the same
- * VISITOR-only registration rule, the same cold-start handling.
+ * accent, 6px corners, Inter — using the --pc-* tokens in index.css, which were
+ * read out of the Figma file itself rather than eyeballed from a screenshot.
+ *
+ * The behaviour underneath is unchanged and entirely ours, not the kit's: the
+ * same endpoints, the same VISITOR-only registration rule and its notice, the
+ * same Google flow, the same cold-start handling.
  */
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
   const shouldReduceMotion = useReducedMotion();
@@ -115,7 +118,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
         onClick={onClose}
       >
         <motion.div
-          className="w-full max-w-[400px] overflow-hidden rounded-3xl pc-card"
+          className="pc w-full max-w-[400px] overflow-hidden pc-card"
           role="dialog"
           aria-modal="true"
           aria-labelledby="auth-title"
@@ -137,10 +140,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
             />
 
             <div className="relative flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25">
+              <span className="flex h-9 w-9 items-center justify-center rounded-md bg-white/15 ring-1 ring-white/25">
                 <Plus className="h-5 w-5 text-[var(--pc-accent)]" strokeWidth={3} />
               </span>
-              <span className="font-display text-base font-bold tracking-tight">QueueMind</span>
+              <span className="text-base font-bold tracking-tight">QueueMind</span>
             </div>
 
             <AnimatePresence mode="wait" initial={false}>
@@ -152,7 +155,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
                 transition={{ duration: shouldReduceMotion ? 0 : 0.18, ease: modalEase }}
                 className="relative mt-4"
               >
-                <h3 id="auth-title" className="font-display text-xl font-bold tracking-tight">
+                <h3 id="auth-title" className="text-xl font-bold tracking-tight">
                   {isRegister ? 'Create your account' : 'Welcome back'}
                 </h3>
                 <p className="mt-1 text-xs text-white/70">
@@ -164,7 +167,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
             </AnimatePresence>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 px-6 py-6 text-sm">
+          <form onSubmit={handleSubmit} className="space-y-4 px-6 py-6 text-sm text-[var(--pc-text)]">
             <AnimatePresence initial={false}>
               {error && (
                 <motion.div
@@ -175,7 +178,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
                   transition={{ duration: shouldReduceMotion ? 0 : 0.18, ease: modalEase }}
                   className="overflow-hidden"
                 >
-                  <p className="rounded-xl border border-[var(--pc-danger-soft)] bg-[#FEF3F2] px-3.5 py-2.5 text-xs font-medium text-[var(--pc-danger)]">
+                  <p className="rounded-md border border-[var(--pc-tint-rose)] bg-[#FEF3F2] px-3.5 py-2.5 text-[13px] font-medium text-[var(--pc-danger)]">
                     {error}
                   </p>
                 </motion.div>
@@ -192,7 +195,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
                   className="overflow-hidden"
                 >
                   <label className="block">
-                    <span className="mb-1.5 block text-xs font-semibold text-[var(--pc-text)]">Full name</span>
+                    <span className="mb-1.5 block text-[13px] font-medium text-[var(--pc-text)]">Full name</span>
                     <span className="relative block">
                       <UserIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--pc-border-strong)]" />
                       <input
@@ -202,7 +205,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
                         placeholder="e.g. Julian Sarah"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="pc-input w-full rounded-xl py-3 pl-10 pr-4 text-sm"
+                        className="pc-input w-full py-3 pl-10 pr-4 text-sm"
                       />
                     </span>
                   </label>
@@ -251,7 +254,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
                   transition={{ duration: shouldReduceMotion ? 0 : 0.2, ease: modalEase }}
                   className="overflow-hidden"
                 >
-                  <p className="flex items-start gap-2 rounded-xl bg-[var(--pc-tint-lilac)] px-3.5 py-2.5 text-[11px] leading-relaxed text-[var(--pc-text-muted)]">
+                  <p className="flex items-start gap-2 rounded-md bg-[var(--pc-tint-lilac)] px-3.5 py-2.5 text-xs leading-relaxed text-[var(--pc-text-muted)]">
                     <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--pc-primary)]" />
                     New accounts start as a visitor. Staff and clinical access is granted by an administrator.
                   </p>
@@ -263,7 +266,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
               <button
                 type="submit"
                 disabled={loading}
-                className="pc-btn-primary group flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold cursor-pointer"
+                className="pc-btn-primary group flex w-full items-center justify-center gap-2 px-5 py-3 text-sm font-semibold cursor-pointer"
               >
                 <span>{loading ? busyLabel : isRegister ? 'Create account' : 'Sign in'}</span>
                 {!loading && (
@@ -298,7 +301,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
               type="button"
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="pc-btn-ghost flex w-full items-center justify-center gap-3 rounded-xl px-5 py-3.5 text-sm font-semibold cursor-pointer disabled:opacity-60"
+              className="pc-btn-ghost flex w-full items-center justify-center gap-3 px-5 py-3 text-sm font-medium cursor-pointer disabled:opacity-60"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
