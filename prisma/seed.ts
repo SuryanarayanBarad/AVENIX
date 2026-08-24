@@ -182,18 +182,24 @@ async function main() {
   const staffHash = await bcrypt.hash('staff123', 12);
   const superAdminHash = await bcrypt.hash('superadmin123', 12);
 
+  // The local super admin is addressed by environment, not by name in source.
+  // A real address written here would publish, to everyone with repository
+  // access, exactly which account to attack and which password to try first.
+  // The default is a throwaway that exists only in a developer's own database.
+  const localSuperAdminEmail = process.env.SEED_SUPER_ADMIN_EMAIL || 'superadmin@local.test';
+
   await prisma.user.upsert({
-    where: { email: 'aurafarm.co.nx@gmail.com' },
+    where: { email: localSuperAdminEmail },
     update: {},
     create: {
-      name: 'Aura Farm (Super Admin)',
-      email: 'aurafarm.co.nx@gmail.com',
+      name: 'Local Super Admin',
+      email: localSuperAdminEmail,
       passwordHash: superAdminHash,
       role: 'SUPER_ADMIN',
       facilityId: facility.id,
     },
   });
-  console.log('  ✅ Super Admin user: aurafarm.co.nx@gmail.com (SUPER_ADMIN, password: superadmin123)');
+  console.log(`  ✅ Super Admin user: ${localSuperAdminEmail} (SUPER_ADMIN, password: superadmin123)`);
 
   await prisma.user.upsert({
     where: { email: 'admin@citycare.com' },
