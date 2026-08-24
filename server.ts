@@ -4272,14 +4272,37 @@ async function startServer() {
         });
         console.log(`✅ Bootstrapped SUPER_ADMIN account: ${process.env.SUPER_ADMIN_EMAIL}`);
       } else {
-        // Always sync the password from .env on startup
-        const isMatch = await bcrypt.compare(process.env.SUPER_ADMIN_PASSWORD, existing.passwordHash);
-        if (!isMatch) {
+        // The role is repaired on every boot — the super admin must never lose
+        // it. The PASSWORD is not.
+        //
+        // Overwriting it here meant the account's password was decided by
+        // whichever process started last: the deployed instance and any local
+        // server pointed at the same database would each reset it to their own
+        // env value, and a password changed in the app was silently reverted on
+        // the next restart. Recovery is still possible, but it has to be asked
+        // for: set SUPER_ADMIN_PASSWORD_RESET=true for one boot, then remove it.
+        const resetRequested = process.env.SUPER_ADMIN_PASSWORD_RESET === 'true';
+
+        if (existing.role !== 'SUPER_ADMIN') {
           await prisma.user.update({
             where: { email: process.env.SUPER_ADMIN_EMAIL },
-            data: { passwordHash: hash, role: 'SUPER_ADMIN' }
+            data: { role: 'SUPER_ADMIN' },
           });
-          console.log(`✅ Synced SUPER_ADMIN password for: ${process.env.SUPER_ADMIN_EMAIL}`);
+          console.log(`✅ Restored SUPER_ADMIN role for: ${process.env.SUPER_ADMIN_EMAIL}`);
+        }
+
+        if (resetRequested) {
+          const isMatch = await bcrypt.compare(process.env.SUPER_ADMIN_PASSWORD, existing.passwordHash);
+          if (!isMatch) {
+            await prisma.user.update({
+              where: { email: process.env.SUPER_ADMIN_EMAIL },
+              data: { passwordHash: hash },
+            });
+            console.log(
+              `✅ Reset SUPER_ADMIN password for ${process.env.SUPER_ADMIN_EMAIL} ` +
+              '(SUPER_ADMIN_PASSWORD_RESET was set — remove it now so the next restart does not repeat this).',
+            );
+          }
         }
       }
     } catch (err) {
