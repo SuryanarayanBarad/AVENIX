@@ -526,15 +526,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </div>
 
       {/* Floating QueueMind Copilot Button on Bottom-Right */}
+      {/* A floating action button, not a banner. It was a full-width pill with
+          16px padding and the whole product name showing at all times, which is
+          a lot of screen for something that sits on top of the work. It rests as
+          a 48px glass disc — the size a thumb expects — and widens to name
+          itself when pointed at, so it is still discoverable. The label is on
+          the button either way, so a screen reader always has it. */}
       <button
         onClick={() => handleOpenCopilotWithPrompt()}
-        className="pc-btn-primary fixed bottom-6 right-6 z-40 flex items-center gap-2.5 p-4 font-semibold cursor-pointer group"
+        aria-label="Open QueueMind Copilot"
+        title="QueueMind Copilot"
+        className="liquid-glass pc-fab group fixed bottom-6 right-6 z-40 flex h-12 items-center gap-2 rounded-full px-3.5 font-semibold cursor-pointer"
       >
-        <div className="relative">
-          <Sparkles className="w-5 h-5 animate-pulse" />
-          <span className="w-2 h-2 rounded-full bg-emerald-400 absolute -top-1 -right-1 ring-2 ring-purple-900" />
-        </div>
-        <span className="text-xs font-bold font-display pr-1">QueueMind Copilot</span>
+        <span className="relative flex h-5 w-5 shrink-0 items-center justify-center">
+          <Sparkles className="h-5 w-5 text-[var(--pc-primary)]" />
+          <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-[var(--pc-success)] ring-2 ring-white" />
+        </span>
+        <span
+          className="max-w-0 overflow-hidden whitespace-nowrap text-xs font-bold text-[var(--pc-primary)] opacity-0 transition-[max-width,opacity] duration-300 ease-out group-hover:max-w-[140px] group-hover:opacity-100 group-focus-visible:max-w-[140px] group-focus-visible:opacity-100 motion-reduce:transition-none"
+        >
+          Copilot
+        </span>
       </button>
 
       {/* Copilot Chat Drawer */}
