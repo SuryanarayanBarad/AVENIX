@@ -58,7 +58,7 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
           <button
             onClick={() => setActiveLayer('all')}
             className={`px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer ${
-              activeLayer === 'all' ? 'bg-[#2E37A4] text-white font-bold shadow-md shadow-[#2E37A4]/30' : 'text-white/60 hover:text-white'
+              activeLayer === 'all' ? 'liquid-glass-active font-semibold' : 'text-[var(--pc-text-muted)] hover:text-[var(--pc-text)]'
             }`}
           >
             All Sensors (42)
@@ -66,7 +66,7 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
           <button
             onClick={() => setActiveLayer('lidar')}
             className={`px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer ${
-              activeLayer === 'lidar' ? 'bg-[#2E37A4] text-white font-bold shadow-md shadow-[#2E37A4]/30' : 'text-white/60 hover:text-white'
+              activeLayer === 'lidar' ? 'liquid-glass-active font-semibold' : 'text-[var(--pc-text-muted)] hover:text-[var(--pc-text)]'
             }`}
           >
             LiDAR (18)
@@ -74,7 +74,7 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
           <button
             onClick={() => setActiveLayer('thermal')}
             className={`px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer ${
-              activeLayer === 'thermal' ? 'bg-[#2E37A4] text-white font-bold shadow-md shadow-[#2E37A4]/30' : 'text-white/60 hover:text-white'
+              activeLayer === 'thermal' ? 'liquid-glass-active font-semibold' : 'text-[var(--pc-text-muted)] hover:text-[var(--pc-text)]'
             }`}
           >
             Thermal (24)
@@ -169,7 +169,7 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
           </div>
 
           {/* SVG Hospital Floorplan Graphic (Frosted Glass Canvas) */}
-          <div className="relative my-4 w-full h-[320px] bg-black/40 rounded-2xl border border-white/[0.12] p-3 overflow-hidden backdrop-blur-md">
+          <div className="relative my-4 w-full h-[320px] rounded-2xl border border-[var(--pc-border)] bg-[var(--pc-page)] p-3 overflow-hidden">
             
             {/* Grid overlay */}
             <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
@@ -207,7 +207,7 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-[11px] truncate text-white">{zone.name}</span>
-                    <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-black/50 text-white">
+                    <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[var(--pc-text)] text-white">
                       {adjustedDensity}%
                     </span>
                   </div>
@@ -272,8 +272,8 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
                   onClick={() => setForecastMinuteOffset(step.offset)}
                   className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     forecastMinuteOffset === step.offset
-                      ? 'bg-[#2E37A4] text-white shadow-md shadow-[#2E37A4]/30'
-                      : 'text-white/60 hover:text-white'
+                      ? 'liquid-glass-active font-semibold'
+                      : 'text-[var(--pc-text-muted)] hover:text-[var(--pc-text)]'
                   }`}
                 >
                   {step.label}
@@ -333,7 +333,7 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
                 <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 <div>
                   <strong className="block text-white">Congestion Alert</strong>
-                  <span className="text-rose-200/80">Zone density exceeds 85% safety threshold. Suggest opening overflow counter.</span>
+                  <span className="text-[var(--pc-danger-text)]">Zone density exceeds 85% safety threshold. Suggest opening overflow counter.</span>
                 </div>
               </div>
             )}

@@ -604,11 +604,11 @@
    each one. Anything that already opts in, is the filled primary, or is a bare
    link-style control is left alone.
 --------------------------------------------------------------------------- */
-.pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):not(.fixed):not(.absolute):not(.sticky) {
+.pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-[#"]):not(.fixed):not(.absolute):not(.sticky) {
   position: relative;
 }
 
-.pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]) {
+.pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-[#"]) {
   isolation: isolate;
   --lg-x: 30%;
   --lg-y: 0%;
@@ -626,7 +626,7 @@
    A conic gradient sitting still is cheap; two hundred of them animating at
    once is a dropped frame rate, and only the one being pointed at is being
    looked at anyway. */
-.pc button:not(:disabled):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"])::before {
+.pc button:not(:disabled):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-[#"])::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -650,7 +650,7 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .pc button:not(:disabled):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):hover::before {
+  .pc button:not(:disabled):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-[#"]):hover::before {
     opacity: 0.9;
     animation: lg-drift 6s linear infinite;
   }
@@ -658,23 +658,40 @@
   /* At rest the pane is clear. Under the pointer the tint arrives and tracks
      the cursor, so the colour appears where you are actually pointing rather
      than washing the whole control at once. */
-  .pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):hover {
+  .pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-[#"]):hover {
     background:
-      radial-gradient(130px circle at var(--lg-x) var(--lg-y), rgba(46, 55, 164, 0.20), transparent 62%),
-      radial-gradient(110px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.85), transparent 55%),
+      radial-gradient(90px circle at var(--lg-x) var(--lg-y), rgba(120, 200, 255, 0.30), transparent 70%),
+      radial-gradient(120px circle at calc(var(--lg-x) + 14%) calc(var(--lg-y) + 10%), rgba(255, 138, 190, 0.26), transparent 70%),
+      radial-gradient(150px circle at calc(var(--lg-x) - 12%) calc(var(--lg-y) + 16%), rgba(122, 245, 214, 0.24), transparent 72%),
+      radial-gradient(100px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.9), transparent 55%),
       linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.28) 100%);
     box-shadow:
       inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
-      0 6px 18px -10px rgba(46, 55, 164, 0.26);
+      0 6px 18px -10px rgba(46, 55, 164, 0.22);
   }
 
   /* The same on an explicit pane. */
+  /* The same iridescence on an explicit pane: the hues sit at slightly
+     different centres and radii, so they separate as the pointer moves —
+     which is what reads as something liquid under the surface rather than a
+     coloured spotlight following the cursor. */
   .liquid-glass:hover {
     background:
-      radial-gradient(150px circle at var(--lg-x) var(--lg-y), rgba(46, 55, 164, 0.18), transparent 64%),
-      radial-gradient(120px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.9), transparent 56%),
+      radial-gradient(100px circle at var(--lg-x) var(--lg-y), rgba(120, 200, 255, 0.30), transparent 70%),
+      radial-gradient(140px circle at calc(var(--lg-x) + 16%) calc(var(--lg-y) + 12%), rgba(255, 138, 190, 0.26), transparent 72%),
+      radial-gradient(170px circle at calc(var(--lg-x) - 14%) calc(var(--lg-y) + 18%), rgba(122, 245, 214, 0.24), transparent 74%),
+      radial-gradient(120px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.92), transparent 56%),
       linear-gradient(105deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 46%),
       linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.3) 100%);
+  }
+
+  .liquid-glass-active:hover {
+    background:
+      radial-gradient(110px circle at var(--lg-x) var(--lg-y), rgba(120, 200, 255, 0.32), transparent 70%),
+      radial-gradient(150px circle at calc(var(--lg-x) + 16%) calc(var(--lg-y) + 12%), rgba(255, 138, 190, 0.28), transparent 72%),
+      radial-gradient(180px circle at calc(var(--lg-x) - 14%) calc(var(--lg-y) + 18%), rgba(122, 245, 214, 0.26), transparent 74%),
+      radial-gradient(130px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.9), transparent 58%),
+      linear-gradient(180deg, rgba(255, 252, 250, 0.5) 0%, rgba(0, 211, 199, 0.08) 100%);
   }
 }
 
@@ -861,6 +878,9 @@
 
    Part of the same transitional block above: as a view moves to pc-* classes,
    its rules here stop matching. */
+.pc .text-emerald-200\/90,
+.pc .text-emerald-200\/80,
+.pc .text-emerald-100\/80,
 .pc .text-emerald-50,
 .pc .text-emerald-100,
 .pc .text-emerald-200,
@@ -869,6 +889,10 @@
 .pc .text-green-300,
 .pc .text-green-400 { color: var(--pc-success-text); }
 
+.pc .text-amber-200\/90,
+.pc .text-amber-200\/80,
+.pc .text-amber-200\/70,
+.pc .text-amber-100\/80,
 .pc .text-amber-50,
 .pc .text-amber-100,
 .pc .text-amber-200,
@@ -876,6 +900,10 @@
 .pc .text-amber-400,
 .pc .text-yellow-300 { color: #B54708; }
 
+.pc .text-rose-200\/90,
+.pc .text-rose-200\/80,
+.pc .text-rose-200\/70,
+.pc .text-rose-100\/80,
 .pc .text-rose-50,
 .pc .text-rose-100,
 .pc .text-rose-200,

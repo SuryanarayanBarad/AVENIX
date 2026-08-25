@@ -107,10 +107,10 @@ export const UsersRolesView: React.FC = () => {
                   </td>
                   <td className="p-4 text-right">
                     {u.role === 'SUPER_ADMIN' ? (
-                      <span className="text-white/50 text-sm italic">Immutable</span>
+                      <span className="text-[var(--pc-text-subtle)] text-sm italic">Immutable</span>
                     ) : (
                       <select
-                        className="bg-black/50 border border-white/20 text-white text-sm rounded-lg px-2 py-1 outline-none"
+                        className="pc-input px-2.5 py-1.5 text-sm cursor-pointer"
                         value={u.role}
                         onChange={(e) => handleRoleChange(u.id, e.target.value)}
                       >

@@ -269,7 +269,7 @@ export const AnalyticsView: React.FC = () => {
                 aria-pressed={timeRange === value}
                 className={`shrink-0 rounded-xl px-3 py-1.5 transition-all cursor-pointer ${
                   timeRange === value
-                    ? 'bg-[#2E37A4] text-white font-bold shadow-md shadow-[#2E37A4]/30'
+                    ? 'liquid-glass-active font-semibold'
                     : 'text-white/60 hover:bg-white/[0.08] hover:text-white'
                 }`}
               >

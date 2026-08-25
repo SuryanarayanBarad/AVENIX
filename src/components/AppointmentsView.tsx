@@ -271,7 +271,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                               setCurrentMonth(i);
                               setShowMonthSelector(false);
                             }}
-                            className={`text-xs py-1.5 rounded-lg font-medium ${isDisabled ? 'text-white/20 cursor-not-allowed' : currentMonth === i ? 'bg-[#2E37A4] text-white' : 'text-white/70 hover:bg-white/[0.08] hover:text-white cursor-pointer'}`}
+                            className={`text-xs py-1.5 rounded-lg font-medium ${isDisabled ? 'text-white/20 cursor-not-allowed' : currentMonth === i ? 'liquid-glass-active font-semibold' : 'text-white/70 hover:bg-white/[0.08] hover:text-white cursor-pointer'}`}
                           >
                             {new Date(2000, i).toLocaleString('default', { month: 'short' })}
                           </button>
@@ -313,7 +313,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                     onClick={() => setSelectedDate(day)}
                     className={`py-2 rounded-xl font-medium transition-all relative cursor-pointer ${
                       isSelected
-                        ? 'bg-[#2E37A4] text-white font-bold shadow-md shadow-[#2E37A4]/40'
+                        ? 'liquid-glass-active font-semibold'
                         : isToday
                         ? 'bg-[#2E37A4]/20 text-[#2E37A4] font-bold border border-[#2E37A4]/40'
                         : 'text-white/70 hover:bg-white/[0.08] hover:text-white'

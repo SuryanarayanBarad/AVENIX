@@ -36,12 +36,12 @@ const DoctorAvatar: React.FC<{ doctor: { name: string; photoUrl?: string | null 
         src={doctor.photoUrl}
         alt={doctor.name}
         onError={() => setFailed(true)}
-        className={`${size} rounded-xl object-cover border border-white/20 shrink-0`}
+        className={`${size} rounded-xl object-cover border border-[var(--pc-border)] shrink-0`}
       />
     );
   }
   return (
-    <div className={`${size} rounded-xl bg-gradient-to-tr from-[#2E37A4] to-[#00D3C7] flex items-center justify-center text-white font-bold text-xs border border-white/20 shrink-0`}>
+    <div className={`${size} rounded-xl bg-gradient-to-tr from-[#2E37A4] to-[#00D3C7] flex items-center justify-center text-white font-bold text-xs border border-[var(--pc-border)] shrink-0`}>
       {initials || <UserRound className="w-4 h-4" />}
     </div>
   );
@@ -123,7 +123,7 @@ const SpecializationPicker: React.FC<{
         type="button"
         onClick={() => setOpen(!open)}
         className={`w-full flex items-center justify-between gap-2 bg-black/20 border rounded-lg px-4 py-2 text-left outline-none transition-colors ${
-          open ? 'border-pink-500/50' : 'border-white/10 hover:border-white/20'
+          open ? 'border-pink-500/50' : 'border-[var(--pc-border)] hover:border-[var(--pc-border)]'
         } ${selected ? 'text-white' : 'text-white/40'}`}
       >
         <span className="truncate">{selected ? selected.name : 'Select specialization...'}</span>
@@ -142,7 +142,7 @@ const SpecializationPicker: React.FC<{
             transition={{ duration: reduceMotion ? 0 : 0.16, ease: panelEase }}
             className="absolute left-0 right-0 z-40 mt-2 rounded-xl border border-white/15 bg-[#12122b] shadow-2xl overflow-hidden origin-top"
           >
-            <div className="p-2 border-b border-white/10">
+            <div className="p-2 border-b border-[var(--pc-border)]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
                 <input
@@ -151,7 +151,7 @@ const SpecializationPicker: React.FC<{
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                   placeholder="Search specializations..."
-                  className="w-full bg-black/30 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white outline-none focus:border-pink-500/50"
+                  className="w-full bg-black/30 border border-[var(--pc-border)] rounded-lg pl-9 pr-3 py-2 text-sm text-white outline-none focus:border-pink-500/50"
                 />
               </div>
             </div>
@@ -199,7 +199,7 @@ const SpecializationPicker: React.FC<{
                   type="button"
                   disabled={creating}
                   onClick={() => pickNew(query.trim())}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-pink-400 hover:bg-white/5 transition-colors disabled:opacity-50 border-t border-white/10 mt-1"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-pink-400 hover:bg-white/5 transition-colors disabled:opacity-50 border-t border-[var(--pc-border)] mt-1"
                 >
                   <Plus className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">Create "{query.trim()}"</span>
@@ -226,7 +226,7 @@ const Field: React.FC<{ label: string; children: React.ReactNode; className?: st
   </div>
 );
 
-const inputClass = 'w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white outline-none focus:border-pink-500/50 transition-colors';
+const inputClass = 'w-full bg-black/20 border border-[var(--pc-border)] rounded-lg px-4 py-2 text-white outline-none focus:border-pink-500/50 transition-colors';
 
 export const SuperAdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
@@ -462,7 +462,7 @@ export const SuperAdminDashboard: React.FC = () => {
 
       ) : activeTab === 'overview' && stats ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+          <div className="bg-white/5 border border-[var(--pc-border)] rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-white/70 font-medium">Total Users</h3>
               <Users className="w-5 h-5 text-blue-400" />
@@ -470,21 +470,21 @@ export const SuperAdminDashboard: React.FC = () => {
             <div className="text-3xl font-bold text-white">{stats.totalUsers}</div>
             <div className="text-sm text-white/50 mt-1">{stats.totalAdmins} Admins, {stats.totalSuperAdmins} Super Admins</div>
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+          <div className="bg-white/5 border border-[var(--pc-border)] rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-white/70 font-medium">Appointments</h3>
               <Activity className="w-5 h-5 text-emerald-400" />
             </div>
             <div className="text-3xl font-bold text-white">{stats.totalAppointments}</div>
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+          <div className="bg-white/5 border border-[var(--pc-border)] rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-white/70 font-medium">Active Tokens</h3>
               <FileText className="w-5 h-5 text-purple-400" />
             </div>
             <div className="text-3xl font-bold text-white">{stats.activeTokens}</div>
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+          <div className="bg-white/5 border border-[var(--pc-border)] rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-white/70 font-medium">Connected Cameras</h3>
               <Camera className="w-5 h-5 text-pink-400" />
@@ -494,7 +494,7 @@ export const SuperAdminDashboard: React.FC = () => {
         </div>
 
       ) : activeTab === 'users' ? (
-        <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+        <div className="bg-white/5 border border-[var(--pc-border)] rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[560px]">
             <thead>
@@ -523,7 +523,7 @@ export const SuperAdminDashboard: React.FC = () => {
                       <span className="text-white/50 text-sm italic">Immutable</span>
                     ) : (
                       <select
-                        className="bg-black/50 border border-white/20 text-white text-sm rounded-lg px-2 py-1 outline-none"
+                        className="bg-[var(--pc-page)] border border-[var(--pc-border)] text-white text-sm rounded-lg px-2 py-1 outline-none"
                         value={u.role}
                         onChange={(e) => handleRoleChange(u.id, e.target.value)}
                       >
@@ -557,7 +557,7 @@ export const SuperAdminDashboard: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-2">
               <button
                 onClick={() => setShowSpecializations(!showSpecializations)}
-                className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-[var(--pc-border)] text-white/80 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               >
                 Manage specializations
                 <ChevronDown className={`w-4 h-4 transition-transform ${showSpecializations ? 'rotate-180' : ''}`} />
@@ -583,7 +583,7 @@ export const SuperAdminDashboard: React.FC = () => {
               transition={{ duration: shouldReduceMotion ? 0 : 0.22, ease: panelEase }}
               className="overflow-hidden"
             >
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+            <div className="bg-white/5 border border-[var(--pc-border)] rounded-2xl p-5">
               <form onSubmit={handleAddDept} className="flex flex-col sm:flex-row gap-2 mb-4">
                 <input
                   type="text"
@@ -620,7 +620,7 @@ export const SuperAdminDashboard: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
               transition={{ duration: shouldReduceMotion ? 0 : 0.2, ease: panelEase }}
-              className="bg-white/5 border border-white/10 rounded-2xl p-5 sm:p-6"
+              className="bg-white/5 border border-[var(--pc-border)] rounded-2xl p-5 sm:p-6"
             >
               <h3 className="text-base font-semibold text-white mb-4">Add a doctor</h3>
 
@@ -703,19 +703,19 @@ export const SuperAdminDashboard: React.FC = () => {
               </div>
 
               {/* Photo + submit */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-5 pt-5 border-t border-white/10">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-5 pt-5 border-t border-[var(--pc-border)]">
                 <div className="flex items-center gap-3">
                   {newDocPhoto ? (
-                    <img src={newDocPhoto} alt="Selected doctor" className="w-11 h-11 rounded-xl object-cover border border-white/20 shrink-0" />
+                    <img src={newDocPhoto} alt="Selected doctor" className="w-11 h-11 rounded-xl object-cover border border-[var(--pc-border)] shrink-0" />
                   ) : (
-                    <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 shrink-0">
+                    <div className="w-11 h-11 rounded-xl bg-white/5 border border-[var(--pc-border)] flex items-center justify-center text-white/40 shrink-0">
                       <UserRound className="w-4 h-4" />
                     </div>
                   )}
                   <button
                     type="button"
                     onClick={() => newDocPhotoInput.current?.click()}
-                    className="flex items-center gap-2 bg-white/10 hover:bg-white/15 border border-white/10 text-white/80 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                    className="flex items-center gap-2 bg-white/10 hover:bg-white/15 border border-[var(--pc-border)] text-white/80 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                   >
                     <Upload className="w-4 h-4" />
                     {newDocPhoto ? 'Change photo' : 'Upload photo'}
@@ -760,8 +760,8 @@ export const SuperAdminDashboard: React.FC = () => {
           />
 
           {/* Doctors list */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
-            <div className="p-4 border-b border-white/10">
+          <div className="bg-white/5 border border-[var(--pc-border)] rounded-2xl overflow-hidden">
+            <div className="p-4 border-b border-[var(--pc-border)]">
               <div className="relative sm:max-w-xs">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
                 <input
@@ -769,7 +769,7 @@ export const SuperAdminDashboard: React.FC = () => {
                   value={doctorSearch}
                   onChange={e => setDoctorSearch(e.target.value)}
                   placeholder="Search doctors..."
-                  className="w-full bg-black/20 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white outline-none focus:border-pink-500/50"
+                  className="w-full bg-black/20 border border-[var(--pc-border)] rounded-lg pl-9 pr-3 py-2 text-sm text-white outline-none focus:border-pink-500/50"
                 />
               </div>
             </div>
@@ -794,7 +794,7 @@ export const SuperAdminDashboard: React.FC = () => {
                           {editingId === doc.id ? (
                             <input
                               type="text"
-                              className="bg-black/30 border border-white/20 rounded-lg px-2 py-1 text-white text-sm outline-none focus:border-pink-500/50 w-40"
+                              className="bg-black/30 border border-[var(--pc-border)] rounded-lg px-2 py-1 text-white text-sm outline-none focus:border-pink-500/50 w-40"
                               value={editDraft.name}
                               onChange={e => setEditDraft({ ...editDraft, name: e.target.value })}
                             />
@@ -812,7 +812,7 @@ export const SuperAdminDashboard: React.FC = () => {
                       <td className="p-4">
                         {editingId === doc.id ? (
                           <select
-                            className="bg-black/30 border border-white/20 rounded-lg px-2 py-1 text-white text-sm outline-none focus:border-pink-500/50 max-w-[10rem]"
+                            className="bg-black/30 border border-[var(--pc-border)] rounded-lg px-2 py-1 text-white text-sm outline-none focus:border-pink-500/50 max-w-[10rem]"
                             value={editDraft.departmentId}
                             onChange={e => setEditDraft({ ...editDraft, departmentId: e.target.value })}
                           >
@@ -831,7 +831,7 @@ export const SuperAdminDashboard: React.FC = () => {
                           <input
                             type="number"
                             min={0}
-                            className="bg-black/30 border border-white/20 rounded-lg px-2 py-1 text-white text-sm outline-none focus:border-pink-500/50 w-20"
+                            className="bg-black/30 border border-[var(--pc-border)] rounded-lg px-2 py-1 text-white text-sm outline-none focus:border-pink-500/50 w-20"
                             value={editDraft.experienceYears || ''}
                             onChange={e => setEditDraft({ ...editDraft, experienceYears: Number(e.target.value) })}
                           />
@@ -904,7 +904,7 @@ export const SuperAdminDashboard: React.FC = () => {
         </div>
 
       ) : activeTab === 'audit' ? (
-        <div className="bg-white/5 border border-white/10 rounded-2xl flex-1 overflow-auto">
+        <div className="bg-white/5 border border-[var(--pc-border)] rounded-2xl flex-1 overflow-auto">
           <table className="w-full text-left border-collapse min-w-[620px]">
             <thead className="sticky top-0 bg-[#12122b] shadow-md">
               <tr className="bg-white/5 text-white/70 text-sm">

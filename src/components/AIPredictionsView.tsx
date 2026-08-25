@@ -75,8 +75,8 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
               onClick={() => setTimeHorizon(horizon)}
               className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
                 timeHorizon === horizon
-                  ? 'bg-[#2E37A4] text-white font-bold shadow-md shadow-[#2E37A4]/30'
-                  : 'text-white/60 hover:text-white'
+                  ? 'liquid-glass-active font-semibold'
+                  : 'text-[var(--pc-text-muted)] hover:text-[var(--pc-text)]'
               }`}
             >
               {horizon === 'today' ? 'Full Day' : horizon}
