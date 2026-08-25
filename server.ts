@@ -365,7 +365,7 @@ function standardSlots(): string[] {
 }
 
 function parseDateQuery(req: express.Request): string {
-  const date = typeof req.query.date === 'string' ? req.query.date : new Date().toISOString().slice(0, 10);
+  const date = typeof req.query.date === 'string' ? req.query.date : serviceDayKey();
   return validatedDate(date);
 }
 
@@ -2364,7 +2364,7 @@ app.get('/api/visitor/my-appointments', apiRoute(async (req, res) => {
     }),
   ]);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = serviceDayKey();
 
   res.json({
     appointments: appointments.map((apt) => ({
@@ -2394,7 +2394,7 @@ app.get('/api/visitor/my-appointments', apiRoute(async (req, res) => {
         id: t.id,
         code: t.code,
         kind: 'walk-in' as const,
-        date: issued.toISOString().slice(0, 10),
+        date: serviceDayKey(issued),
         time: issued.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
         serviceName: t.service.name,
         counterName: t.counterName ?? t.service.defaultCounterName ?? null,
@@ -2758,7 +2758,7 @@ app.get('/api/visitor/doctors', apiRoute(async (req, res) => {
   const facility = await getCachedFacility();
   if (!facility) return res.json({ doctors: [] });
 
-  const date = typeof req.query.date === 'string' ? req.query.date : new Date().toISOString().slice(0, 10);
+  const date = typeof req.query.date === 'string' ? req.query.date : serviceDayKey();
   // Doctors and the day's availability in two reads, not one per doctor.
   const [allDoctors, availability] = await Promise.all([
     DoctorRepo.findAll(facility.id),
@@ -2818,7 +2818,7 @@ app.get('/api/visitor/specializations', apiRoute(async (_req, res) => {
 
 app.get('/api/visitor/doctors/:id/availability', apiRoute(async (req, res) => {
   const doctorId = req.params.id;
-  const date = typeof req.query.date === 'string' ? req.query.date : new Date().toISOString().slice(0, 10);
+  const date = typeof req.query.date === 'string' ? req.query.date : serviceDayKey();
   await findDoctor(doctorId);
   const slots = await availableTimesForDoctor(doctorId, date);
   // queueApi.ts expects { availableTimes: string[] } with display-ready strings.
@@ -2957,7 +2957,7 @@ app.get('/api/admin/tokens', apiRoute(async (req, res) => {
 
   // 1. Walk-in tokens and today's appointments are independent — one round
   //    trip for both instead of two.
-  const todayDate = new Date().toISOString().slice(0, 10);
+  const todayDate = serviceDayKey();
   const appointmentWhereEarly: any = {
     facilityId: facility.id,
     date: todayDate,
@@ -4404,7 +4404,7 @@ app.get('/api/admin/doctors', apiRoute(async (req, res) => {
   if (!facility) return res.json({ doctors: [] });
 
   const doctors = await DoctorRepo.findAllWithUser(facility.id);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = serviceDayKey();
 
   const withStats = await Promise.all(doctors.map(async (doctor) => {
     const view = doctorManagementView(doctor);
@@ -4494,7 +4494,7 @@ app.get('/api/doctor/patients', apiRoute(async (req, res) => {
   if (!doctorAuth) return;
 
   const scope = typeof req.query.scope === 'string' ? req.query.scope : 'today';
-  const today = new Date().toISOString().slice(0, 10);
+  const today = serviceDayKey();
 
   const where: any = { doctorId: doctorAuth.doctorId, deletedAt: null };
   if (typeof req.query.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.query.date)) {
@@ -4565,7 +4565,7 @@ app.get('/api/doctor/queue', apiRoute(async (req, res) => {
   if (!doctorAuth) return;
 
   const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
-  const today = new Date().toISOString().slice(0, 10);
+  const today = serviceDayKey();
 
   const doctor = await DoctorRepo.findById(doctorAuth.doctorId);
 
@@ -4748,7 +4748,7 @@ app.get('/api/doctor/stats', apiRoute(async (req, res) => {
   const doctorAuth = await requireDoctor(req, res);
   if (!doctorAuth) return;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = serviceDayKey();
   const stats = await doctorStatCounts(doctorAuth.doctorId, today);
 
   res.json({ stats });

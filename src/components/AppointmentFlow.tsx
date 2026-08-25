@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { serviceDayKey } from '../../lib/serviceDay';
 import {
   ArrowLeft,
   ArrowRight,
@@ -85,7 +86,7 @@ interface AppointmentFlowProps {
 
 import { visitorApi } from '../services/queueApi';
 
-const today = new Date().toISOString().slice(0, 10);
+const today = serviceDayKey();
 
 const statusClass: Record<PublicAppointment['status'], string> = {
   'Awaiting approval': 'border-amber-400/30 bg-amber-500/15 text-amber-100',
@@ -137,6 +138,7 @@ export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshNote, setRefreshNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [requestSent, setRequestSent] = useState(false);
 
@@ -279,7 +281,17 @@ export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
     setError(null);
     setIsRefreshing(true);
     try {
-      setAppointment(await onRefreshAppointment(appointment.appointmentId));
+      const before = appointment.status;
+      const next = await onRefreshAppointment(appointment.appointmentId);
+      setAppointment(next);
+      // Refreshing usually returns exactly what is already on screen, so
+      // without saying so the button looks broken: the spinner flashes and
+      // nothing moves. Say what was found, and whether it changed.
+      setRefreshNote(
+        next.status === before
+          ? `Checked just now — still ${String(before).toLowerCase()}.`
+          : `Updated: now ${String(next.status).toLowerCase()}.`,
+      );
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : 'We could not refresh your appointment. Please try again.');
     } finally {
@@ -501,7 +513,10 @@ export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
               <dl className="overflow-hidden rounded-[20px] border border-[var(--pc-border)] bg-[var(--pc-surface)] text-sm"><DetailRow label="Doctor" value={appointment.doctor} /><DetailRow label="Department" value={appointment.department} /><DetailRow label="Date" value={formatDate(appointment.date)} /><DetailRow label="Time" value={appointment.time} /><DetailRow label="Patient" value={appointment.patientName} /><DetailRow label="Reason for Visit" value={appointment.reasonForVisit} /><DetailRow label="Phone" value={appointment.phoneMasked} /></dl>
               {appointment.notification && <div className="rounded-3xl border border-amber-400/30 bg-amber-500/10 p-4"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200">Appointment updated</p><p className="mt-1 text-xs leading-relaxed text-white/75">Your appointment with {appointment.doctor} was moved from <strong className="text-white">{appointment.notification.previousTime}</strong> to <strong className="text-white">{appointment.notification.newTime}</strong>.</p><p className="mt-2 text-[10px] text-white/45">Notification status: {appointment.notification.status}</p></div>}
               {error && <p className="rounded-2xl border border-rose-400/30 bg-rose-500/15 px-3 py-2.5 text-xs text-rose-100" role="alert">{error}</p>}
-              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2"><button type="button" onClick={refreshAppointment} disabled={!onRefreshAppointment || isRefreshing} className="liquid-glass flex items-center justify-center gap-2 rounded-md px-4 py-3 text-[13px] font-medium text-[var(--pc-text)] disabled:opacity-55 cursor-pointer"><RefreshCw className={`h-3.5 w-3.5 text-[var(--pc-primary)] ${isRefreshing ? 'animate-spin' : ''}`} />{isRefreshing ? 'Refreshing…' : 'View appointment'}</button><button type="button" onClick={() => setStep('reschedule')} className="pc-btn-primary flex items-center justify-center gap-2 px-4 py-3 text-[13px] font-medium cursor-pointer"><Clock3 className="h-3.5 w-3.5" />Reschedule</button></div>
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2"><button type="button" onClick={refreshAppointment} disabled={!onRefreshAppointment || isRefreshing} className="liquid-glass flex items-center justify-center gap-2 rounded-md px-4 py-3 text-[13px] font-medium text-[var(--pc-text)] disabled:opacity-55 cursor-pointer"><RefreshCw className={`h-3.5 w-3.5 text-[var(--pc-primary)] ${isRefreshing ? 'animate-spin' : ''}`} />{isRefreshing ? 'Checking…' : 'Check status'}</button><button type="button" onClick={() => setStep('reschedule')} className="pc-btn-primary flex items-center justify-center gap-2 px-4 py-3 text-[13px] font-medium cursor-pointer"><Clock3 className="h-3.5 w-3.5" />Reschedule</button></div>
+              {refreshNote && (
+                <p className="mt-2 text-center text-[11px] text-[var(--pc-text-muted)]">{refreshNote}</p>
+              )}
             </section>
           )}
 

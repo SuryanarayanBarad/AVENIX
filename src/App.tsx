@@ -15,6 +15,7 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { SuperAdminDashboard } from './components/SuperAdminDashboard';
 import { DoctorDashboard } from './components/DoctorDashboard';
 import { VisitorStart, WalkInTokenFlow } from './components/VisitorFlow';
+import { serviceDayKey } from '../lib/serviceDay';
 
 import type { PublicQueueToken } from './components/VisitorFlow';
 import { AppointmentFlow } from './components/AppointmentFlow';
@@ -473,7 +474,7 @@ export default function App() {
                 facilityName="CityCare Hospital"
                 onStartWalkIn={() => navigateToView('visitor-token')}
                 onStartAppointment={() => {
-                  visitorApi.getDoctors(new Date().toISOString().slice(0, 10))
+                  visitorApi.getDoctors(serviceDayKey())
                     .then(setDoctorList)
                     .catch(() => {});
                   navigateToView('visitor-appointment');
@@ -499,7 +500,7 @@ export default function App() {
                 }}
                 onBack={() => navigateToView('visitor')}
                 onBookAppointment={() => {
-                  visitorApi.getDoctors(new Date().toISOString().slice(0, 10))
+                  visitorApi.getDoctors(serviceDayKey())
                     .then(setDoctorList)
                     .catch(() => {});
                   navigateToView('visitor-appointment');

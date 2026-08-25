@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { serviceDayKey } from '../../lib/serviceDay';
 import { visitorApi } from '../services/queueApi';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
@@ -109,7 +110,7 @@ export const DoctorScheduleView: React.FC<DoctorScheduleViewProps> = ({
 
   useEffect(() => {
     let mounted = true;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = serviceDayKey();
     adminApi.getDoctorSchedule(today)
       .then((result: any) => {
         if (!mounted) return;
@@ -227,7 +228,7 @@ export const DoctorScheduleView: React.FC<DoctorScheduleViewProps> = ({
   useEffect(() => {
     if (!rescheduleTarget) return;
     let cancelled = false;
-    const day = rescheduleTarget.date ?? new Date().toISOString().slice(0, 10);
+    const day = rescheduleTarget.date ?? serviceDayKey();
     visitorApi.getDoctors(day)
       .then((doctors) => {
         if (cancelled) return;
@@ -246,7 +247,7 @@ export const DoctorScheduleView: React.FC<DoctorScheduleViewProps> = ({
     if (!rescheduleTarget || !newDoctorId) { setSlotOptions([]); return; }
     let cancelled = false;
     setSlotsLoading(true);
-    const day = rescheduleTarget.date ?? new Date().toISOString().slice(0, 10);
+    const day = rescheduleTarget.date ?? serviceDayKey();
     visitorApi.getAvailableTimes(newDoctorId, day)
       .then((times) => {
         if (cancelled) return;

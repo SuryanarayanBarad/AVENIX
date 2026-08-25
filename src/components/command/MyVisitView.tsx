@@ -100,6 +100,19 @@ export const MyVisitView: React.FC<MyVisitViewProps> = ({ refreshKey = 0, onGetT
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey]);
 
+  /**
+   * An approved appointment for today is a place in the queue, even though it
+   * is not a walk-in token.
+   *
+   * This panel only ever looked for a token, so a patient whose appointment had
+   * just been approved was told "you are not in a queue right now" while the
+   * doctor's board was showing them in it. The queue is the union of walk-in
+   * tokens and queue-eligible appointments everywhere else; it is here too now.
+   */
+  const todayKey = new Date().toLocaleDateString('en-CA');
+  const todaysAppointment = appointments.find(a => a.inQueue && a.date === todayKey)
+    ?? appointments.find(a => a.inQueue);
+
   const upcoming = appointments.filter(a => a.upcoming || a.awaitingApproval);
   const past = appointments.filter(a => !a.upcoming && !a.awaitingApproval);
   const nextAppointment = upcoming[upcoming.length - 1] ?? null;
@@ -145,18 +158,46 @@ export const MyVisitView: React.FC<MyVisitViewProps> = ({ refreshKey = 0, onGetT
               </div>
             </div>
           </div>
+        ) : todaysAppointment ? (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-5 justify-between">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--pc-primary)]">
+                Your appointment
+              </p>
+              <p className="mt-1 font-mono text-4xl font-black tracking-tight text-[var(--pc-text)]">
+                {todaysAppointment.code}
+              </p>
+              <p className="mt-1 text-xs text-[var(--pc-text-muted)]">
+                {todaysAppointment.doctor} · {todaysAppointment.department}
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="glass-panel rounded-2xl px-4 py-3">
+                <div className="text-sm font-bold text-[var(--pc-text)] font-display mt-1.5">{todaysAppointment.time}</div>
+                <div className="text-[10px] uppercase tracking-wider text-[var(--pc-text-subtle)] font-semibold mt-0.5">Time</div>
+              </div>
+              <div className="glass-panel rounded-2xl px-4 py-3">
+                <div className="text-sm font-bold text-[var(--pc-text)] font-display mt-1.5">{todaysAppointment.date}</div>
+                <div className="text-[10px] uppercase tracking-wider text-[var(--pc-text-subtle)] font-semibold mt-0.5">Date</div>
+              </div>
+              <div className="glass-panel rounded-2xl px-4 py-3">
+                <div className="text-sm font-bold text-[var(--pc-success-text)] font-display mt-1.5">{todaysAppointment.status}</div>
+                <div className="text-[10px] uppercase tracking-wider text-[var(--pc-text-subtle)] font-semibold mt-0.5">Status</div>
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#b9b0ff]">No active queue token</p>
-              <h3 className="mt-1 font-display text-xl font-bold text-white">You are not in a queue right now</h3>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--pc-primary)]">No active queue token</p>
+              <h3 className="mt-1 font-display text-xl font-bold text-[var(--pc-text)]">You are not in a queue right now</h3>
               <p className="mt-1 text-xs text-white/60">Take a walk-in token or book a consultation to get started.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {onGetToken && (
                 <button
                   onClick={onGetToken}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 text-white font-semibold text-xs shadow-lg shadow-[#2E37A4]/30 border border-white/20 cursor-pointer transition-all"
+                  className="pc-btn-primary flex items-center gap-2 px-4 py-2.5 text-xs font-semibold cursor-pointer"
                 >
                   <Ticket className="w-4 h-4" />
                   Get a token
@@ -165,7 +206,7 @@ export const MyVisitView: React.FC<MyVisitViewProps> = ({ refreshKey = 0, onGetT
               {onBookAppointment && (
                 <button
                   onClick={onBookAppointment}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.16] text-white font-semibold text-xs cursor-pointer transition-all"
+                  className="liquid-glass flex items-center gap-2 rounded-md px-4 py-2.5 text-xs font-semibold text-[var(--pc-text)] cursor-pointer"
                 >
                   <CalendarDays className="w-4 h-4 text-emerald-300" />
                   Book appointment

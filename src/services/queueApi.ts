@@ -2,6 +2,7 @@ import type { AppointmentRequest, DoctorOption, PublicAppointment } from '../com
 import type { PublicQueueToken, VisitorServiceOption, WalkInTokenRequest } from '../components/VisitorFlow';
 import type { PublicDoctor } from '../types';
 import { apiFetch, authHeaders } from './apiClient';
+import { serviceDayKey } from '../../lib/serviceDay';
 
 const TOKEN_KEY_PREFIX = 'queuemind:visitor-token:';
 const APPOINTMENT_KEY_PREFIX = 'queuemind:visitor-appointment:';
@@ -188,7 +189,7 @@ export const visitorApi = {
 
   /** Public doctor directory (photo, specialization, experience). No account data. */
   async getDoctorDirectory(date?: string): Promise<PublicDoctor[]> {
-    const day = date ?? new Date().toISOString().slice(0, 10);
+    const day = date ?? serviceDayKey();
     const result = await request<{ doctors: PublicDoctor[] }>(`/api/visitor/doctors?date=${encodeURIComponent(day)}`);
     return result.doctors;
   },
