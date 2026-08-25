@@ -40,6 +40,8 @@
 
   --pc-border: #E7E8EB;          /* the most-used colour in the whole frame */
   --pc-border-strong: #CED1D7;
+  --pc-placeholder: #9DA4B0;     /* input placeholder, from the Login frame */
+  --pc-illustration: #ECEDF7;    /* the lavender half of the split auth page */
 
   --pc-success: #27AE60;
   --pc-danger: #EF1E1E;
@@ -243,7 +245,7 @@
   transition-timing-function: var(--motion-ease);
 }
 
-.pc-input::placeholder { color: var(--pc-text-subtle); }
+.pc-input::placeholder { color: var(--pc-placeholder); }
 
 .pc-input:focus {
   border-color: var(--pc-primary);
