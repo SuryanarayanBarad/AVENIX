@@ -74,6 +74,25 @@ export const doctorApi = {
   },
 
   /** Denial reasons, served by the API so the UI never hardcodes them. */
+  /** Free times for moving one of my appointments. */
+  async getRescheduleSlots(appointmentId: string, date?: string) {
+    const query = date ? `?date=${encodeURIComponent(date)}` : '';
+    return request<{ date: string; availableTimes: string[] }>(
+      `/appointments/${encodeURIComponent(appointmentId)}/slots${query}`,
+    );
+  },
+
+  /** Move one of my appointments. The server checks it is mine. */
+  async rescheduleAppointment(appointmentId: string, newTime: string, date?: string) {
+    return request<{
+      appointment: { id: string; code: string; date: string; time: string; status: string; version: number };
+      notification: { id: string; message: string } | null;
+    }>(`/appointments/${encodeURIComponent(appointmentId)}/reschedule`, {
+      method: 'POST',
+      body: JSON.stringify({ newTime, ...(date ? { date } : {}) }),
+    });
+  },
+
   async getDenialReasons() {
     const result = await request<{ reasons: { id: string; label: string }[] }>('/denial-reasons');
     return result.reasons;

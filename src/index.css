@@ -517,6 +517,55 @@
   .liquid-glass-active::before { display: none; }
 }
 
+/* Semantic actions. Confirm and decline carry meaning, so they keep a filled
+   colour rather than becoming clear glass — but lit from within, like the
+   primary, so they belong to the same material. */
+.pc-btn-success,
+.pc-btn-danger {
+  position: relative;
+  isolation: isolate;
+  --lg-x: 30%;
+  --lg-y: 0%;
+  color: #fff;
+  border: 1px solid transparent;
+  border-radius: var(--pc-radius);
+  font-family: var(--pc-font);
+  transition-property: transform, background, box-shadow, opacity;
+  transition-duration: var(--motion-standard);
+  transition-timing-function: var(--motion-ease);
+}
+
+.pc-btn-success {
+  background:
+    radial-gradient(120px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.30), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 55%),
+    var(--pc-success-text);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.35),
+    0 6px 18px -8px rgba(27, 127, 70, 0.45);
+}
+
+.pc-btn-danger {
+  background:
+    radial-gradient(120px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.30), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 55%),
+    var(--pc-danger-text);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.35),
+    0 6px 18px -8px rgba(200, 30, 30, 0.45);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pc-btn-success:not(:disabled):hover,
+  .pc-btn-danger:not(:disabled):hover { transform: translateY(-1px); }
+}
+
+.pc-btn-success:not(:disabled):active,
+.pc-btn-danger:not(:disabled):active { transform: translateY(0) scale(0.985); }
+
+.pc-btn-success:disabled,
+.pc-btn-danger:disabled { opacity: 0.6; box-shadow: none; }
+
 /* ---------------------------------------------------------------------------
    Every button is glass
    ---------------------------------------------------------------------------
@@ -524,7 +573,7 @@
    each one. Anything that already opts in, is the filled primary, or is a bare
    link-style control is left alone.
 --------------------------------------------------------------------------- */
-.pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]) {
+.pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]) {
   position: relative;
   isolation: isolate;
   --lg-x: 30%;
@@ -543,7 +592,7 @@
    A conic gradient sitting still is cheap; two hundred of them animating at
    once is a dropped frame rate, and only the one being pointed at is being
    looked at anyway. */
-.pc button:not(:disabled):not(.pc-btn-primary):not([data-plain])::before {
+.pc button:not(:disabled):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"])::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -567,7 +616,7 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .pc button:not(:disabled):not(.pc-btn-primary):not([data-plain]):hover::before {
+  .pc button:not(:disabled):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):hover::before {
     opacity: 0.9;
     animation: lg-drift 6s linear infinite;
   }
@@ -576,7 +625,7 @@
 /* A phone pays the most for a blur and sees the least of it. Half the radius
    keeps the material without the frame cost. */
 @media (pointer: coarse) {
-  .pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]),
+  .pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]),
   .liquid-glass {
     backdrop-filter: blur(4px) saturate(150%);
     -webkit-backdrop-filter: blur(4px) saturate(150%);
@@ -676,6 +725,18 @@
 .pc .text-white\/40,
 .pc .text-white\/35,
 .pc .text-white\/30 { color: var(--pc-text-subtle); }
+
+/* Hover and group-hover variants generate their own class names, so the rule
+   above never matched them: a control written as "text-white/70 hover:text-white"
+   stayed readable at rest and turned literally white — invisible — the moment
+   the pointer touched it. */
+.pc .hover\:text-white:hover,
+.pc .group:hover .group-hover\:text-white,
+.pc .hover\:text-white\/90:hover,
+.pc .hover\:text-white\/80:hover { color: var(--pc-text); }
+
+.pc .hover\:text-white\/70:hover,
+.pc .hover\:text-white\/60:hover { color: var(--pc-text-muted); }
 
 .pc .placeholder-white\/40::placeholder,
 .pc .placeholder-white\/35::placeholder { color: var(--pc-text-subtle); }

@@ -420,7 +420,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
                         type="button"
                         disabled={isCompleting}
                         onClick={handleComplete}
-                        className="flex-1 rounded-2xl border border-white/20 bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-emerald-500/20 hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                        className="pc-btn-success flex-1 px-4 py-2.5 text-xs font-bold cursor-pointer"
                       >
                         {isCompleting ? 'Completing…' : 'Yes, I have been seen'}
                       </button>

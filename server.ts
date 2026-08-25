@@ -2972,6 +2972,7 @@ app.get('/api/admin/tokens', apiRoute(async (req, res) => {
       const estWait = Math.max(t.service.estimatedWaitMinutes, Math.ceil(peopleAhead * 1.7));
       return {
         id: t.id,
+        kind: 'token' as const,
         code: t.code,
         service: t.service.name,
         patientName: displayVisitorName(t.visitorName, t.code),
@@ -2994,6 +2995,16 @@ app.get('/api/admin/tokens', apiRoute(async (req, res) => {
 
   const appointmentTokens = appointments.map((apt, index) => ({
     id: apt.id,
+    // The two halves of this list carry different kinds of identifier. Without
+    // saying which, a client cannot know whether `id` addresses a token or an
+    // appointment — which is why opening an appointment row asked for a token
+    // that does not exist and was told, correctly, that it was not found.
+    kind: 'appointment' as const,
+    appointmentId: apt.id,
+    version: apt.version,
+    date: apt.date,
+    time: apt.time,
+    reasonForVisit: apt.reasonForVisit,
     code: apt.code,
     service: `Dr. ${apt.doctor.name} (${apt.doctor.department.name})`,
     patientName: apt.patientName,
@@ -4392,6 +4403,16 @@ app.get('/api/doctor/queue', apiRoute(async (req, res) => {
 
   const appointmentTokens = appointments.map((apt, index) => ({
     id: apt.id,
+    // The two halves of this list carry different kinds of identifier. Without
+    // saying which, a client cannot know whether `id` addresses a token or an
+    // appointment — which is why opening an appointment row asked for a token
+    // that does not exist and was told, correctly, that it was not found.
+    kind: 'appointment' as const,
+    appointmentId: apt.id,
+    version: apt.version,
+    date: apt.date,
+    time: apt.time,
+    reasonForVisit: apt.reasonForVisit,
     code: apt.code,
     service: `Dr. ${doctor?.name ?? ''} (${doctor?.department.name ?? 'Consultation'})`,
     patientName: apt.patientName,
@@ -4429,6 +4450,7 @@ app.get('/api/doctor/queue', apiRoute(async (req, res) => {
 
   const walkInTokens = tokens.map((t, index) => ({
     id: t.id,
+    kind: 'token' as const,
     code: t.code,
     service: t.service.name,
     patientName: displayVisitorName(t.visitorName, t.code),
@@ -4448,6 +4470,86 @@ app.get('/api/doctor/queue', apiRoute(async (req, res) => {
 }));
 
 /** The denial reasons a doctor may choose from. Served so the UI cannot drift. */
+
+/**
+ * GET /api/doctor/appointments/:id/slots — free times for rescheduling.
+ *
+ * Scoped to the signed-in doctor's own appointments. The doctor's current slot
+ * is excluded from the occupancy check, so their existing time still appears as
+ * choosable rather than looking taken by themselves.
+ */
+app.get('/api/doctor/appointments/:id/slots', apiRoute(async (req, res) => {
+  const doctorAuth = await requireDoctor(req, res);
+  if (!doctorAuth) return;
+
+  const appointment = await AppointmentRepo.findByIdOrCode(req.params.id);
+  if (!appointment || appointment.doctorId !== doctorAuth.doctorId) {
+    throw new ApiError(404, 'APPOINTMENT_NOT_FOUND', 'That appointment is not on your schedule.');
+  }
+
+  const date = typeof req.query.date === 'string' ? validatedDate(req.query.date) : appointment.date;
+  const availableTimes = await availableTimesForDoctor(doctorAuth.doctorId, date, appointment.id);
+  res.json({ date, availableTimes: availableTimes.map(formatTime) });
+}));
+
+/**
+ * POST /api/doctor/appointments/:id/reschedule — move one of my appointments.
+ *
+ * A doctor could approve or deny but never move an appointment, so the only way
+ * to shift their own clinic was to ask an administrator. This is the same act
+ * the admin route performs, narrowed to appointments the caller actually owns:
+ * the doctor is resolved from the session, the appointment must already belong
+ * to them, and the doctorId is never taken from the request — so this cannot be
+ * used to move a colleague's patient or hand one to somebody else.
+ */
+app.post('/api/doctor/appointments/:id/reschedule', apiRoute(async (req, res) => {
+  const doctorAuth = await requireDoctor(req, res);
+  if (!doctorAuth) return;
+  if (!enforceRateLimit(req, res, 'doctor-reschedule', 30, 60_000)) return;
+
+  const appointment = await AppointmentRepo.findByIdOrCode(req.params.id);
+  if (!appointment || appointment.doctorId !== doctorAuth.doctorId) {
+    throw new ApiError(404, 'APPOINTMENT_NOT_FOUND', 'That appointment is not on your schedule.');
+  }
+
+  if ((TERMINAL_STATUSES as readonly string[]).includes(appointment.status)) {
+    throw new ApiError(409, 'APPOINTMENT_CLOSED',
+      `This appointment is ${appointment.status.toLowerCase()} and cannot be moved.`);
+  }
+
+  const body = bodyAsObject(req);
+  const newTime = normaliseTime(requiredString(body.newTime ?? body.time, 'New time'));
+  const newDate = body.date || body.newDate ? validatedDate(String(body.date ?? body.newDate)) : appointment.date;
+
+  await assertBookableSlot(doctorAuth.doctorId, newDate, newTime, appointment.id);
+
+  const results = await AdminAppointmentService.batchReschedule(
+    [{ appointmentId: appointment.id, newDoctorId: doctorAuth.doctorId, newDate, newTime }],
+    doctorAuth.userId,
+  );
+  const result = results[0];
+
+  publishEvent({
+    type: 'appointment.status',
+    appointmentId: appointment.id,
+    status: result.appointment.status,
+    doctorId: doctorAuth.doctorId,
+    facilityId: appointment.facilityId,
+  });
+
+  res.json({
+    appointment: {
+      id: result.appointment.id,
+      code: result.appointment.code,
+      date: result.appointment.date,
+      time: formatTime(result.appointment.time),
+      status: result.appointment.status,
+      version: result.appointment.version,
+    },
+    notification: notificationPublicView(result.notification),
+  });
+}));
+
 app.get('/api/doctor/denial-reasons', apiRoute(async (req, res) => {
   const doctorAuth = await requireDoctor(req, res);
   if (!doctorAuth) return;

@@ -90,6 +90,23 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
     'Emergency Triage': AlertCircle,
   };
 
+  /**
+   * A colour per service, so the tiles are distinguishable at a glance.
+   *
+   * They were six identical indigo squares, which meant the icon was the only
+   * thing telling them apart and a visitor had to read every one. The hues are
+   * the kit's own — its KPI chips use exactly this device.
+   */
+  const SERVICE_TONES: Record<string, { solid: string; tint: string }> = {
+    'General Consultation': { solid: '#2E37A4', tint: '#EDEDFB' },
+    'Registration':         { solid: '#06AED4', tint: '#E4F6FB' },
+    'Billing & Discharge':  { solid: '#27AE60', tint: '#E9F7EF' },
+    'Pharmacy & Dispensing':{ solid: '#8B3FA8', tint: '#F5EAF9' },
+    'Specialist Appointments': { solid: '#E04F16', tint: '#FEF0E9' },
+    'Emergency Triage':     { solid: '#EF1E1E', tint: '#FEECEC' },
+  };
+  const DEFAULT_TONE = { solid: '#2E37A4', tint: '#EDEDFB' };
+
   const BADGE_TONES: Record<string, string> = {
     'zero-wait': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
     'high-load': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
@@ -110,6 +127,7 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
       peopleWaiting: live?.peopleWaiting ?? null,
       badge: tile.badge ? KIOSK_BADGES[tile.badge][language] : undefined,
       badgeColor: tile.badge ? BADGE_TONES[tile.badge] : undefined,
+      tone: SERVICE_TONES[tile.type] ?? DEFAULT_TONE,
     };
   });
 
@@ -354,10 +372,12 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
                       )}
 
                       <div className="space-y-2 sm:space-y-3">
-                        <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center transition-colors ${isSelected
-                          ? 'bg-[var(--pc-primary)] text-white shadow-md shadow-[#2E37A4]/30'
-                          : 'bg-[var(--pc-tint-lilac)] text-[var(--pc-primary)]'
-                          }`}>
+                        <div
+                          className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center transition-colors"
+                          style={isSelected
+                            ? { background: s.tone.solid, color: '#fff' }
+                            : { background: s.tone.tint, color: s.tone.solid }}
+                        >
                           <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
                         <div>
@@ -457,7 +477,7 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
                 <button
                   onClick={handleGenerateToken}
                   disabled={isIssuing}
-                  className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-[#2E37A4] via-purple-600 to-[#00D3C7] hover:opacity-90 disabled:opacity-60 text-white font-bold text-sm shadow-lg shadow-[#2E37A4]/30 flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer border border-white/20"
+                  className="pc-btn-primary w-full sm:w-auto px-8 py-3 text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Printer className="w-5 h-5" />
                   <span>{isIssuing ? t.issuing : t.getToken}</span>

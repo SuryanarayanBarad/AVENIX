@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { adminApi, visitorApi } from '../services/queueApi';
 import { doctorApi } from '../services/doctorApi';
+import { DoctorAppointmentModal } from './DoctorAppointmentModal';
 import {
   Search,
   Clock,
@@ -325,6 +326,19 @@ export const PatientTrackerCarousel: React.FC<PatientTrackerCarouselProps> = ({
 
   const isDoctorUser = user?.role === 'DOCTOR';
 
+  // An appointment row and a walk-in row carry different kinds of id, so they
+  // open different things. Sending both to the token view is what produced
+  // "the token was not found".
+  const [appointmentRow, setAppointmentRow] = useState<any>(null);
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const openRow = (token: any) => {
+    if (token?.kind === 'appointment' || (isDoctorUser && token?.appointmentStatus)) {
+      setAppointmentRow(token);
+      return;
+    }
+    onSelectToken(token);
+  };
+
   // Only ever the live queue.
   //
   // This used to fall back to initialTokens while the first fetch was in
@@ -364,7 +378,7 @@ export const PatientTrackerCarousel: React.FC<PatientTrackerCarouselProps> = ({
       mounted = false;
       clearInterval(interval);
     };
-  }, [searchQuery, segment, isDoctorUser]);
+  }, [searchQuery, segment, isDoctorUser, refreshNonce]);
 
   // Doctor directory is fetched lazily the first time the Doctors tab is opened.
   useEffect(() => {
@@ -492,7 +506,7 @@ export const PatientTrackerCarousel: React.FC<PatientTrackerCarouselProps> = ({
                     <PatientCard
                       key={token.id}
                       token={token}
-                      onClick={() => onSelectToken(token)}
+                      onClick={() => openRow(token)}
                       onRefreshWait={(updated) => onUpdateToken(updated)}
                     />
                   ))}
@@ -521,6 +535,21 @@ export const PatientTrackerCarousel: React.FC<PatientTrackerCarouselProps> = ({
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {appointmentRow && (
+        <DoctorAppointmentModal
+          row={appointmentRow}
+          onClose={() => setAppointmentRow(null)}
+          onChanged={() => {
+            // The move is already live for everyone else through the event
+            // stream; this repaints the board the doctor is looking at.
+            // Nudging the search term re-runs the fetch effect, which is the
+            // same path the poller and the live stream use.
+            setSearchQuery((q) => (q === '' ? '' : q));
+            setRefreshNonce((n) => n + 1);
+          }}
+        />
+      )}
 
     </div>
   );
