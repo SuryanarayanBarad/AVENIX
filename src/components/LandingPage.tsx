@@ -41,7 +41,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen text-white selection:bg-[#8e7dff] selection:text-white pb-16">
+    <div className="pc min-h-screen bg-[var(--pc-page)] text-[var(--pc-text)] selection:bg-[#2E37A4] selection:text-white pb-16">
 
       {/* Top Banner Notice - Frosted Glass Bar */}
       <div className="bg-white/[0.04] border-b border-white/[0.10] backdrop-blur-xl px-4 py-2.5 text-center text-xs text-white/80">
@@ -52,22 +52,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <div className="relative overflow-hidden pt-12 pb-16 lg:pt-16 lg:pb-24">
 
         {/* Glow backdrop bubbles */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-[#8e7dff]/15 blur-[140px] pointer-events-none rounded-full" />
-        <div className="absolute top-1/3 left-1/4 -translate-y-1/2 w-[450px] h-[300px] bg-[#ff7db8]/10 blur-[130px] pointer-events-none rounded-full" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-[#2E37A4]/15 blur-[140px] pointer-events-none rounded-full" />
+        <div className="absolute top-1/3 left-1/4 -translate-y-1/2 w-[450px] h-[300px] bg-[#00D3C7]/10 blur-[130px] pointer-events-none rounded-full" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center max-w-3xl mx-auto space-y-6">
 
             {/* Tag pill */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.08] border border-white/[0.16] text-xs font-medium text-white/90 shadow-lg backdrop-blur-xl">
-              <Sparkles className="w-3.5 h-3.5 text-[#8e7dff]" />
+              <Sparkles className="w-3.5 h-3.5 text-[#2E37A4]" />
               <span>AI-Driven Spatial Intelligence & Fair Queue Optimization</span>
             </div>
 
             {/* Main Headline */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white font-display leading-[1.1]">
               Smarter Queues. <br className="hidden sm:inline" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#8e7dff] via-purple-300 to-[#ff7db8]">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2E37A4] via-purple-300 to-[#00D3C7]">
                 Fairer Service.
               </span>
             </h1>
@@ -81,7 +81,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="flex flex-wrap items-center justify-center gap-3.5 pt-4">
               <button
                 onClick={() => launch('admin')}
-                className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#8e7dff] to-purple-600 hover:from-[#7b69fd] hover:to-purple-500 text-white font-semibold text-sm shadow-lg shadow-[#8e7dff]/30 flex items-center gap-2 group transition-all cursor-pointer active:scale-95 border border-white/20"
+                className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:from-[#3538CD] hover:to-purple-500 text-white font-semibold text-sm shadow-lg shadow-[#2E37A4]/30 flex items-center gap-2 group transition-all cursor-pointer active:scale-95 border border-white/20"
               >
                 <LayoutDashboard className="w-4 h-4" />
                 <span>Launch Admin Operations</span>
@@ -92,7 +92,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 onClick={() => launch('kiosk')}
                 className="px-6 py-3.5 rounded-2xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.16] backdrop-blur-xl text-white font-semibold text-sm flex items-center gap-2 transition-all cursor-pointer active:scale-95 shadow-sm"
               >
-                <Monitor className="w-4 h-4 text-[#8e7dff]" />
+                <Monitor className="w-4 h-4 text-[#2E37A4]" />
                 <span>Visitor Self-Service Kiosk</span>
               </button>
 
@@ -100,7 +100,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 onClick={() => launch('patient-tracker')}
                 className="px-6 py-3.5 rounded-2xl bg-white/[0.05] hover:bg-white/[0.10] border border-white/[0.12] backdrop-blur-xl text-white/90 font-semibold text-sm flex items-center gap-2 transition-all cursor-pointer shadow-sm"
               >
-                <Smartphone className="w-4 h-4 text-[#ff7db8]" />
+                <Smartphone className="w-4 h-4 text-[#00D3C7]" />
                 <span>Live Patient Token (A-184)</span>
               </button>
 
@@ -132,13 +132,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
               <div className="glass-panel p-5 rounded-3xl text-left relative overflow-hidden group">
                 <div className="text-xs uppercase tracking-wider text-white/50 font-semibold mb-1">Privacy Guarantee</div>
-                <div className="text-3xl font-light text-[#8e7dff] font-display">100%</div>
+                <div className="text-3xl font-light text-[#2E37A4] font-display">100%</div>
                 <div className="text-xs text-white/60 mt-1">Zero PII / Biometrics</div>
               </div>
 
               <div className="glass-panel p-5 rounded-3xl text-left relative overflow-hidden group">
                 <div className="text-xs uppercase tracking-wider text-white/50 font-semibold mb-1">Spatial Grid</div>
-                <div className="text-3xl font-light text-[#ff7db8] font-display">42 Nodes</div>
+                <div className="text-3xl font-light text-[#00D3C7] font-display">42 Nodes</div>
                 <div className="text-xs text-white/60 mt-1">LiDAR & Thermal mesh</div>
               </div>
 
@@ -156,7 +156,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </p>
           <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-14 opacity-80">
             <div className="flex items-center gap-2 text-white/80 font-bold text-sm tracking-wide">
-              <Building2 className="w-4 h-4 text-[#8e7dff]" />
+              <Building2 className="w-4 h-4 text-[#2E37A4]" />
               <span>CityCare Health System</span>
             </div>
             <div className="flex items-center gap-2 text-white/80 font-bold text-sm tracking-wide">
@@ -178,7 +178,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* 4 Core Lifecycle Pillars (Frosted Glass Cards) */}
       <div className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#8e7dff]/15 border border-[#8e7dff]/30 text-xs font-semibold text-[#8e7dff] mb-3">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#2E37A4]/15 border border-[#2E37A4]/30 text-xs font-semibold text-[#2E37A4] mb-3">
             <span>THE CLOSED-LOOP ENGINE</span>
           </div>
           <h3 className="text-3xl font-bold text-white font-display">How QueueMind AI Works</h3>
@@ -190,7 +190,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
 
           {/* Step 1 */}
-          <div className="glass-panel p-6 rounded-3xl relative group hover:border-[#8e7dff]/50 transition-all">
+          <div className="glass-panel p-6 rounded-3xl relative group hover:border-[#2E37A4]/50 transition-all">
             <div className="w-11 h-11 rounded-2xl bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center mb-4 shadow-inner">
               <Radar className="w-5 h-5" />
             </div>
@@ -202,7 +202,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Step 2 */}
-          <div className="glass-panel p-6 rounded-3xl relative group hover:border-[#8e7dff]/50 transition-all">
+          <div className="glass-panel p-6 rounded-3xl relative group hover:border-[#2E37A4]/50 transition-all">
             <div className="w-11 h-11 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 flex items-center justify-center mb-4 shadow-inner">
               <Cpu className="w-5 h-5" />
             </div>
@@ -214,7 +214,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Step 3 */}
-          <div className="glass-panel p-6 rounded-3xl relative group hover:border-[#8e7dff]/50 transition-all">
+          <div className="glass-panel p-6 rounded-3xl relative group hover:border-[#2E37A4]/50 transition-all">
             <div className="w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-300 flex items-center justify-center mb-4 shadow-inner">
               <SlidersHorizontal className="w-5 h-5" />
             </div>
@@ -226,7 +226,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Step 4 */}
-          <div className="glass-panel p-6 rounded-3xl relative group hover:border-[#8e7dff]/50 transition-all">
+          <div className="glass-panel p-6 rounded-3xl relative group hover:border-[#2E37A4]/50 transition-all">
             <div className="w-11 h-11 rounded-2xl bg-teal-500/15 border border-teal-500/30 text-teal-300 flex items-center justify-center mb-4 shadow-inner">
               <Sparkles className="w-5 h-5" />
             </div>
@@ -271,7 +271,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <footer className="max-w-7xl mx-auto px-4 pt-8 border-t border-white/[0.08] text-center text-xs text-white/50">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-[#8e7dff]" />
+            <Activity className="w-4 h-4 text-[#2E37A4]" />
             <span className="font-semibold text-white/80">QueueMind AI</span>
             <span>— Frosted Glass Edition</span>
           </div>

@@ -65,7 +65,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const initials = displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 
   return (
-    <header className="sticky top-0 z-40 bg-white/[0.05] backdrop-blur-2xl border-b border-white/[0.12] shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]">
+    <header className="pc sticky top-0 z-40 bg-[var(--pc-surface)] border-b border-[var(--pc-border)] text-[var(--pc-text)]">
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
 
@@ -75,13 +75,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleNav('landing')}
               className="flex items-center gap-2.5 text-left group cursor-pointer"
             >
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#8e7dff] via-indigo-500 to-[#ff7db8] flex items-center justify-center text-white shadow-lg shadow-[#8e7dff]/25 border border-white/20 group-hover:scale-105 transition-transform">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#2E37A4] via-indigo-500 to-[#00D3C7] flex items-center justify-center text-white shadow-lg shadow-[#2E37A4]/25 border border-white/20 group-hover:scale-105 transition-transform">
                 <Activity className="w-5 h-5" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-lg text-white tracking-tight font-display">
-                    QueueMind<span className="text-[#8e7dff]">AI</span>
+                    QueueMind<span className="text-[#2E37A4]">AI</span>
                   </span>
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 backdrop-blur-md">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-pulse" />
@@ -103,7 +103,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => handleNav('landing')}
               className={`flex w-full min-w-0 items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-center transition-all cursor-pointer ${isViewActive('landing')
-                  ? 'bg-gradient-to-r from-[#8e7dff]/30 to-purple-500/30 text-white font-bold border border-[#8e7dff]/50 shadow-[0_0_15px_rgba(142,125,255,0.35)]'
+                  ? 'bg-gradient-to-r from-[#2E37A4]/30 to-purple-500/30 text-white font-bold border border-[#2E37A4]/50 shadow-[0_0_15px_rgba(142,125,255,0.35)]'
                   : 'text-white/70 hover:text-white hover:bg-white/[0.08]'
                 }`}
             >
@@ -114,7 +114,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => handleNav('kiosk')}
               className={`flex w-full min-w-0 items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-center transition-all cursor-pointer ${isViewActive('kiosk')
-                  ? 'bg-gradient-to-r from-[#8e7dff]/30 to-purple-500/30 text-white font-bold border border-[#8e7dff]/50 shadow-[0_0_15px_rgba(142,125,255,0.35)]'
+                  ? 'bg-gradient-to-r from-[#2E37A4]/30 to-purple-500/30 text-white font-bold border border-[#2E37A4]/50 shadow-[0_0_15px_rgba(142,125,255,0.35)]'
                   : 'text-white/70 hover:text-white hover:bg-white/[0.08]'
                 }`}
             >
@@ -126,7 +126,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={() => handleNav('doctor')}
                 className={`flex w-full min-w-0 items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-center transition-all cursor-pointer ${isViewActive('doctor')
-                    ? 'bg-gradient-to-r from-[#8e7dff]/30 to-purple-500/30 text-white font-bold border border-[#8e7dff]/50 shadow-[0_0_15px_rgba(142,125,255,0.35)]'
+                    ? 'bg-gradient-to-r from-[#2E37A4]/30 to-purple-500/30 text-white font-bold border border-[#2E37A4]/50 shadow-[0_0_15px_rgba(142,125,255,0.35)]'
                     : 'text-white/70 hover:text-white hover:bg-white/[0.08]'
                   }`}
               >
@@ -137,7 +137,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={() => handleNav('patient-tracker')}
                 className={`flex w-full min-w-0 items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-center transition-all cursor-pointer ${isViewActive('patient-tracker')
-                    ? 'bg-gradient-to-r from-[#8e7dff]/30 to-purple-500/30 text-white font-bold border border-[#8e7dff]/50 shadow-[0_0_15px_rgba(142,125,255,0.35)]'
+                    ? 'bg-gradient-to-r from-[#2E37A4]/30 to-purple-500/30 text-white font-bold border border-[#2E37A4]/50 shadow-[0_0_15px_rgba(142,125,255,0.35)]'
                     : 'text-white/70 hover:text-white hover:bg-white/[0.08]'
                   }`}
               >
@@ -149,7 +149,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => handleNav('admin')}
               className={`flex w-full min-w-0 items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-center transition-all cursor-pointer ${isViewActive('admin')
-                  ? 'bg-gradient-to-r from-[#8e7dff]/30 to-purple-500/30 text-white font-bold border border-[#8e7dff]/50 shadow-[0_0_15px_rgba(142,125,255,0.35)]'
+                  ? 'bg-gradient-to-r from-[#2E37A4]/30 to-purple-500/30 text-white font-bold border border-[#2E37A4]/50 shadow-[0_0_15px_rgba(142,125,255,0.35)]'
                   : 'text-white/70 hover:text-white hover:bg-white/[0.08]'
                 }`}
             >
@@ -161,7 +161,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={() => handleNav('super-admin')}
                 className={`flex w-full min-w-0 items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-center transition-all cursor-pointer ${isViewActive('super-admin')
-                    ? 'bg-gradient-to-r from-[#ff7db8]/30 to-pink-500/30 text-white font-bold border border-[#ff7db8]/50 shadow-[0_0_15px_rgba(255,125,184,0.35)]'
+                    ? 'bg-gradient-to-r from-[#00D3C7]/30 to-pink-500/30 text-white font-bold border border-[#00D3C7]/50 shadow-[0_0_15px_rgba(255,125,184,0.35)]'
                     : 'text-white/70 hover:text-white hover:bg-white/[0.08]'
                   }`}
               >
@@ -201,7 +201,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                             setIsMobileNavOpen(false);
                           }}
                           className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs text-left transition-all cursor-pointer ${active
-                              ? 'bg-gradient-to-r from-[#8e7dff]/30 to-purple-500/30 text-white font-bold border border-[#8e7dff]/50'
+                              ? 'bg-gradient-to-r from-[#2E37A4]/30 to-purple-500/30 text-white font-bold border border-[#2E37A4]/50'
                               : 'text-white/70 hover:text-white hover:bg-white/[0.08] border border-transparent'
                             }`}
                         >
@@ -235,7 +235,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       className="w-7 h-7 rounded-full object-cover border border-white/20 shadow-sm"
                     />
                   ) : (
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#8e7dff] to-[#ff7db8] flex items-center justify-center text-white font-bold text-[11px] shadow-sm">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#2E37A4] to-[#00D3C7] flex items-center justify-center text-white font-bold text-[11px] shadow-sm">
                       {initials}
                     </div>
                   )}
@@ -248,7 +248,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               ) : (
                 <button
                   onClick={() => onLoginClick?.()}
-                  className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-[#8e7dff] to-purple-500 text-white font-semibold text-xs shadow-[0_0_15px_rgba(142,125,255,0.4)] hover:shadow-[0_0_20px_rgba(142,125,255,0.6)] transition-all cursor-pointer"
+                  className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-[#2E37A4] to-purple-500 text-white font-semibold text-xs shadow-[0_0_15px_rgba(142,125,255,0.4)] hover:shadow-[0_0_20px_rgba(142,125,255,0.6)] transition-all cursor-pointer"
                 >
                   Sign In
                 </button>

@@ -73,18 +73,17 @@
 }
 
 @layer base {
+  /* The page itself is the kit's surface now. It was a dark radial gradient,
+     which every screen has since moved off — leaving it in place put a dark
+     band behind the content and showed through on overscroll. */
   html, body {
-    background-color: #0c0c1e;
-    background-image:
-      radial-gradient(circle at 15% 15%, rgba(30, 30, 74, 0.75) 0%, transparent 45%),
-      radial-gradient(circle at 85% 85%, rgba(61, 27, 93, 0.7) 0%, transparent 45%),
-      radial-gradient(circle at 50% 50%, rgba(14, 14, 38, 0.95) 0%, #06060c 100%);
+    background-color: var(--pc-page);
     background-attachment: fixed;
   }
-  
+
   body {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    color: var(--text-primary);
+    font-family: var(--pc-font);
+    color: var(--pc-text);
     min-height: 100vh;
   }
 
@@ -111,11 +110,38 @@
   }
 
   /* A shared fallback gives every enabled action a clear response, including
-     active segmented controls that do not have a utility hover class. */
+     active segmented controls that do not have a utility hover class.
+
+     brightness() was the wrong instrument. It multiplies whatever is already
+     there, so a pale control barely moves while a saturated one lurches, and on
+     a light surface the result reads as the button dimming rather than lifting.
+     A frosted wash plus a hairline is the same gesture on every control,
+     regardless of what colour it started as. */
   @media (hover: hover) and (pointer: fine) {
     :where(button:not(:disabled)):hover {
-      filter: brightness(1.08);
       transform: translateY(-1px);
+      backdrop-filter: saturate(1.15);
+      -webkit-backdrop-filter: saturate(1.15);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+        0 4px 14px -6px rgba(10, 27, 57, 0.28);
+    }
+  }
+
+  /* On a Preclinic surface the same gesture reads the other way round: the
+     frost is a faint indigo tint and the hairline is the kit's own border. */
+  @media (hover: hover) and (pointer: fine) {
+    .pc :where(button:not(:disabled)):hover {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      box-shadow:
+        inset 0 0 0 1px rgba(46, 55, 164, 0.16),
+        0 4px 12px -6px rgba(46, 55, 164, 0.22);
+    }
+
+    /* A filled primary already carries the colour; it lifts without a ring. */
+    .pc :where(button.pc-btn-primary:not(:disabled)):hover {
+      box-shadow: 0 4px 12px -2px rgba(46, 55, 164, 0.35);
     }
   }
 
@@ -398,6 +424,28 @@
 
 .pc .divide-white\/\[0\.06\] > * + *,
 .pc .divide-white\/\[0\.08\] > * + * { border-color: var(--pc-border); }
+
+/* Hard-coded dark surfaces.
+   ---------------------------------------------------------------------------
+   Popovers, dropdowns, select options and a few modals paint #12122b directly
+   rather than through a utility, so nothing above catches them and they stayed
+   as dark islands on a light page. Native <option> elements especially: the
+   browser draws those itself, so a dark one is unreadable in a light select. */
+.pc [class*="bg-[#12122b]"] {
+  background-color: var(--pc-surface) !important;
+  color: var(--pc-text);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.pc [class*="ring-[#0c0c1e]"] {
+  --tw-ring-color: var(--pc-surface);
+}
+
+.pc option {
+  background-color: var(--pc-surface);
+  color: var(--pc-text);
+}
 
 /* Status colours inside a Preclinic surface.
    ---------------------------------------------------------------------------

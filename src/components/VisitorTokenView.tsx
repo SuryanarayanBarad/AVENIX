@@ -606,7 +606,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
         </div>
 
         {/* Bottom Navigation */}
-        <div className="bg-[#12122b]/80 border-t border-white/[0.08] backdrop-blur-xl p-3 shrink-0 flex items-center justify-around pb-6">
+        <div className="bg-[var(--pc-surface)] border-t border-[var(--pc-border)] p-3 shrink-0 flex items-center justify-around pb-6">
           {[
             { icon: Ticket, label: 'Ticket' },
             { icon: Users, label: 'Queue' },
@@ -619,13 +619,13 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
                 key={idx}
                 onClick={() => scrollToCard(idx)}
                 className={`group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all duration-300 relative ${
-                  isActive ? 'text-white' : 'text-white/40 hover:text-white/80'
+                  isActive ? 'text-[var(--pc-primary)]' : 'text-[var(--pc-text-subtle)] hover:text-[var(--pc-text)]'
                 }`}
               >
                 {/* Glowing hover/active effect */}
-                <div className={`absolute inset-0 bg-[#2E37A4]/20 blur-md rounded-xl transition-opacity duration-300 ${isActive ? 'opacity-100 animate-pulse' : 'opacity-0 group-hover:opacity-100'}`} />
+                <div className={`absolute inset-0 rounded-xl bg-[var(--pc-tint-lilac)] transition-opacity duration-200 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
                 <tab.icon className={`w-5 h-5 relative z-10 transition-colors ${isActive ? 'text-[#2E37A4]' : 'group-hover:text-[#2E37A4]/70'}`} />
-                <span className={`text-[10px] font-medium relative z-10 transition-colors ${isActive ? 'text-white' : ''}`}>
+                <span className={`text-[10px] font-medium relative z-10 transition-colors ${isActive ? 'text-[var(--pc-primary)]' : ''}`}>
                   {tab.label}
                 </span>
               </button>
