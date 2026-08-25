@@ -242,7 +242,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden text-white">
+    <div className="pc flex h-[calc(100vh-4rem)] overflow-hidden bg-[var(--pc-page)] text-[var(--pc-text)]">
 
       {/* Sidebar Navigation */}
       <Sidebar
@@ -257,11 +257,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       <div className="flex-1 flex min-h-0 min-w-0 flex-col overflow-x-hidden">
 
         {/* Top Operational Bar (Frosted Glass Header) */}
-        <header className="shrink-0 bg-white/[0.04] border-b border-white/[0.10] backdrop-blur-2xl px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between gap-3 z-20 shadow-md">
+        <header className="shrink-0 bg-[var(--pc-surface)] border-b border-[var(--pc-border)] px-4 sm:px-6 py-3 flex items-center justify-between gap-3 z-20">
 
           <div className="flex items-center gap-4 flex-1 max-w-xl">
             <div className="relative w-full">
-              <Search className="w-4 h-4 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-[var(--pc-text-subtle)] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Search patient, token, doctor, counter, or AI rule..."
@@ -288,14 +288,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 aria-autocomplete="list"
                 aria-controls="hospital-search-results"
                 aria-expanded={showSearchResults && Boolean(searchQuery.trim())}
-                className="w-full pl-10 pr-4 py-2 glass-input rounded-2xl text-xs placeholder-white/40 text-white"
+                className="pc-input w-full pl-10 pr-4 py-2 text-[13px]"
               />
 
               {showSearchResults && searchQuery.trim() && (
                 <div
                   id="hospital-search-results"
                   role="listbox"
-                  className="absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-white/[0.18] bg-[#12122b] p-2 text-xs shadow-2xl"
+                  className="absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-md border border-[var(--pc-border)] bg-[var(--pc-surface)] p-2 text-[13px] shadow-lg"
                 >
                   {searchResults.length > 0 ? (
                     <div className="space-y-1">
@@ -306,7 +306,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           role="option"
                           onMouseDown={(event) => event.preventDefault()}
                           onClick={() => handleSearchResultSelect(result)}
-                          className="flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-white/[0.08] cursor-pointer"
+                          className="flex w-full items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-[var(--pc-page)] cursor-pointer"
                         >
                           <span className="mt-0.5 shrink-0 rounded-full border border-[#8e7dff]/40 bg-[#8e7dff]/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#b4aaff]">
                             {result.category}
@@ -331,7 +331,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {/* Direct Switch to Visitor Facing screens */}
             <button
               onClick={onNavigateToKiosk}
-              className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.12] text-white/80 hover:text-white text-xs font-semibold transition-all cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[var(--pc-border)] bg-[var(--pc-surface)] text-[var(--pc-text-muted)] hover:bg-[var(--pc-page)] hover:text-[var(--pc-text)] text-[13px] font-medium transition-colors cursor-pointer"
               title="Open Visitor Self-Service Kiosk"
             >
               <ExternalLink className="w-3.5 h-3.5 text-[#8e7dff]" />
@@ -351,7 +351,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="relative">
               <button
                 onClick={() => setShowAlertsDropdown(!showAlertsDropdown)}
-                className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/[0.10] border border-transparent hover:border-white/[0.12] relative transition-colors cursor-pointer"
+                className="relative p-2 rounded-md text-[var(--pc-text-muted)] hover:bg-[var(--pc-page)] hover:text-[var(--pc-text)] border border-transparent transition-colors cursor-pointer"
               >
                 <Bell className="w-4.5 h-4.5" />
                 {alerts.length > 0 && (
@@ -365,13 +365,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <AnimatePresence initial={false}>
                 {showAlertsDropdown && (
                   <motion.div
-                    className="absolute right-0 z-50 mt-2 w-80 space-y-2 rounded-2xl border border-white/[0.18] bg-[#12122b] p-3.5 text-xs shadow-2xl backdrop-blur-2xl"
+                    className="absolute right-0 z-50 mt-2 w-80 space-y-2 rounded-md border border-[var(--pc-border)] bg-[var(--pc-surface)] p-3.5 text-[13px] shadow-lg"
                     initial={shouldReduceMotion ? false : { opacity: 0, y: -6, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: -4, scale: 0.98 }}
                     transition={{ duration: shouldReduceMotion ? 0 : 0.16, ease: panelEase }}
                   >
-                    <div className="flex items-center justify-between pb-2 border-b border-white/[0.10]">
+                    <div className="flex items-center justify-between pb-2 border-b border-[var(--pc-border)]">
                       <span className="font-bold text-white font-display">System Alerts ({alerts.length})</span>
                       <button
                         onClick={() => setShowAlertsDropdown(false)}
@@ -382,7 +382,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
                     <div className="space-y-1.5 max-h-64 overflow-y-auto">
                       {alerts.map((al) => (
-                        <div key={al.id} className="p-2.5 rounded-xl bg-white/[0.05] border border-white/[0.08] space-y-0.5">
+                        <div key={al.id} className="p-2.5 rounded-md bg-[var(--pc-page)] border border-[var(--pc-border)] space-y-0.5">
                           <div className="flex items-center justify-between">
                             <span className={`font-bold text-[11px] ${al.severity === 'critical' || al.severity === 'CRITICAL' ? 'text-rose-400' : 'text-amber-400'
                               }`}>
@@ -528,7 +528,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* Floating QueueMind Copilot Button on Bottom-Right */}
       <button
         onClick={() => handleOpenCopilotWithPrompt()}
-        className="fixed bottom-6 right-6 z-40 p-4 rounded-2xl bg-gradient-to-r from-[#8e7dff] to-purple-600 hover:from-[#7b69fd] hover:to-purple-500 text-white font-bold shadow-xl shadow-[#8e7dff]/30 flex items-center gap-2.5 active:scale-95 transition-all cursor-pointer group border border-white/20 backdrop-blur-xl"
+        className="pc-btn-primary fixed bottom-6 right-6 z-40 flex items-center gap-2.5 p-4 font-semibold cursor-pointer group"
       >
         <div className="relative">
           <Sparkles className="w-5 h-5 animate-pulse" />

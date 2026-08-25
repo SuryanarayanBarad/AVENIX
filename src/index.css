@@ -301,6 +301,102 @@
 
 .pc-btn-ghost:not(:disabled):active { transform: translateY(0) scale(0.985); }
 
+/* ---------------------------------------------------------------------------
+   TRANSITIONAL: dark-glass markup inside a Preclinic shell
+   ---------------------------------------------------------------------------
+   The Command Center shell and sidebar are converted; the views inside them
+   still carry glass-* classes and inline text-white utilities, which would be
+   white-on-white on a light page. These scoped rules keep every tab readable
+   during the migration.
+
+   This is a bridge, not the design. As each view is converted to pc-* classes
+   its rules here stop matching anything, and the block shrinks. Delete it once
+   nothing inside .pc needs it.
+--------------------------------------------------------------------------- */
+.pc .glass-panel,
+.pc .glass-panel-elevated,
+.pc .glass-panel-interactive,
+.pc .glass-hero {
+  background: var(--pc-surface);
+  border-color: var(--pc-border);
+  box-shadow: var(--pc-shadow);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.pc .glass-panel-interactive:hover {
+  background: var(--pc-page);
+  border-color: var(--pc-border-strong);
+  box-shadow: var(--pc-shadow);
+}
+
+.pc .glass-input {
+  background: var(--pc-surface);
+  border-color: var(--pc-border);
+  color: var(--pc-text);
+}
+
+.pc .glass-input:focus {
+  background: var(--pc-surface);
+  border-color: var(--pc-primary);
+  box-shadow: 0 0 0 3px rgba(46, 55, 164, 0.12);
+}
+
+.pc .glass-pill {
+  background: var(--pc-page);
+  border-color: var(--pc-border);
+}
+
+.pc .glass-pill-active {
+  background: var(--pc-primary);
+  border-color: var(--pc-primary);
+  color: #fff;
+  box-shadow: none;
+}
+
+/* Text written for a dark surface. Solid white becomes the body navy; the
+   translucent greys collapse onto the two muted tones the kit actually uses. */
+.pc .text-white { color: var(--pc-text); }
+.pc .text-white\/90,
+.pc .text-white\/80,
+.pc .text-white\/75,
+.pc .text-white\/72,
+.pc .text-white\/70 { color: var(--pc-text-muted); }
+.pc .text-white\/65,
+.pc .text-white\/60,
+.pc .text-white\/55,
+.pc .text-white\/50,
+.pc .text-white\/45,
+.pc .text-white\/40 { color: var(--pc-text-subtle); }
+
+.pc .placeholder-white\/40::placeholder,
+.pc .placeholder-white\/35::placeholder { color: var(--pc-text-subtle); }
+
+/* Hairlines and low-alpha fills drawn for a dark surface. */
+.pc .border-white\/\[0\.20\],
+.pc .border-white\/\[0\.18\],
+.pc .border-white\/\[0\.15\],
+.pc .border-white\/\[0\.14\],
+.pc .border-white\/\[0\.12\],
+.pc .border-white\/\[0\.11\],
+.pc .border-white\/\[0\.10\],
+.pc .border-white\/\[0\.08\],
+.pc .border-white\/10,
+.pc .border-white\/20 { border-color: var(--pc-border); }
+
+.pc .bg-white\/\[0\.08\],
+.pc .bg-white\/\[0\.07\],
+.pc .bg-white\/\[0\.06\],
+.pc .bg-white\/\[0\.05\],
+.pc .bg-white\/\[0\.045\],
+.pc .bg-white\/\[0\.04\],
+.pc .bg-white\/\[0\.03\],
+.pc .bg-white\/5,
+.pc .bg-white\/10 { background-color: var(--pc-page); }
+
+.pc .divide-white\/\[0\.06\] > * + *,
+.pc .divide-white\/\[0\.08\] > * + * { border-color: var(--pc-border); }
+
 /* Animations */
 @keyframes pulse-subtle {
 
