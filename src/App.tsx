@@ -42,7 +42,6 @@ import {
   mockZones,
   mockSensors,
   mockPredictions,
-  mockAppointments,
   mockFairnessWeights,
   mockDecisionLogs,
   mockAlerts
@@ -176,7 +175,11 @@ export default function App() {
   // Lets the live stream trigger the same refetch the poller uses.
   const queueRefetchRef = useRef<(() => void) | null>(null);
 
-  const [appointments, setAppointments] = useState<Appointment[]>(mockAppointments);
+  // Real appointments, loaded for staff. This was seeded with mockAppointments,
+  // so the Appointments tab showed demo rows while genuine bookings — which sit
+  // Pending until somebody approves them, and so never reach the live queue —
+  // were invisible to every staff role.
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [fairnessWeights, setFairnessWeights] = useState<FairnessWeight[]>(mockFairnessWeights);
   const [decisionLogs, setDecisionLogs] = useState<DecisionLogEntry[]>(mockDecisionLogs);
   const [alerts, setAlerts] = useState<AlertItem[]>(mockAlerts);
@@ -220,7 +223,15 @@ export default function App() {
   }, [user?.role]);
 
   // Any queue or appointment change anywhere refreshes the board immediately.
-  useLiveUpdates(() => queueRefetchRef.current?.(), { enabled: !!user && user.role !== 'VISITOR' });
+  // Declared before the subscriber that calls it.
+  const loadAppointments = useRef<() => void>(() => {});
+
+  useLiveUpdates(() => {
+    queueRefetchRef.current?.();
+    // An appointment approved or denied anywhere changes this list too, and it
+    // is the list that shows what is still waiting on somebody.
+    loadAppointments.current?.();
+  }, { enabled: !!user && user.role !== 'VISITOR' });
 
   // A signed-in visitor's own token drives the nav pill, so it has to track the
   // real one — including the moment it is issued, edited or cancelled.
@@ -298,6 +309,22 @@ export default function App() {
       // ticket stays on screen rather than dumping the visitor somewhere blank.
     }
   };
+
+  useEffect(() => {
+    if (!user || !['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'STAFF'].includes(user.role)) {
+      setAppointments([]);
+      return;
+    }
+    let cancelled = false;
+    const run = () => {
+      adminApi.getAppointments()
+        .then((data) => { if (!cancelled) setAppointments(data.appointments as any); })
+        .catch(() => { /* the tab shows its own empty state */ });
+    };
+    loadAppointments.current = run;
+    run();
+    return () => { cancelled = true; };
+  }, [user]);
 
   // Handler for updating token status
   const handleUpdateToken = (updatedToken: Token) => {

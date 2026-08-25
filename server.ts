@@ -3414,6 +3414,147 @@ app.patch('/api/admin/doctors/:id/availability', apiRoute(async (req, res) => {
   });
 }));
 
+
+/**
+ * GET /api/admin/appointments — the facility's appointments, for staff.
+ *
+ * This did not exist, so the Command Center's Appointments tab was rendering
+ * seeded demo rows while real bookings were invisible to everyone except the
+ * patient and the one doctor they were booked with. Pending requests are
+ * included and listed first: they are the ones needing somebody's attention,
+ * and they are deliberately absent from the live queue until approved.
+ */
+app.get('/api/admin/appointments', apiRoute(async (req, res) => {
+  const user = await requireAuthUser(req, res);
+  if (!user) return;
+  if (!hasPermission(user.role, 'appointments:read')) {
+    res.status(403).json({ error: 'AUTHORIZATION_DENIED', message: 'You cannot view appointments.' });
+    return;
+  }
+
+  const facility = await getCachedFacilityOrThrow();
+  const date = typeof req.query.date === 'string' ? validatedDate(req.query.date) : undefined;
+  const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+
+  const where: any = { facilityId: facility.id, deletedAt: null };
+  if (date) where.date = date;
+  if (typeof req.query.status === 'string' && req.query.status !== 'All') {
+    const wanted = normaliseStatus(req.query.status);
+    if (wanted) where.status = wanted;
+  }
+  if (search) {
+    where.OR = [
+      { code: { contains: search, mode: 'insensitive' } },
+      { patientName: { contains: search, mode: 'insensitive' } },
+      { doctor: { name: { contains: search, mode: 'insensitive' } } },
+    ];
+  }
+
+  const rows = await prisma.appointment.findMany({
+    where,
+    orderBy: [{ date: 'asc' }, { time: 'asc' }],
+    take: 200,
+    include: { doctor: { include: { department: true } } },
+  });
+
+  const appointments = rows.map((apt) => ({
+    id: apt.id,
+    code: apt.code,
+    appointmentId: apt.code,
+    patientName: apt.patientName,
+    phoneMasked: maskPhone(apt.phone),
+    doctorId: apt.doctorId,
+    doctor: `Dr. ${apt.doctor.name}`,
+    department: apt.doctor.department.name,
+    service: apt.doctor.department.name,
+    date: apt.date,
+    time: formatTime(apt.time),
+    rawTime: apt.time,
+    reasonForVisit: apt.reasonForVisit,
+    status: apt.status,
+    patientStatus: toPatientStatus(apt.status),
+    statusReason: apt.statusReason ?? null,
+    awaitingApproval: apt.status === 'Pending',
+    inQueue: isQueueEligible(apt.status),
+    version: apt.version,
+    bookedAtDesk: (apt as any).bookedAtDesk ?? false,
+  }));
+
+  // Pending first: they are the only rows that need a decision.
+  appointments.sort((a, b) => Number(b.awaitingApproval) - Number(a.awaitingApproval));
+
+  res.json({
+    appointments,
+    pendingCount: appointments.filter((a) => a.awaitingApproval).length,
+  });
+}));
+
+/**
+ * POST /api/admin/appointments/:id/status — staff approve, deny or advance one.
+ *
+ * Approval was reachable only through /api/doctor/*, which resolves the doctor
+ * from the session — so a booking could only ever be actioned by the one doctor
+ * it named. If that doctor never signed in, the request sat Pending forever,
+ * invisible to the live queue and unactionable by anyone else. Staff who run
+ * the floor can now approve or deny on their behalf, through the same state
+ * machine and the same audit trail.
+ */
+app.post('/api/admin/appointments/:id/status', apiRoute(async (req, res) => {
+  const user = await requireAuthUser(req, res);
+  if (!user) return;
+  if (!hasPermission(user.role, 'appointments:manage')) {
+    res.status(403).json({
+      error: 'AUTHORIZATION_DENIED',
+      message: 'You do not have permission to change an appointment.',
+    });
+    return;
+  }
+
+  const body = bodyAsObject(req);
+  const status = normaliseStatus(requiredString(body.status, 'Status'));
+  if (!status) throw new ApiError(400, 'INVALID_STATUS', 'Invalid status provided.');
+
+  const appointment = await prisma.appointment.findFirst({
+    where: { id: req.params.id, deletedAt: null },
+  });
+  if (!appointment) throw new ApiError(404, 'NOT_FOUND', 'Appointment not found.');
+
+  // A denial still has to say why — the patient is told, whoever declined.
+  let statusReason: string | null = null;
+  if (status === 'Denied') {
+    statusReason = resolveDenialReason(
+      optionalString(body.reasonId, 'Reason', 60),
+      optionalString(body.reasonNote, 'Reason note', 300),
+    );
+    if (!statusReason) {
+      throw new ApiError(400, 'DENIAL_REASON_REQUIRED', 'Select a reason for declining this appointment.',
+        { field: 'reasonId', options: DENIAL_REASONS });
+    }
+  }
+
+  const updated = await applyAppointmentStatus(
+    appointment,
+    status,
+    { id: user.id, role: user.role },
+    body.expectedVersion,
+    statusReason,
+  );
+
+  await recordAudit({ id: user.id, role: user.role }, 'update_appointment_status', 'appointment', appointment.id,
+    `Status changed to ${status}`);
+
+  res.json({
+    appointment: {
+      id: updated.id,
+      code: updated.code,
+      status: updated.status,
+      statusReason: updated.statusReason ?? null,
+      version: updated.version,
+      inQueue: isQueueEligible(updated.status),
+    },
+  });
+}));
+
 app.post('/api/admin/appointments/:id/reschedule', apiRoute(async (req, res) => {
   const admin = await requireAdmin(req, res);
   if (!admin) return;

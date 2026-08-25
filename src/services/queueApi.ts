@@ -250,6 +250,30 @@ export interface AdminScheduleAppointment {
 }
 
 export const adminApi = {
+  /** The facility's appointments, pending first. Staff only. */
+  async getAppointments(params: { date?: string; status?: string; search?: string } = {}) {
+    const query = new URLSearchParams();
+    if (params.date) query.set('date', params.date);
+    if (params.status && params.status !== 'All') query.set('status', params.status);
+    if (params.search) query.set('search', params.search);
+    const suffix = query.toString() ? `?${query}` : '';
+    return apiFetch<{ appointments: any[]; pendingCount: number }>(`/api/admin/appointments${suffix}`, {
+      fallback: 'Appointments could not be loaded',
+    });
+  },
+
+  /** Approve, deny or advance an appointment as staff. Audited. */
+  async setAppointmentStatus(
+    appointmentId: string,
+    status: string,
+    opts: { reasonId?: string; reasonNote?: string; expectedVersion?: number } = {},
+  ) {
+    return apiFetch<{ appointment: { id: string; code: string; status: string; statusReason: string | null; version: number; inQueue: boolean } }>(
+      `/api/admin/appointments/${encodeURIComponent(appointmentId)}/status`,
+      { method: 'POST', body: JSON.stringify({ status, ...opts }), fallback: 'The appointment could not be updated' },
+    );
+  },
+
   /**
    * Edit a queue entry as staff.
    *
