@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { AlertCircle, Phone, Trash2, UserRound, Stethoscope } from 'lucide-react';
-import { visitorApi } from '../services/queueApi';
+import { visitorApi, adminApi } from '../services/queueApi';
 import type { VisitorServiceOption } from './VisitorFlow';
 
 const modalEase = [0.22, 1, 0.36, 1] as const;
@@ -16,6 +16,16 @@ interface TokenManageModalProps {
   onClose: () => void;
   onUpdated: (updated: any) => void;
   onCancelled: () => void;
+  /**
+   * Staff opening somebody else's token from the live board.
+   *
+   * The visitor routes prove ownership with the holder's private access key,
+   * which staff do not have — so this panel answered "a valid private access
+   * key is required" to the very people the board is built for. When set, the
+   * save and the removal go through the audited admin routes instead, which
+   * check the caller's role and record the change.
+   */
+  asStaff?: boolean;
 }
 
 /**
@@ -35,6 +45,7 @@ export const TokenManageModal: React.FC<TokenManageModalProps> = ({
   onClose,
   onUpdated,
   onCancelled,
+  asStaff = false,
 }) => {
   const shouldReduceMotion = useReducedMotion();
   const [services, setServices] = useState<VisitorServiceOption[]>([]);
@@ -71,11 +82,16 @@ export const TokenManageModal: React.FC<TokenManageModalProps> = ({
     try {
       // Blank fields are omitted entirely: the server treats a missing field as
       // "leave it as it was", so clearing a box never wipes the saved value.
-      const updated = await visitorApi.updateToken(tokenId, {
+      const changes = {
         ...(name.trim() ? { name: name.trim() } : {}),
         ...(phone.trim() ? { phone: phone.trim() } : {}),
         ...(willRequeue ? { serviceId } : {}),
-      });
+      };
+      // Staff go through the audited admin route; the holder proves ownership
+      // with their own access key on the visitor route.
+      const updated = asStaff
+        ? await adminApi.updateTokenAsStaff(tokenId, changes)
+        : await visitorApi.updateToken(tokenId, changes);
       onUpdated(updated);
       onClose();
     } catch (err: any) {
@@ -89,7 +105,11 @@ export const TokenManageModal: React.FC<TokenManageModalProps> = ({
     setBusy(true);
     setError(null);
     try {
-      await visitorApi.cancelToken(tokenId);
+      if (asStaff) {
+        await adminApi.deleteTokenAsStaff(tokenId, 'Removed from the live board');
+      } else {
+        await visitorApi.cancelToken(tokenId);
+      }
       onCancelled();
       onClose();
     } catch (err: any) {
@@ -188,12 +208,21 @@ export const TokenManageModal: React.FC<TokenManageModalProps> = ({
 
             {confirmingCancel ? (
               <div className="rounded-2xl border border-rose-500/35 bg-rose-500/10 p-4">
-                <p className="text-[11px] leading-relaxed text-rose-100">
+                <p className="text-[11px] leading-relaxed text-[var(--pc-danger-text)]">
                   Give up token <span className="font-mono font-bold">{tokenCode}</span>?
                 </p>
-                <p className="mt-1.5 text-[11px] leading-relaxed text-rose-100/85">
-                  You have <strong className="text-white">not been treated yet</strong>. Cancelling gives up this place
-                  in the queue, and any new token starts at the back — you would wait again from the end.
+                <p className="mt-1.5 text-[11px] leading-relaxed text-[var(--pc-danger-text)]">
+                  {asStaff ? (
+                    <>
+                      This visitor has <strong>not been treated yet</strong>. Removing the token gives up their place,
+                      and a new one would start at the back of the queue. The change is recorded in the audit log.
+                    </>
+                  ) : (
+                    <>
+                      You have <strong>not been treated yet</strong>. Cancelling gives up this place
+                      in the queue, and any new token starts at the back — you would wait again from the end.
+                    </>
+                  )}
                 </p>
                 <div className="mt-3 flex gap-2">
                   <button

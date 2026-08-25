@@ -342,9 +342,10 @@
      dispersion   a conic rainbow on the rim. Real glass splits light at its
                   edges, and this is the detail that reads as glass rather than
                   plastic. It rotates slowly, so the pane looks alive.
-     specular     a highlight that follows the pointer (--lg-x / --lg-y, set by
-                  useLiquidPointer). A highlight that never moves is the usual
-                  giveaway — glass is lit from wherever you happen to be.
+     specular     a fixed sweep across the upper-left, the way a curved surface
+                  catches light from a room. This used to track the pointer;
+                  it was distracting on a dense screen, so the light now stays
+                  where the design puts it.
      body         a vertical tint, denser at the top, giving the pane thickness.
      rim          a bright inner edge along the top with a soft bloom beneath,
                   so it sits above the page rather than in it.
@@ -373,8 +374,6 @@
 .liquid-glass,
 .liquid-glass-active {
   isolation: isolate;
-  --lg-x: 30%;
-  --lg-y: 0%;
   transition-property: background, box-shadow, border-color, transform, color;
   transition-duration: var(--motion-standard);
   transition-timing-function: var(--motion-ease);
@@ -420,7 +419,6 @@
 /* Resting: clear glass. */
 .liquid-glass {
   background:
-    radial-gradient(120px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.75), transparent 60%),
     linear-gradient(105deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 46%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.26) 100%);
   backdrop-filter: blur(10px) saturate(170%);
@@ -441,7 +439,6 @@
    and the label goes indigo so it still reads as chosen at a glance. */
 .liquid-glass-active {
   background:
-    radial-gradient(150px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.92), transparent 64%),
     linear-gradient(105deg, rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0) 44%),
     linear-gradient(180deg, rgba(255, 252, 250, 0.50) 0%, rgba(0, 211, 199, 0.07) 100%);
   backdrop-filter: blur(18px) saturate(215%);
@@ -536,8 +533,6 @@
 .pc-btn-success,
 .pc-btn-danger {
   isolation: isolate;
-  --lg-x: 30%;
-  --lg-y: 0%;
   color: #fff;
   border: 1px solid transparent;
   border-radius: var(--pc-radius);
@@ -549,7 +544,6 @@
 
 .pc-btn-success {
   background:
-    radial-gradient(120px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.30), transparent 60%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 55%),
     var(--pc-success-text);
   box-shadow:
@@ -559,7 +553,6 @@
 
 .pc-btn-danger {
   background:
-    radial-gradient(120px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.30), transparent 60%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 55%),
     var(--pc-danger-text);
   box-shadow:
@@ -610,10 +603,7 @@
 
 .pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-[#"]) {
   isolation: isolate;
-  --lg-x: 30%;
-  --lg-y: 0%;
   background:
-    radial-gradient(110px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.7), transparent 60%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.2) 100%);
   backdrop-filter: blur(8px) saturate(160%);
   -webkit-backdrop-filter: blur(8px) saturate(160%);
@@ -660,38 +650,26 @@
      than washing the whole control at once. */
   .pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-[#"]):hover {
     background:
-      radial-gradient(90px circle at var(--lg-x) var(--lg-y), rgba(120, 200, 255, 0.30), transparent 70%),
-      radial-gradient(120px circle at calc(var(--lg-x) + 14%) calc(var(--lg-y) + 10%), rgba(255, 138, 190, 0.26), transparent 70%),
-      radial-gradient(150px circle at calc(var(--lg-x) - 12%) calc(var(--lg-y) + 16%), rgba(122, 245, 214, 0.24), transparent 72%),
-      radial-gradient(100px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.9), transparent 55%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.28) 100%);
+      linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.36) 100%);
+    border-color: rgba(46, 55, 164, 0.18);
     box-shadow:
       inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
       0 6px 18px -10px rgba(46, 55, 164, 0.22);
   }
 
-  /* The same on an explicit pane. */
-  /* The same iridescence on an explicit pane: the hues sit at slightly
-     different centres and radii, so they separate as the pointer moves —
-     which is what reads as something liquid under the surface rather than a
-     coloured spotlight following the cursor. */
+  /* Hover brightens the pane. The tint that used to arrive with the pointer
+     and follow it around has been removed — on a dense screen it drew the eye
+     to whatever the mouse was passing over rather than to the work. */
   .liquid-glass:hover {
     background:
-      radial-gradient(100px circle at var(--lg-x) var(--lg-y), rgba(120, 200, 255, 0.30), transparent 70%),
-      radial-gradient(140px circle at calc(var(--lg-x) + 16%) calc(var(--lg-y) + 12%), rgba(255, 138, 190, 0.26), transparent 72%),
-      radial-gradient(170px circle at calc(var(--lg-x) - 14%) calc(var(--lg-y) + 18%), rgba(122, 245, 214, 0.24), transparent 74%),
-      radial-gradient(120px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.92), transparent 56%),
-      linear-gradient(105deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 46%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.3) 100%);
+      linear-gradient(105deg, rgba(255, 255, 255, 0.68) 0%, rgba(255, 255, 255, 0) 46%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.66) 0%, rgba(255, 255, 255, 0.34) 100%);
   }
 
   .liquid-glass-active:hover {
     background:
-      radial-gradient(110px circle at var(--lg-x) var(--lg-y), rgba(120, 200, 255, 0.32), transparent 70%),
-      radial-gradient(150px circle at calc(var(--lg-x) + 16%) calc(var(--lg-y) + 12%), rgba(255, 138, 190, 0.28), transparent 72%),
-      radial-gradient(180px circle at calc(var(--lg-x) - 14%) calc(var(--lg-y) + 18%), rgba(122, 245, 214, 0.26), transparent 74%),
-      radial-gradient(130px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.9), transparent 58%),
-      linear-gradient(180deg, rgba(255, 252, 250, 0.5) 0%, rgba(0, 211, 199, 0.08) 100%);
+      linear-gradient(105deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 44%),
+      linear-gradient(180deg, rgba(255, 252, 250, 0.56) 0%, rgba(0, 211, 199, 0.10) 100%);
   }
 }
 
@@ -716,10 +694,7 @@
 
 .pc button.pc-btn-primary:not(:disabled) {
   isolation: isolate;
-  --lg-x: 30%;
-  --lg-y: 0%;
   background:
-    radial-gradient(120px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.28), transparent 60%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 55%),
     var(--pc-primary);
   box-shadow:

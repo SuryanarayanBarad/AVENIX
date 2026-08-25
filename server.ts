@@ -3223,6 +3223,34 @@ app.patch('/api/admin/tokens/:id', apiRoute(async (req, res) => {
     }
   }
 
+  // Phone and service, the two corrections a desk actually makes for somebody
+  // standing in front of them. They were only available on the visitor route,
+  // which needs the holder's private access key — so staff could rename a token
+  // but not fix a mistyped number or move somebody to the right queue.
+  if (body.phone !== undefined) {
+    const phone = validatedPhone(body.phone, false) ?? null;
+    if (phone !== token.phone) {
+      data.phone = phone;
+      changes.phone = { from: maskPhone(token.phone), to: maskPhone(phone) };
+    }
+  }
+
+  if (body.serviceId !== undefined) {
+    const service = await findService(requiredString(body.serviceId, 'Service'));
+    if (service.id !== token.serviceId) {
+      const previous = await getCachedService(token.serviceId);
+      data.serviceId = service.id;
+      // A different queue means a different line, so the token is re-issued at
+      // the back of it — the same rule the visitor route applies, because
+      // moving service must not jump ahead of people already waiting there.
+      data.issuedAt = new Date();
+      // Recorded as a move rather than a flag, so the audit row reads the same
+      // way every other change in it does.
+      changes.service = { from: previous?.name ?? token.serviceId, to: service.name };
+      changes.position = { from: 'kept', to: 'back of the new queue' };
+    }
+  }
+
   // Moving somebody's place in line is expressed as a new issue time.
   if (body.position === 'front' || body.position === 'back') {
     const neighbours = await prisma.token.findMany({

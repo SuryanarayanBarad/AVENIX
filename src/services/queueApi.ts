@@ -250,6 +250,36 @@ export interface AdminScheduleAppointment {
 }
 
 export const adminApi = {
+  /**
+   * Edit a queue entry as staff.
+   *
+   * The visitor route proves ownership with the holder's private access key,
+   * which staff do not have and should not need — they run the board. This is
+   * the audited route: every change lands in the audit log the Super Admin's
+   * queue-activity feed reads, so an administrator cannot alter somebody's
+   * place unobserved.
+   */
+  async updateTokenAsStaff(tokenId: string, changes: { name?: string; phone?: string; serviceId?: string }) {
+    // The two routes name the same field differently — `name` for the holder,
+    // `visitorName` for staff — so sending the visitor shape here silently
+    // changed nothing and came back "there is nothing to change on this token".
+    const { name, ...rest } = changes;
+    return apiFetch<any>(`/api/admin/tokens/${encodeURIComponent(tokenId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ ...rest, ...(name !== undefined ? { visitorName: name } : {}) }),
+      fallback: 'The queue entry could not be updated',
+    });
+  },
+
+  /** Remove a queue entry as staff. Soft delete, audited. */
+  async deleteTokenAsStaff(tokenId: string, reason?: string) {
+    return apiFetch<{ deleted: boolean; code: string }>(`/api/admin/tokens/${encodeURIComponent(tokenId)}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ reason }),
+      fallback: 'The queue entry could not be removed',
+    });
+  },
+
   async getTokens(search?: string): Promise<any> {
     const url = search ? `/api/admin/tokens?search=${encodeURIComponent(search)}` : '/api/admin/tokens';
     const result = await request<{ tokens: any[] }>(url, { headers: authHeaders() });

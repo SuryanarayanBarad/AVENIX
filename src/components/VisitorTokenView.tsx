@@ -30,10 +30,17 @@ interface VisitorTokenViewProps {
   onBackToKiosk: () => void;
   /** Where "Get a new token" goes. Defaults to the back action. */
   onGetNewToken?: () => void;
+  /**
+   * The signed-in viewer's role, when there is one. Staff opening a token from
+   * the live board are not its holder and have no access key, so their edits
+   * go through the audited admin routes instead.
+   */
+  viewerRole?: string | null;
 }
 
 export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
   token,
+  viewerRole = null,
   onBackToKiosk,
   onGetNewToken,
 }) => {
@@ -646,6 +653,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
         </AnimatePresence>
 
         <TokenManageModal
+          asStaff={['SUPER_ADMIN', 'ADMIN', 'MANAGER'].includes(String(viewerRole))}
           isOpen={showManageModal}
           tokenId={token.id}
           tokenCode={token.code}

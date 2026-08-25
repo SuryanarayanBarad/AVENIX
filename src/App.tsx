@@ -7,7 +7,6 @@ import { ProfileModal } from './components/ProfileModal';
 import { authApi } from './services/authApi';
 import { wakeServer } from './services/apiClient';
 import { LiquidGlassDefs } from './components/LiquidGlassDefs';
-import { useLiquidPointer } from './hooks/useLiquidPointer';
 import { User } from './types';
 import { VisitorKiosk } from './components/VisitorKiosk';
 import { VisitorTokenView } from './components/VisitorTokenView';
@@ -55,9 +54,6 @@ export default function App() {
   const [currentView, setCurrentView] = useState<AppView>('landing');
   const [currentAdminTab, setCurrentAdminTab] = useState<AdminTab>('overview');
   const shouldReduceMotion = useReducedMotion();
-
-  // Lights every glass control from wherever the pointer is.
-  useLiquidPointer();
 
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -415,6 +411,7 @@ export default function App() {
             {currentView === 'patient-tracker' && (
               selectedTrackerToken ? (
                 <VisitorTokenView
+                  viewerRole={user?.role ?? null}
                   token={selectedTrackerToken}
                   onUpdateToken={(updated) => {
                     handleUpdateToken(updated);
@@ -436,6 +433,7 @@ export default function App() {
 
             {currentView === 'visitor-queue' && liveToken && (
               <VisitorTokenView
+                viewerRole={user?.role ?? null}
                 token={liveToken}
                 onBackToKiosk={() => navigateToView('landing')}
                 onGetNewToken={() => navigateToView('kiosk')}
