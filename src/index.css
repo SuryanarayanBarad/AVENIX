@@ -768,7 +768,12 @@
 /* White text is only wrong when it sits on a light surface. On an element
    that also paints a filled brand background, white is exactly right, and
    turning it navy makes it unreadable — so those are excluded. */
-.pc .text-white:not([class*="bg-[#2E37A4]"]):not([class*="bg-[var(--pc-primary)]"]):not(.pc-btn-primary):not([class*="bg-gradient"]) {
+/* `[class*=]` matches anywhere in the attribute, so the earlier form also
+   matched `hover:bg-[#2E37A4]/25` — a control that is only tinted on hover was
+   treated as permanently filled and kept white text it could not carry. Anchor
+   the match to the start of the attribute or to a class boundary so a variant
+   prefix no longer counts. */
+.pc .text-white:not([class^="bg-[#2E37A4]"]):not([class*=" bg-[#2E37A4]"]):not([class^="bg-[var(--pc-primary)]"]):not([class*=" bg-[var(--pc-primary)]"]):not(.pc-btn-primary):not([class^="bg-gradient"]):not([class*=" bg-gradient"]) {
   color: var(--pc-text);
 }
 .pc .text-white\/90,

@@ -23,6 +23,52 @@ interface CopilotDrawerProps {
 
 const drawerEase = [0.22, 1, 0.36, 1] as const;
 
+/**
+ * The small amount of markdown the assistant actually emits: **bold**, bullet
+ * lines, and paragraph breaks.
+ *
+ * Replies were rendered as plain text, so a bold phrase arrived on screen as
+ * literal asterisks and a bullet list as stray "*" characters. A full markdown
+ * library is not worth the bytes for three constructs, and building React
+ * elements rather than setting innerHTML means model output can never inject
+ * markup.
+ */
+const renderReply = (text: string): React.ReactNode => {
+  const bold = (line: string, keyBase: string) =>
+    line.split(/(\*\*[^*]+\*\*)/g).filter(Boolean).map((part, i) =>
+      part.startsWith('**') && part.endsWith('**')
+        ? <strong key={`${keyBase}-${i}`} className="font-semibold">{part.slice(2, -2)}</strong>
+        : <React.Fragment key={`${keyBase}-${i}`}>{part}</React.Fragment>,
+    );
+
+  const lines = text.split('\n');
+  const out: React.ReactNode[] = [];
+  let bullets: React.ReactNode[] = [];
+
+  const flush = (key: string) => {
+    if (!bullets.length) return;
+    out.push(
+      <ul key={key} className="my-1 list-disc space-y-0.5 pl-4">
+        {bullets}
+      </ul>,
+    );
+    bullets = [];
+  };
+
+  lines.forEach((raw, index) => {
+    const line = raw.trimEnd();
+    const bullet = line.match(/^\s*[-*•]\s+(.*)$/);
+    if (bullet) {
+      bullets.push(<li key={`b-${index}`}>{bold(bullet[1], `b-${index}`)}</li>);
+      return;
+    }
+    flush(`ul-${index}`);
+    if (line.trim()) out.push(<p key={`p-${index}`} className="my-0.5">{bold(line, `p-${index}`)}</p>);
+  });
+  flush('ul-end');
+  return out;
+};
+
 export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
   isOpen,
   onClose,
@@ -48,6 +94,7 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
   // Reported by the server, never written here: the badge said "Gemini 2.5
   // Flash" as a literal string while the server was calling something else.
   const [model, setModel] = useState<string | null>(null);
+  const [snapshot, setSnapshot] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const shouldReduceMotion = useReducedMotion();
 
@@ -65,11 +112,12 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
-    apiFetch<{ suggestions: string[]; model?: string | null }>('/api/copilot/suggestions', { fallback: 'Could not load suggestions' })
+    apiFetch<{ suggestions: string[]; model?: string | null; snapshot?: any }>('/api/copilot/suggestions', { fallback: 'Could not load suggestions' })
       .then((data) => {
         if (cancelled) return;
         setSuggestions(data.suggestions ?? []);
         setModel(data.model ?? null);
+        setSnapshot(data.snapshot ?? null);
       })
       .catch(() => { /* the drawer is still usable without them */ });
     return () => { cancelled = true; };
@@ -94,7 +142,7 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
       // The server assembles the live snapshot itself. Sending counters and
       // zones from here meant posting mock data up and getting confident
       // analysis of it back.
-      const data = await apiFetch<{ reply: string; suggestions?: string[]; model?: string }>('/api/copilot/chat', {
+      const data = await apiFetch<{ reply: string; suggestions?: string[]; model?: string; snapshot?: any }>('/api/copilot/chat', {
         method: 'POST',
         fallback: 'The copilot could not answer',
         body: JSON.stringify({
@@ -108,6 +156,7 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
 
       if (data.suggestions) setSuggestions(data.suggestions);
       if (data.model) setModel(data.model);
+      if (data.snapshot) setSnapshot(data.snapshot);
 
       const aiMsg: CopilotMessage = {
         id: `ai-${Date.now()}`,
@@ -185,13 +234,20 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
           </button>
         </div>
 
-        {/* Real-time Status Badge Strip */}
-        <div className="px-4 py-2.5 bg-white/[0.03] border-b border-white/[0.08] flex items-center justify-between text-[11px] text-white/70 font-medium">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(74,222,128,0.8)]" />
-            <span>42 LiDAR & Thermal Nodes Connected</span>
-          </div>
-          <span className="font-mono text-[#2E37A4] font-bold">147 Queued</span>
+        {/* The figures the assistant is answering from — the same snapshot, so
+            the strip cannot disagree with the replies. It previously claimed 42
+            sensors and 147 queued, neither of which exists. */}
+        <div className="flex items-center justify-between border-b border-[var(--pc-border)] bg-[var(--pc-page)] px-4 py-2.5 text-[11px] font-medium text-[var(--pc-text-muted)]">
+          <span className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-[var(--pc-success)]" />
+            {snapshot ? `${snapshot.facility ?? 'Facility'} · ${snapshot.serviceDay ?? ''}` : 'Reading live data…'}
+          </span>
+          {snapshot?.queue && (
+            <span className="font-semibold text-[var(--pc-text)]">
+              {snapshot.queue.waiting} waiting
+              {snapshot.queue.serving > 0 ? ` · ${snapshot.queue.serving} in consultation` : ''}
+            </span>
+          )}
         </div>
 
         {/* Chat Message Stream */}
@@ -212,12 +268,12 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
               <div
                 className={`max-w-[85%] p-4 rounded-3xl space-y-2 ${
                   m.sender === 'user'
-                    ? 'bg-gradient-to-r from-[#2E37A4] to-purple-600 text-white rounded-br-md shadow-lg shadow-[#2E37A4]/20 border border-white/20'
+                    ? 'bg-[var(--pc-primary)] text-white rounded-br-md shadow-sm'
                     : 'glass-panel rounded-tl-md text-white border border-white/[0.12]'
                 }`}
               >
-                <div className="leading-relaxed whitespace-pre-wrap">
-                  {m.text}
+                <div className="leading-relaxed [&_p]:leading-relaxed">
+                  {m.sender === 'ai' ? renderReply(m.text) : m.text}
                 </div>
 
                 <div
@@ -265,7 +321,7 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
                   key={i}
                   type="button"
                   onClick={() => handleSendMessage(suggestion)}
-                  className="px-3 py-1.5 rounded-xl bg-white/[0.08] hover:bg-[#2E37A4]/25 hover:border-[#2E37A4]/50 text-white text-[10px] font-medium border border-white/[0.12] transition-all text-left cursor-pointer backdrop-blur-md"
+                  className="liquid-glass rounded-full px-3 py-1.5 text-left text-[11px] font-medium text-[var(--pc-text)] cursor-pointer"
                 >
                   {suggestion}
                 </button>
@@ -293,7 +349,7 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
             <button
               type="submit"
               disabled={!inputText.trim() || isLoading}
-              className="p-3 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:opacity-90 disabled:opacity-40 text-white font-bold shadow-lg shadow-[#2E37A4]/30 active:scale-95 transition-all cursor-pointer border border-white/20"
+              className="pc-btn-primary rounded-full p-3 cursor-pointer disabled:opacity-40"
             >
               <Send className="w-4 h-4" />
             </button>

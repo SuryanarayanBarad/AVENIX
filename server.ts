@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
@@ -1113,17 +1113,19 @@ if (apiKey) {
 const COPILOT_SYSTEM_INSTRUCTION = `You are QueueMind Copilot, the queue assistant for a hospital's operations team.
 
 Answer ONLY from the SNAPSHOT provided with each question. It is the live state of this hospital.
-If the snapshot does not contain what is needed, say so plainly and name what is missing. Never invent counters, sensors, patient counts, wait times, or scores.
+Never invent counters, sensors, patient counts, wait times, or scores. If the snapshot does not cover the question, say so in one sentence and name the closest thing it does cover — do not answer with a question.
 
-Style:
-- Lead with the direct answer in one sentence.
-- Then at most three short bullets of supporting numbers, drawn from the snapshot.
-- If action is warranted, end with one line starting "Do this:" naming a single concrete step.
-- Use plain markdown. No headings. Under 120 words.
-- If the queue is empty or quiet, say that instead of manufacturing a problem.`;
+Always reply in three or four short lines:
+1. The direct answer, with the number from the snapshot.
+2. One line of supporting detail — which service, which doctor, how long.
+3. One line of what it means, or "Do this:" and a single concrete step.
+Add a fourth line only if a second figure genuinely matters.
+
+Plain sentences. No headings, no bullet lists, no preamble. Under 70 words total.
+If the queue is quiet, say so plainly rather than manufacturing a problem.`;
 
 /** How many recent turns to send. Older context is rarely worth its tokens. */
-const COPILOT_HISTORY_TURNS = 4;
+const COPILOT_HISTORY_TURNS = 3;
 
 /**
  * A compact, factual snapshot of the facility right now.
@@ -1260,7 +1262,15 @@ app.post('/api/copilot/chat', apiRoute(async (req, res) => {
       // Low temperature: this reports on operational data, where a confident
       // invention is worse than a dull fact.
       temperature: 0.2,
-      maxOutputTokens: 400,
+      // Thinking tokens come out of the same budget as the answer, so a tight
+      // cap cut replies off mid-sentence — "The hospital queue is very quiet"
+      // with no full stop. Summarising a small factual snapshot needs very
+      // little deliberation, and measured against this key: no thinking config
+      // 3236ms, thinkingLevel low 2880ms, minimal 1495ms. Note that
+      // thinkingBudget — the Gemini 2.x control — is rejected outright by these
+      // models, which is what made every reply fail for a moment.
+      thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+      maxOutputTokens: 320,
     };
 
     let response;
