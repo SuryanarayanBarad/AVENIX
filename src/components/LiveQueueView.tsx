@@ -107,7 +107,7 @@ export const LiveQueueView: React.FC<LiveQueueViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-12 text-white">
+    <div className="space-y-6 pb-12">
       
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -120,7 +120,7 @@ export const LiveQueueView: React.FC<LiveQueueViewProps> = ({
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#8e7dff] to-purple-600 hover:from-[#7b69fd] hover:to-purple-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-[#8e7dff]/30 active:scale-95 transition-all self-start sm:self-auto cursor-pointer border border-white/20"
+          className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:from-[#3538CD] hover:to-purple-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-[#2E37A4]/30 active:scale-95 transition-all self-start sm:self-auto cursor-pointer border border-white/20"
         >
           <Plus className="w-4 h-4" />
           <span>Manual Token Intake</span>
@@ -130,7 +130,7 @@ export const LiveQueueView: React.FC<LiveQueueViewProps> = ({
       {/* 4 KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         
-        <div className="p-5 rounded-3xl glass-panel-elevated">
+        <div className="p-5 rounded-3xl liquid-glass">
           <span className="text-xs font-semibold text-white/60">Total Visitors Today</span>
           <div className="text-2xl font-light text-white font-display mt-1">
             {tokens.length + 138}
@@ -138,15 +138,15 @@ export const LiveQueueView: React.FC<LiveQueueViewProps> = ({
           <span className="text-[10px] text-emerald-400 font-medium">99.2% intake completed</span>
         </div>
 
-        <div className="p-5 rounded-3xl glass-panel-elevated">
+        <div className="p-5 rounded-3xl liquid-glass">
           <span className="text-xs font-semibold text-white/60">Currently Waiting</span>
-          <div className="text-2xl font-light text-[#8e7dff] font-display mt-1">
+          <div className="text-2xl font-light text-[#2E37A4] font-display mt-1">
             {waitingCount}
           </div>
           <span className="text-[10px] text-white/50 font-medium">{servingCount} actively serving</span>
         </div>
 
-        <div className="p-5 rounded-3xl glass-panel-elevated">
+        <div className="p-5 rounded-3xl liquid-glass">
           <span className="text-xs font-semibold text-white/60">Total Served</span>
           <div className="text-2xl font-light text-emerald-400 font-display mt-1">
             {completedCount + 24}
@@ -154,12 +154,12 @@ export const LiveQueueView: React.FC<LiveQueueViewProps> = ({
           <span className="text-[10px] text-emerald-400 font-medium">+18 served this hour</span>
         </div>
 
-        <div className="p-5 rounded-3xl glass-panel-elevated">
+        <div className="p-5 rounded-3xl liquid-glass">
           <span className="text-xs font-semibold text-white/60">Avg Wait Time</span>
           <div className="text-2xl font-light text-white font-display mt-1">
             ~{avgWait} <span className="text-xs font-normal text-white/50">min</span>
           </div>
-          <span className="text-[10px] text-[#8e7dff] font-semibold bg-[#8e7dff]/20 px-2 py-0.5 rounded-full border border-[#8e7dff]/30 backdrop-blur-md mt-0.5 inline-block">
+          <span className="text-[10px] text-[#2E37A4] font-semibold bg-[#2E37A4]/20 px-2 py-0.5 rounded-full border border-[#2E37A4]/30 backdrop-blur-md mt-0.5 inline-block">
             AI forecast: -4 min next hr
           </span>
         </div>
@@ -167,7 +167,7 @@ export const LiveQueueView: React.FC<LiveQueueViewProps> = ({
       </div>
 
       {/* Filter Toolbar (Frosted Glass Panel) */}
-      <div className="p-4 glass-panel-elevated rounded-3xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 text-xs">
+      <div className="p-4 liquid-glass rounded-3xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 text-xs">
         
         {/* Search */}
         <div className="relative flex-1 max-w-md">
@@ -226,7 +226,7 @@ export const LiveQueueView: React.FC<LiveQueueViewProps> = ({
       </div>
 
       {/* Main Token Table (Frosted Glass Table) */}
-      <div className="glass-panel-elevated rounded-3xl overflow-hidden">
+      <div className="liquid-glass rounded-3xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
@@ -309,7 +309,7 @@ export const LiveQueueView: React.FC<LiveQueueViewProps> = ({
                       </td>
 
                       {/* Counter */}
-                      <td className="py-4 px-5 font-bold text-[#8e7dff]">
+                      <td className="py-4 px-5 font-bold text-[#2E37A4]">
                         {token.counterId}
                       </td>
 
@@ -337,7 +337,7 @@ export const LiveQueueView: React.FC<LiveQueueViewProps> = ({
                           {token.status === 'serving' && (
                             <button
                               onClick={() => handleMarkCompleted(token)}
-                              className="px-3 py-1.5 rounded-xl bg-[#8e7dff]/20 hover:bg-[#8e7dff]/30 text-[#8e7dff] font-bold text-[11px] border border-[#8e7dff]/40 transition-colors flex items-center gap-1 cursor-pointer"
+                              className="px-3 py-1.5 rounded-xl bg-[#2E37A4]/20 hover:bg-[#2E37A4]/30 text-[#2E37A4] font-bold text-[11px] border border-[#2E37A4]/40 transition-colors flex items-center gap-1 cursor-pointer"
                               title="Mark Consultation Complete"
                             >
                               <UserCheck className="w-3 h-3" />
@@ -378,7 +378,7 @@ export const LiveQueueView: React.FC<LiveQueueViewProps> = ({
             onClick={() => setShowAddModal(false)}
           >
             <motion.div
-              className="w-full max-w-md overflow-hidden rounded-3xl border border-white/[0.20] bg-[#12122b]/95 text-white shadow-2xl glass-panel-elevated backdrop-blur-2xl"
+              className="w-full max-w-md overflow-hidden rounded-3xl border border-white/[0.20] bg-[#12122b]/95 text-white shadow-2xl liquid-glass backdrop-blur-2xl"
               role="dialog"
               aria-modal="true"
               aria-label="Desk triage manual intake"
@@ -440,7 +440,7 @@ export const LiveQueueView: React.FC<LiveQueueViewProps> = ({
                       onClick={() => setNewPriority(p)}
                       className={`py-2 rounded-2xl border text-center font-bold transition-all cursor-pointer ${
                         newPriority === p
-                          ? 'border-[#8e7dff] bg-[#8e7dff]/25 text-white shadow-[0_0_12px_rgba(142,125,255,0.3)]'
+                          ? 'border-[#2E37A4] bg-[#2E37A4]/25 text-white shadow-[0_0_12px_rgba(46,55,164,0.18)]'
                           : 'border-white/[0.10] bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white'
                       }`}
                     >
@@ -460,7 +460,7 @@ export const LiveQueueView: React.FC<LiveQueueViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#8e7dff] to-purple-600 hover:opacity-90 text-white font-bold shadow-lg shadow-[#8e7dff]/30 cursor-pointer border border-white/20"
+                  className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:opacity-90 text-white font-bold shadow-lg shadow-[#2E37A4]/30 cursor-pointer border border-white/20"
                 >
                   Issue Token
                 </button>

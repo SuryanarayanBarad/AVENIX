@@ -332,51 +332,104 @@
 /* ---------------------------------------------------------------------------
    Liquid glass
    ---------------------------------------------------------------------------
-   A selected control should read as a pane of tinted glass laid over the page,
-   the way Apple's material does, rather than a solid indigo block stamped on
-   top of it. Four things together produce that:
+   Five layers, and it needs all five to stop looking like a translucent box:
 
-     1. the page blurred and over-saturated behind it, so it looks like glass
-        with something underneath rather than paint
-     2. a vertical tint, denser at the top, so it has thickness
-     3. a specular sweep across the upper-left, which is what reads as a
-        curved surface catching light
-     4. a bright inner rim along the top edge and a soft indigo bloom beneath,
-        so the pane sits above the page instead of in it
+     refraction   an SVG displacement filter in backdrop-filter, so content
+                  behind the pane actually bends. Blur alone only softens; it
+                  cannot make something look like it is being looked *through*.
+     dispersion   a conic rainbow on the rim. Real glass splits light at its
+                  edges, and this is the detail that reads as glass rather than
+                  plastic. It rotates slowly, so the pane looks alive.
+     specular     a highlight that follows the pointer (--lg-x / --lg-y, set by
+                  useLiquidPointer). A highlight that never moves is the usual
+                  giveaway — glass is lit from wherever you happen to be.
+     body         a vertical tint, denser at the top, giving the pane thickness.
+     rim          a bright inner edge along the top with a soft bloom beneath,
+                  so it sits above the page rather than in it.
 
-   The sweep is a background layer, not a pseudo-element, so it can never paint
-   over the label inside.
+   The rim is a ::before, so it paints before the label and can never cover it.
 --------------------------------------------------------------------------- */
+@property --lg-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes lg-drift {
+  to { --lg-angle: 360deg; }
+}
+
 .liquid-glass,
 .liquid-glass-active {
   position: relative;
   isolation: isolate;
-  transition-property: background-color, box-shadow, border-color, transform, color;
+  --lg-x: 30%;
+  --lg-y: 0%;
+  transition-property: background, box-shadow, border-color, transform, color;
   transition-duration: var(--motion-standard);
   transition-timing-function: var(--motion-ease);
 }
 
-/* Resting: clear glass, barely there. */
+/* The dispersive rim. A conic gradient drawn only in the 1px border band, by
+   masking out everything inside it. */
+.liquid-glass::before,
+.liquid-glass-active::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--lg-angle),
+    rgba(255, 138, 190, 0.62),
+    rgba(140, 196, 255, 0.62),
+    rgba(122, 245, 214, 0.55),
+    rgba(255, 226, 150, 0.62),
+    rgba(198, 150, 255, 0.58),
+    rgba(255, 138, 190, 0.62)
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0.5;
+  pointer-events: none;
+  animation: lg-drift 18s linear infinite;
+}
+
+.liquid-glass-active::before { opacity: 0.75; }
+
+@media (hover: hover) and (pointer: fine) {
+  .liquid-glass:hover::before,
+  .liquid-glass-active:hover::before {
+    opacity: 0.95;
+    animation-duration: 6s;
+  }
+}
+
+/* Resting: clear glass. */
 .liquid-glass {
   background:
-    linear-gradient(105deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 46%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.28) 100%);
-  backdrop-filter: blur(12px) saturate(170%);
-  -webkit-backdrop-filter: blur(12px) saturate(170%);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+    radial-gradient(120px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.75), transparent 60%),
+    linear-gradient(105deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 46%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.26) 100%);
+  backdrop-filter: blur(10px) saturate(170%);
+  -webkit-backdrop-filter: blur(10px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.9),
     0 6px 18px -10px rgba(10, 27, 57, 0.20);
 }
 
-/* Selected: the same pane, tinted with the brand and lit a little harder. */
+/* Selected: the same pane, tinted with the brand and lit harder. */
 .liquid-glass-active {
   background:
-    linear-gradient(105deg, rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0) 44%),
+    radial-gradient(140px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.8), transparent 62%),
+    linear-gradient(105deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 44%),
     linear-gradient(180deg, rgba(46, 55, 164, 0.26) 0%, rgba(46, 55, 164, 0.13) 100%);
   backdrop-filter: blur(16px) saturate(200%);
   -webkit-backdrop-filter: blur(16px) saturate(200%);
-  border: 1px solid rgba(46, 55, 164, 0.32);
+  border: 1px solid rgba(46, 55, 164, 0.28);
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.88),
     inset 0 -10px 18px -12px rgba(46, 55, 164, 0.40),
@@ -386,19 +439,13 @@
 
 @media (hover: hover) and (pointer: fine) {
   .liquid-glass:hover {
-    background:
-      linear-gradient(105deg, rgba(255, 255, 255, 0.68) 0%, rgba(255, 255, 255, 0) 48%),
-      linear-gradient(180deg, rgba(46, 55, 164, 0.12) 0%, rgba(46, 55, 164, 0.05) 100%);
-    border-color: rgba(46, 55, 164, 0.22);
+    border-color: rgba(46, 55, 164, 0.20);
     box-shadow:
       inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
-      0 8px 22px -10px rgba(46, 55, 164, 0.28);
+      0 8px 22px -10px rgba(46, 55, 164, 0.26);
   }
 
   .liquid-glass-active:hover {
-    background:
-      linear-gradient(105deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 46%),
-      linear-gradient(180deg, rgba(46, 55, 164, 0.32) 0%, rgba(46, 55, 164, 0.17) 100%);
     box-shadow:
       inset 0 1px 0 0 rgba(255, 255, 255, 0.92),
       inset 0 -10px 18px -12px rgba(46, 55, 164, 0.44),
@@ -406,20 +453,144 @@
   }
 }
 
-/* Pressing compresses the pane rather than darkening it. */
+/* Pressing pushes into the pane: it compresses, the refraction deepens, and
+   the light moves — rather than the whole thing simply going darker. */
 .liquid-glass:active,
 .liquid-glass-active:active {
   transform: scale(0.985);
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.7),
-    inset 0 2px 8px 0 rgba(46, 55, 164, 0.22);
+    inset 0 3px 10px 0 rgba(46, 55, 164, 0.24);
 }
 
-/* backdrop-filter is what sells it. Without support the tint alone would look
-   flat and washed out, so fall back to an opaque surface instead. */
+/* Real refraction, where the browser can do it. Chrome and Safari accept an
+   SVG filter inside backdrop-filter; the rest keep blur and saturate, which
+   still reads as glass, just without the bend. */
+@supports (backdrop-filter: url(#lg-lens)) or (-webkit-backdrop-filter: url(#lg-lens)) {
+  .liquid-glass {
+    backdrop-filter: url(#lg-lens) blur(9px) saturate(175%);
+    -webkit-backdrop-filter: url(#lg-lens) blur(9px) saturate(175%);
+  }
+  .liquid-glass-active {
+    backdrop-filter: url(#lg-lens) blur(14px) saturate(205%);
+    -webkit-backdrop-filter: url(#lg-lens) blur(14px) saturate(205%);
+  }
+  .liquid-glass:active,
+  .liquid-glass-active:active {
+    backdrop-filter: url(#lg-lens-strong) blur(12px) saturate(215%);
+    -webkit-backdrop-filter: url(#lg-lens-strong) blur(12px) saturate(215%);
+  }
+}
+
+/* backdrop-filter is what sells the whole thing. Without it the tint alone
+   looks flat and washed out, so fall back to an opaque surface. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .liquid-glass { background: var(--pc-surface); }
   .liquid-glass-active { background: var(--pc-tint-lilac); }
+}
+
+/* Transparency and drifting colour are exactly what these settings ask us to
+   stop doing. */
+@media (prefers-reduced-motion: reduce) {
+  .liquid-glass::before,
+  .liquid-glass-active::before { animation: none; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .liquid-glass,
+  .liquid-glass-active {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .liquid-glass { background: var(--pc-surface); }
+  .liquid-glass-active { background: var(--pc-tint-lilac); }
+  .liquid-glass::before,
+  .liquid-glass-active::before { display: none; }
+}
+
+/* ---------------------------------------------------------------------------
+   Every button is glass
+   ---------------------------------------------------------------------------
+   ~200 buttons across the app, so this is a scoped rule rather than a class on
+   each one. Anything that already opts in, is the filled primary, or is a bare
+   link-style control is left alone.
+--------------------------------------------------------------------------- */
+.pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]) {
+  position: relative;
+  isolation: isolate;
+  --lg-x: 30%;
+  --lg-y: 0%;
+  background:
+    radial-gradient(110px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.7), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.2) 100%);
+  backdrop-filter: blur(8px) saturate(160%);
+  -webkit-backdrop-filter: blur(8px) saturate(160%);
+  transition-property: background, box-shadow, border-color, transform, color;
+  transition-duration: var(--motion-standard);
+  transition-timing-function: var(--motion-ease);
+}
+
+/* Every button gets the dispersive rim, but it only drifts under the pointer.
+   A conic gradient sitting still is cheap; two hundred of them animating at
+   once is a dropped frame rate, and only the one being pointed at is being
+   looked at anyway. */
+.pc button:not(:disabled):not(.pc-btn-primary):not([data-plain])::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--lg-angle),
+    rgba(255, 138, 190, 0.55),
+    rgba(140, 196, 255, 0.55),
+    rgba(122, 245, 214, 0.5),
+    rgba(255, 226, 150, 0.55),
+    rgba(198, 150, 255, 0.5),
+    rgba(255, 138, 190, 0.55)
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0.38;
+  pointer-events: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pc button:not(:disabled):not(.pc-btn-primary):not([data-plain]):hover::before {
+    opacity: 0.9;
+    animation: lg-drift 6s linear infinite;
+  }
+}
+
+/* A phone pays the most for a blur and sees the least of it. Half the radius
+   keeps the material without the frame cost. */
+@media (pointer: coarse) {
+  .pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]),
+  .liquid-glass {
+    backdrop-filter: blur(4px) saturate(150%);
+    -webkit-backdrop-filter: blur(4px) saturate(150%);
+  }
+  .liquid-glass-active {
+    backdrop-filter: blur(8px) saturate(180%);
+    -webkit-backdrop-filter: blur(8px) saturate(180%);
+  }
+}
+
+/* A filled primary is glass too, lit from within rather than transparent. */
+.pc button.pc-btn-primary:not(:disabled) {
+  position: relative;
+  isolation: isolate;
+  --lg-x: 30%;
+  --lg-y: 0%;
+  background:
+    radial-gradient(120px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.28), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 55%),
+    var(--pc-primary);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.35),
+    0 6px 18px -8px rgba(46, 55, 164, 0.45);
 }
 
 /* ---------------------------------------------------------------------------

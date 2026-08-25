@@ -6,6 +6,8 @@ import { AuthModal } from './components/AuthModal';
 import { ProfileModal } from './components/ProfileModal';
 import { authApi } from './services/authApi';
 import { wakeServer } from './services/apiClient';
+import { LiquidGlassDefs } from './components/LiquidGlassDefs';
+import { useLiquidPointer } from './hooks/useLiquidPointer';
 import { User } from './types';
 import { VisitorKiosk } from './components/VisitorKiosk';
 import { VisitorTokenView } from './components/VisitorTokenView';
@@ -53,6 +55,9 @@ export default function App() {
   const [currentView, setCurrentView] = useState<AppView>('landing');
   const [currentAdminTab, setCurrentAdminTab] = useState<AdminTab>('overview');
   const shouldReduceMotion = useReducedMotion();
+
+  // Lights every glass control from wherever the pointer is.
+  useLiquidPointer();
 
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -342,7 +347,11 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen frosted-canvas text-white flex flex-col font-sans antialiased selection:bg-[#8e7dff] selection:text-white">
+    <div className="pc min-h-screen bg-[var(--pc-page)] text-[var(--pc-text)] flex flex-col font-sans antialiased selection:bg-[#2E37A4] selection:text-white">
+
+      {/* Refraction filters for the glass material. Mounted once, renders
+          nothing, referenced from CSS by id. */}
+      <LiquidGlassDefs />
 
       {/* Global Navigation Header */}
       <Navbar
