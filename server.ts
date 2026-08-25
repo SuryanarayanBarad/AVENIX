@@ -770,7 +770,7 @@ async function toPublicToken(token: { id: string; code: string; serviceId: strin
   };
 }
 
-async function toVisitorAppointment(appointment: { id: string; code: string; doctorId: string; date: string; time: string; patientName: string; phone: string; status: string }) {
+async function toVisitorAppointment(appointment: { id: string; code: string; doctorId: string; date: string; time: string; patientName: string; phone: string; status: string; reasonForVisit?: string }) {
   const doctor = await findDoctor(appointment.doctorId);
   return {
     id: appointment.id,
@@ -783,6 +783,15 @@ async function toVisitorAppointment(appointment: { id: string; code: string; doc
     time: formatTime(appointment.time),
     patientName: appointment.patientName,
     maskedPhone: maskPhone(appointment.phone),
+    // The confirmation card reads `phoneMasked`; the projection only ever
+    // returned `maskedPhone`, so that row rendered blank. Both names are
+    // served rather than renaming a field other callers already read.
+    phoneMasked: maskPhone(appointment.phone),
+    // The patient's own words, returned to the patient. Reaching this
+    // projection already required proving ownership — a session or the
+    // appointment's access key — so this is their data coming back to them,
+    // not a disclosure. Staff projections carry it separately.
+    reasonForVisit: appointment.reasonForVisit ?? null,
     // Raw lifecycle state plus the shared patient-facing wording. Both come
     // from the same source, so this can never disagree with the staff view.
     status: toPatientStatus(appointment.status),

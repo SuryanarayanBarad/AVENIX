@@ -793,19 +793,33 @@
 .pc .text-white:not([class^="bg-[#2E37A4]"]):not([class*=" bg-[#2E37A4]"]):not([class^="bg-[var(--pc-primary)]"]):not([class*=" bg-[var(--pc-primary)]"]):not(.pc-btn-primary):not([class^="bg-gradient"]):not([class*=" bg-gradient"]) {
   color: var(--pc-text);
 }
+/* Every opacity of white text that appears in the app, mapped by intent.
+   This list is exhaustive on purpose and kept that way by a check: an unmapped
+   value is invisible on a white surface rather than merely wrong, and
+   text-white/42 and /88 on the appointment detail rows are how that was found.
+   Anything at 85 or above was written to read as primary copy. */
 .pc .text-white\/90,
+.pc .text-white\/88,
+.pc .text-white\/85 { color: var(--pc-text); }
+
 .pc .text-white\/80,
 .pc .text-white\/75,
 .pc .text-white\/72,
-.pc .text-white\/70 { color: var(--pc-text-muted); }
+.pc .text-white\/70,
 .pc .text-white\/65,
 .pc .text-white\/60,
 .pc .text-white\/55,
+.pc .text-white\/52,
 .pc .text-white\/50,
+.pc .text-white\/48,
 .pc .text-white\/45 { color: var(--pc-text-muted); }
+
+.pc .text-white\/42,
 .pc .text-white\/40,
 .pc .text-white\/35,
-.pc .text-white\/30 { color: var(--pc-text-subtle); }
+.pc .text-white\/30,
+.pc .text-white\/25,
+.pc .text-white\/20 { color: var(--pc-text-subtle); }
 
 /* Hover and group-hover variants generate their own class names, so the rule
    above never matched them: a control written as "text-white/70 hover:text-white"
@@ -909,6 +923,8 @@
 .pc .text-rose-200,
 .pc .text-rose-300,
 .pc .text-rose-400,
+.pc .text-red-100,
+.pc .text-red-200,
 .pc .text-red-300,
 .pc .text-red-400 { color: var(--pc-danger-text); }
 
