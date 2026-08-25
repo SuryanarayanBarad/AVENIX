@@ -227,7 +227,7 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
                 key={option.id}
                 onClick={() => setLanguage(option.id)}
                 aria-pressed={language === option.id}
-                className={`px-2 sm:px-3 py-1.5 rounded-xl font-semibold transition-all cursor-pointer ${language === option.id ? 'bg-[#2E37A4] text-white shadow-md shadow-[#2E37A4]/30' : 'text-white/60 hover:text-white'
+                className={`px-2 sm:px-3 py-1.5 rounded-xl font-semibold transition-all cursor-pointer ${language === option.id ? 'liquid-glass-active' : 'text-[var(--pc-text-muted)] hover:text-[var(--pc-text)]'
                   }`}
               >
                 {option.label}

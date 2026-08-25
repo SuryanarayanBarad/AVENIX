@@ -36,15 +36,17 @@
   --pc-text: #0A1B39;            /* headings and primary copy */
   --pc-text-strong: #111827;
   --pc-text-muted: #6C7688;
-  --pc-text-subtle: #858D9C;
+  --pc-text-subtle: #737C8C;
 
   --pc-border: #E7E8EB;          /* the most-used colour in the whole frame */
   --pc-border-strong: #CED1D7;
   --pc-placeholder: #9DA4B0;     /* input placeholder, from the Login frame */
   --pc-illustration: #ECEDF7;    /* the lavender half of the split auth page */
 
-  --pc-success: #27AE60;
-  --pc-danger: #EF1E1E;
+  --pc-success: #27AE60;        /* fills, dots, bars */
+  --pc-success-text: #1B7F46;   /* 5.04:1 on white — #27AE60 is 2.87:1 */
+  --pc-danger: #EF1E1E;         /* fills */
+  --pc-danger-text: #C81E1E;    /* 5.74:1 on white */
 
   /* 6px is the kit's default corner; 20px is used for pills and larger cards. */
   --pc-radius: 6px;
@@ -422,18 +424,25 @@
 }
 
 /* Selected: the same pane, tinted with the brand and lit harder. */
+/* Selected: clear glass, not blue glass.
+   ---------------------------------------------------------------------------
+   A heavy indigo tint made the pane look like a blue button with the page
+   showing through, which is the opposite of the intent — glass takes its colour
+   from what is behind it. The tint is now barely there and faintly warm, the
+   selection is carried by the rim, the brighter specular and the deeper bloom,
+   and the label goes indigo so it still reads as chosen at a glance. */
 .liquid-glass-active {
   background:
-    radial-gradient(140px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.8), transparent 62%),
-    linear-gradient(105deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 44%),
-    linear-gradient(180deg, rgba(46, 55, 164, 0.26) 0%, rgba(46, 55, 164, 0.13) 100%);
-  backdrop-filter: blur(16px) saturate(200%);
-  -webkit-backdrop-filter: blur(16px) saturate(200%);
-  border: 1px solid rgba(46, 55, 164, 0.28);
+    radial-gradient(150px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.92), transparent 64%),
+    linear-gradient(105deg, rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0) 44%),
+    linear-gradient(180deg, rgba(255, 252, 250, 0.50) 0%, rgba(0, 211, 199, 0.07) 100%);
+  backdrop-filter: blur(18px) saturate(215%);
+  -webkit-backdrop-filter: blur(18px) saturate(215%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
   box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.88),
-    inset 0 -10px 18px -12px rgba(46, 55, 164, 0.40),
-    0 8px 22px -10px rgba(46, 55, 164, 0.38);
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+    inset 0 -12px 20px -14px rgba(0, 211, 199, 0.35),
+    0 10px 26px -12px rgba(10, 27, 57, 0.22);
   color: var(--pc-primary);
 }
 
@@ -447,9 +456,9 @@
 
   .liquid-glass-active:hover {
     box-shadow:
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.92),
-      inset 0 -10px 18px -12px rgba(46, 55, 164, 0.44),
-      0 10px 26px -10px rgba(46, 55, 164, 0.44);
+      inset 0 1px 0 0 rgba(255, 255, 255, 1),
+      inset 0 -12px 20px -14px rgba(0, 211, 199, 0.45),
+      0 12px 30px -12px rgba(10, 27, 57, 0.26);
   }
 }
 
@@ -459,8 +468,8 @@
 .liquid-glass-active:active {
   transform: scale(0.985);
   box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.7),
-    inset 0 3px 10px 0 rgba(46, 55, 164, 0.24);
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.75),
+    inset 0 3px 10px 0 rgba(10, 27, 57, 0.16);
 }
 
 /* Real refraction, where the browser can do it. Chrome and Safari accept an
@@ -486,7 +495,7 @@
    looks flat and washed out, so fall back to an opaque surface. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .liquid-glass { background: var(--pc-surface); }
-  .liquid-glass-active { background: var(--pc-tint-lilac); }
+  .liquid-glass-active { background: var(--pc-tint-mint); }
 }
 
 /* Transparency and drifting colour are exactly what these settings ask us to
@@ -503,7 +512,7 @@
     -webkit-backdrop-filter: none;
   }
   .liquid-glass { background: var(--pc-surface); }
-  .liquid-glass-active { background: var(--pc-tint-lilac); }
+  .liquid-glass-active { background: var(--pc-tint-mint); }
   .liquid-glass::before,
   .liquid-glass-active::before { display: none; }
 }
@@ -648,7 +657,12 @@
 
 /* Text written for a dark surface. Solid white becomes the body navy; the
    translucent greys collapse onto the two muted tones the kit actually uses. */
-.pc .text-white { color: var(--pc-text); }
+/* White text is only wrong when it sits on a light surface. On an element
+   that also paints a filled brand background, white is exactly right, and
+   turning it navy makes it unreadable — so those are excluded. */
+.pc .text-white:not([class*="bg-[#2E37A4]"]):not([class*="bg-[var(--pc-primary)]"]):not(.pc-btn-primary):not([class*="bg-gradient"]) {
+  color: var(--pc-text);
+}
 .pc .text-white\/90,
 .pc .text-white\/80,
 .pc .text-white\/75,
@@ -658,8 +672,10 @@
 .pc .text-white\/60,
 .pc .text-white\/55,
 .pc .text-white\/50,
-.pc .text-white\/45,
-.pc .text-white\/40 { color: var(--pc-text-subtle); }
+.pc .text-white\/45 { color: var(--pc-text-muted); }
+.pc .text-white\/40,
+.pc .text-white\/35,
+.pc .text-white\/30 { color: var(--pc-text-subtle); }
 
 .pc .placeholder-white\/40::placeholder,
 .pc .placeholder-white\/35::placeholder { color: var(--pc-text-subtle); }
@@ -720,23 +736,31 @@
 
    Part of the same transitional block above: as a view moves to pc-* classes,
    its rules here stop matching. */
+.pc .text-emerald-50,
+.pc .text-emerald-100,
 .pc .text-emerald-200,
 .pc .text-emerald-300,
 .pc .text-emerald-400,
 .pc .text-green-300,
-.pc .text-green-400 { color: var(--pc-success); }
+.pc .text-green-400 { color: var(--pc-success-text); }
 
+.pc .text-amber-50,
+.pc .text-amber-100,
 .pc .text-amber-200,
 .pc .text-amber-300,
 .pc .text-amber-400,
 .pc .text-yellow-300 { color: #B54708; }
 
+.pc .text-rose-50,
+.pc .text-rose-100,
 .pc .text-rose-200,
 .pc .text-rose-300,
 .pc .text-rose-400,
 .pc .text-red-300,
-.pc .text-red-400 { color: var(--pc-danger); }
+.pc .text-red-400 { color: var(--pc-danger-text); }
 
+.pc .text-blue-100,
+.pc .text-blue-200,
 .pc .text-blue-300,
 .pc .text-blue-400,
 .pc .text-sky-300 { color: var(--pc-accent-cyan); }

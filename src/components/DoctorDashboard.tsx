@@ -173,7 +173,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ user, onLogout
                   key={scope}
                   onClick={() => setPatientScope(scope)}
                   className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors capitalize ${
-                    patientScope === scope ? 'bg-[#2E37A4]/20 text-[#d6d2ff]' : 'text-white/55 hover:text-white/80'
+                    patientScope === scope ? 'liquid-glass-active' : 'text-[var(--pc-text-muted)] hover:text-[var(--pc-text)]'
                   }`}
                 >
                   {scope}
