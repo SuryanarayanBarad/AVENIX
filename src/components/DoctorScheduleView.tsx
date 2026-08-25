@@ -58,7 +58,7 @@ const modalEase = [0.22, 1, 0.36, 1] as const;
 
 const statusTone: Record<DoctorStatus, string> = {
   Available: 'border-emerald-400/30 bg-emerald-500/15 text-emerald-300',
-  Busy: 'border-[#8e7dff]/35 bg-[#8e7dff]/15 text-[#c5beff]',
+  Busy: 'border-[#2E37A4]/35 bg-[#2E37A4]/15 text-[#c5beff]',
   Delayed: 'border-amber-400/30 bg-amber-500/15 text-amber-200',
   Unavailable: 'border-rose-400/35 bg-rose-500/15 text-rose-200',
 };
@@ -66,7 +66,7 @@ const statusTone: Record<DoctorStatus, string> = {
 const appointmentTone = (status: string) => {
   const normalized = status.toLowerCase();
   if (normalized.includes('complete')) return 'border-white/[0.12] bg-white/[0.06] text-white/55';
-  if (normalized.includes('consult') || normalized.includes('busy')) return 'border-[#8e7dff]/35 bg-[#8e7dff]/15 text-[#c5beff]';
+  if (normalized.includes('consult') || normalized.includes('busy')) return 'border-[#2E37A4]/35 bg-[#2E37A4]/15 text-[#c5beff]';
   if (normalized.includes('delay')) return 'border-amber-400/30 bg-amber-500/15 text-amber-200';
   if (normalized.includes('wait') || normalized.includes('check')) return 'border-amber-400/30 bg-amber-500/15 text-amber-200';
   return 'border-emerald-400/30 bg-emerald-500/15 text-emerald-200';
@@ -343,7 +343,7 @@ export const DoctorScheduleView: React.FC<DoctorScheduleViewProps> = ({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="font-display text-2xl font-bold text-white">Doctor Schedule Control</h1>
-            <span className="rounded-full border border-[#8e7dff]/30 bg-[#8e7dff]/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#c5beff]">Staff workspace</span>
+            <span className="rounded-full border border-[#2E37A4]/30 bg-[#2E37A4]/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#c5beff]">Staff workspace</span>
           </div>
           <p className="mt-1 text-xs text-white/60">Availability, appointment impact, and reviewable AI rescheduling recommendations.</p>
         </div>
@@ -421,7 +421,7 @@ export const DoctorScheduleView: React.FC<DoctorScheduleViewProps> = ({
                   type="button"
                   onClick={() => setSelectedDoctor(doctor.name)}
                   className={`rounded-3xl border p-4 text-left transition-all cursor-pointer ${
-                    active ? 'border-[#8e7dff]/55 bg-[#8e7dff]/16 shadow-[0_10px_30px_rgba(142,125,255,0.15)]' : 'glass-panel hover:border-white/[0.22]'
+                    active ? 'border-[#2E37A4]/55 bg-[#2E37A4]/16 shadow-[0_10px_30px_rgba(46,55,164,0.10)]' : 'glass-panel hover:border-white/[0.22]'
                   }`}
                   aria-pressed={active}
                 >
@@ -479,7 +479,7 @@ export const DoctorScheduleView: React.FC<DoctorScheduleViewProps> = ({
                         <td className="px-5 py-4"><span className={`inline-flex rounded-full border px-2 py-1 text-[9px] font-bold uppercase tracking-wide ${appointmentTone(appointment.status)}`}>{appointment.status}</span></td>
                         <td className="px-5 py-4 text-right">
                           {recommendation ? (
-                            <button type="button" onClick={() => openRescheduleReview(recommendation)} className="inline-flex items-center gap-1 rounded-xl border border-[#8e7dff]/35 bg-[#8e7dff]/15 px-2.5 py-1.5 text-[10px] font-bold text-[#d6d2ff] hover:bg-[#8e7dff]/25 cursor-pointer">
+                            <button type="button" onClick={() => openRescheduleReview(recommendation)} className="inline-flex items-center gap-1 rounded-xl border border-[#2E37A4]/35 bg-[#2E37A4]/15 px-2.5 py-1.5 text-[10px] font-bold text-[#d6d2ff] hover:bg-[#2E37A4]/25 cursor-pointer">
                               Review change <ChevronRight className="h-3 w-3" aria-hidden="true" />
                             </button>
                           ) : <span className="text-[10px] text-white/35">No change proposed</span>}
@@ -499,14 +499,14 @@ export const DoctorScheduleView: React.FC<DoctorScheduleViewProps> = ({
           <AnimatePresence initial={false}>
             {showRecommendation && (
               <motion.section
-                className="rounded-3xl border border-[#8e7dff]/35 bg-gradient-to-br from-[#8e7dff]/18 via-[#7C3AED]/10 to-white/[0.045] p-5 shadow-xl shadow-[#4F46E5]/10 backdrop-blur-xl"
+                className="rounded-3xl border border-[#2E37A4]/35 bg-gradient-to-br from-[#2E37A4]/18 via-[#7C3AED]/10 to-white/[0.045] p-5 shadow-xl shadow-[#4F46E5]/10 backdrop-blur-xl"
                 initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: -6 }}
                 transition={{ duration: shouldReduceMotion ? 0 : 0.18, ease: modalEase }}
               >
                 <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#c5beff]/30 bg-[#8e7dff]/20 text-[#d6d2ff]"><Sparkles className="h-5 w-5" aria-hidden="true" /></span>
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#c5beff]/30 bg-[#2E37A4]/20 text-[#d6d2ff]"><Sparkles className="h-5 w-5" aria-hidden="true" /></span>
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#d6d2ff]">AI suggestion</p>
                     <h2 className="mt-1 font-display text-base font-bold text-white">Reviewable recovery plan</h2>
@@ -647,7 +647,7 @@ export const DoctorScheduleView: React.FC<DoctorScheduleViewProps> = ({
                   </select>
                 </label>
 
-                <div className="rounded-2xl border border-[#8e7dff]/30 bg-[#8e7dff]/12 p-3.5 text-xs">
+                <div className="rounded-2xl border border-[#2E37A4]/30 bg-[#2E37A4]/12 p-3.5 text-xs">
                   <div className="flex items-center gap-2 font-bold text-[#d6d2ff]"><Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> AI recommendation review</div>
                   <p className="mt-1.5 leading-relaxed text-white/70">Previous Time <strong className="text-white">{rescheduleTarget.time}</strong> <ArrowRight className="mx-1 inline h-3 w-3" aria-hidden="true" /> New Time <strong className="text-white">{newTime}</strong> · Doctor <strong className="text-white">{newDoctor}</strong></p>
                 </div>

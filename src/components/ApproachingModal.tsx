@@ -76,11 +76,11 @@ export const ApproachingModal: React.FC<ApproachingModalProps> = ({
           {/* Big Token Display (Frosted Card) */}
           <div className="text-center glass-panel rounded-2xl p-5 border border-white/15">
             <span className="text-xs text-white/50 font-medium tracking-wider">YOUR TOKEN</span>
-            <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#8e7dff] to-[#ff7db8] font-mono tracking-tight my-1">
+            <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#2E37A4] to-[#00D3C7] font-mono tracking-tight my-1">
               {token.code}
             </div>
             <p className="text-xs font-semibold text-white/80 mt-1">
-              Please proceed toward <span className="text-[#8e7dff] font-bold">{token.counterId}</span>.
+              Please proceed toward <span className="text-[#2E37A4] font-bold">{token.counterId}</span>.
             </p>
           </div>
 
@@ -96,7 +96,7 @@ export const ApproachingModal: React.FC<ApproachingModalProps> = ({
 
             <div className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.05] border border-white/[0.10]">
               <div className="flex items-center gap-2 text-white/70">
-                <Stethoscope className="w-4 h-4 text-[#8e7dff]" />
+                <Stethoscope className="w-4 h-4 text-[#2E37A4]" />
                 <span>Service Dept.</span>
               </div>
               <span className="font-bold text-white">{token.service}</span>
@@ -115,7 +115,7 @@ export const ApproachingModal: React.FC<ApproachingModalProps> = ({
           <div className="space-y-2.5 pt-1">
             <button
               onClick={onConfirmOnWay}
-              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#8e7dff] to-purple-600 hover:from-[#7b69fd] hover:to-purple-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#8e7dff]/30 active:scale-98 transition-all cursor-pointer border border-white/20"
+              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:from-[#3538CD] hover:to-purple-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#2E37A4]/30 active:scale-98 transition-all cursor-pointer border border-white/20"
             >
               <span>I'm on my way</span>
               <ArrowRight className="w-4 h-4" />

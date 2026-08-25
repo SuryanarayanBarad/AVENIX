@@ -164,7 +164,7 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
           particleCount: 70,
           spread: 60,
           origin: { y: 0.7 },
-          colors: ['#8e7dff', '#ff7db8', '#4ade80']
+          colors: ['#2E37A4', '#00D3C7', '#4ade80']
         });
       } catch {
         // ignore
@@ -183,7 +183,7 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] p-3 sm:p-6 lg:p-8 flex flex-col justify-between text-white">
+    <div className="pc min-h-[calc(100vh-4rem)] bg-[var(--pc-page)] p-3 sm:p-6 lg:p-8 flex flex-col justify-between text-[var(--pc-text)]">
 
       {/* Kiosk Container (Frosted Glass Shell) */}
       <div className="max-w-5xl mx-auto w-full glass-panel-elevated rounded-3xl overflow-hidden shadow-2xl">
@@ -204,7 +204,7 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
                 <ArrowLeft className="w-5 h-5" />
               </button>
             )}
-            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-[#8e7dff] to-[#ff7db8] flex items-center justify-center text-white shadow-lg shadow-[#8e7dff]/25 border border-white/20 shrink-0">
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-[#2E37A4] to-[#00D3C7] flex items-center justify-center text-white shadow-lg shadow-[#2E37A4]/25 border border-white/20 shrink-0">
               <Building2 className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="min-w-0">
@@ -227,7 +227,7 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
                 key={option.id}
                 onClick={() => setLanguage(option.id)}
                 aria-pressed={language === option.id}
-                className={`px-2 sm:px-3 py-1.5 rounded-xl font-semibold transition-all cursor-pointer ${language === option.id ? 'bg-[#8e7dff] text-white shadow-md shadow-[#8e7dff]/30' : 'text-white/60 hover:text-white'
+                className={`px-2 sm:px-3 py-1.5 rounded-xl font-semibold transition-all cursor-pointer ${language === option.id ? 'bg-[#2E37A4] text-white shadow-md shadow-[#2E37A4]/30' : 'text-white/60 hover:text-white'
                   }`}
               >
                 {option.label}
@@ -264,10 +264,10 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
 
                 <div className="py-6 text-center">
                   <span className="text-xs text-white/60 font-medium">{t.yourTokenNumber}</span>
-                  <div className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#8e7dff] to-[#ff7db8] font-mono tracking-tight my-2">
+                  <div className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#2E37A4] to-[#00D3C7] font-mono tracking-tight my-2">
                     {issuedToken.code}
                   </div>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#8e7dff]/20 text-[#8e7dff] border border-[#8e7dff]/40 mt-1">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#2E37A4]/20 text-[#2E37A4] border border-[#2E37A4]/40 mt-1">
                     <Clock className="w-3.5 h-3.5" />
                     <span>Est. Wait: ~{issuedToken.estWaitMin} mins</span>
                   </div>
@@ -280,7 +280,7 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
                   </div>
                   <div>
                     <span className="text-white/50 text-[10px] block">{t.assignedCounter}</span>
-                    <span className="font-bold text-[#8e7dff]">{issuedToken.counterId}</span>
+                    <span className="font-bold text-[#2E37A4]">{issuedToken.counterId}</span>
                   </div>
                 </div>
               </div>
@@ -292,7 +292,7 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
                     if (onViewToken) onViewToken(issuedToken);
                     if (onTokenGenerated) onTokenGenerated(issuedToken);
                   }}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#8e7dff] to-purple-600 hover:from-[#7b69fd] hover:to-purple-500 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#8e7dff]/30 cursor-pointer active:scale-98 transition-all border border-white/20"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:from-[#3538CD] hover:to-purple-500 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#2E37A4]/30 cursor-pointer active:scale-98 transition-all border border-white/20"
                 >
                   <span>{t.trackOnMobile}</span>
                   <ArrowRight className="w-4 h-4" />
@@ -320,7 +320,7 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
                   </p>
                 </div>
                 <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.06] border border-white/[0.10] text-xs text-white/70 font-medium backdrop-blur-md">
-                  <Clock className="w-3.5 h-3.5 text-[#8e7dff]" />
+                  <Clock className="w-3.5 h-3.5 text-[#2E37A4]" />
                   <span>{t.avgWait}</span>
                 </div>
               </div>
@@ -342,7 +342,7 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
                       onClick={() => setSelectedService(s.type)}
                       aria-pressed={isSelected}
                       className={`p-3.5 sm:p-5 rounded-3xl text-left transition-all flex flex-col justify-between relative group cursor-pointer ${isSelected
-                        ? 'bg-[#8e7dff]/20 border-2 border-[#8e7dff] shadow-[0_0_25px_rgba(142,125,255,0.3)] backdrop-blur-2xl'
+                        ? 'bg-[#2E37A4]/20 border-2 border-[#2E37A4] shadow-[0_0_25px_rgba(46,55,164,0.18)] backdrop-blur-2xl'
                         : 'glass-panel-interactive border border-white/[0.12] hover:border-white/[0.25]'
                         }`}
                     >
@@ -355,8 +355,8 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
 
                       <div className="space-y-2 sm:space-y-3">
                         <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center ${isSelected
-                          ? 'bg-[#8e7dff] text-white shadow-md shadow-[#8e7dff]/40'
-                          : 'bg-white/[0.08] text-white/80 group-hover:bg-[#8e7dff]/20 group-hover:text-[#8e7dff]'
+                          ? 'bg-[#2E37A4] text-white shadow-md shadow-[#2E37A4]/40'
+                          : 'bg-white/[0.08] text-white/80 group-hover:bg-[#2E37A4]/20 group-hover:text-[#2E37A4]'
                           } transition-colors border border-white/10`}>
                           <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
@@ -369,7 +369,7 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
                       {/* Wait & Queue Metrics footer */}
                       <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-white/[0.10] flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[11px] sm:text-xs">
                         <div className="flex items-center gap-1 font-semibold text-white/90">
-                          <Clock className="w-3.5 h-3.5 text-[#8e7dff] shrink-0" />
+                          <Clock className="w-3.5 h-3.5 text-[#2E37A4] shrink-0" />
                           <span>
                             {s.waitMin === null ? '—' : s.waitMin === 0 ? t.noWait : `~${s.waitMin} ${t.minWait}`}
                           </span>
@@ -388,7 +388,7 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
               <div className="p-3.5 sm:p-5 rounded-3xl bg-white/[0.05] border border-white/[0.12] backdrop-blur-xl space-y-2.5 sm:space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
                   <div className="flex items-center gap-2">
-                    <Heart className="w-4 h-4 text-[#ff7db8] shrink-0" />
+                    <Heart className="w-4 h-4 text-[#00D3C7] shrink-0" />
                     <h4 className="text-xs font-bold uppercase tracking-wider text-white/80">
                       {t.stepAssistance}
                     </h4>
@@ -406,7 +406,7 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
                       onClick={() => setDemographic(demo.type)}
                       aria-pressed={demographic === demo.type}
                       className={`p-2.5 sm:p-3 rounded-2xl border text-left transition-all cursor-pointer ${demographic === demo.type
-                        ? 'border-[#8e7dff] bg-[#8e7dff]/25 font-semibold text-white shadow-[0_0_15px_rgba(142,125,255,0.25)]'
+                        ? 'border-[#2E37A4] bg-[#2E37A4]/25 font-semibold text-white shadow-[0_0_15px_rgba(46,55,164,0.14)]'
                         : 'border-white/[0.10] bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white'
                         }`}
                     >
@@ -457,7 +457,7 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
                 <button
                   onClick={handleGenerateToken}
                   disabled={isIssuing}
-                  className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-[#8e7dff] via-purple-600 to-[#ff7db8] hover:opacity-90 disabled:opacity-60 text-white font-bold text-sm shadow-lg shadow-[#8e7dff]/30 flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer border border-white/20"
+                  className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-[#2E37A4] via-purple-600 to-[#00D3C7] hover:opacity-90 disabled:opacity-60 text-white font-bold text-sm shadow-lg shadow-[#2E37A4]/30 flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer border border-white/20"
                 >
                   <Printer className="w-5 h-5" />
                   <span>{isIssuing ? t.issuing : t.getToken}</span>

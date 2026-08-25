@@ -83,11 +83,11 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ user, onLogout
   };
 
   return (
-    <div className="min-h-full text-white">
+    <div className="pc min-h-full bg-[var(--pc-page)] text-[var(--pc-text)]">
       <header className="bg-white/[0.05] backdrop-blur-2xl border-b border-white/[0.12] p-4 sm:p-5 sticky top-0 z-10 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-4">
-            <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-[#8e7dff] via-indigo-500 to-[#ff7db8] flex items-center justify-center text-white shadow-lg shadow-[#8e7dff]/25 border border-white/20">
+            <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-[#2E37A4] via-indigo-500 to-[#00D3C7] flex items-center justify-center text-white shadow-lg shadow-[#2E37A4]/25 border border-white/20">
               <UserIcon className="text-white" size={20} />
             </div>
             <div>
@@ -128,7 +128,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ user, onLogout
               <p className="text-sm text-emerald-400/80 mb-1">Approved/Waiting</p>
               <p className="text-2xl font-bold text-emerald-400">{stats.approved}</p>
             </div>
-            <div className="p-4 rounded-3xl bg-[#8e7dff]/12 border border-[#8e7dff]/30 backdrop-blur-xl shadow-[0_8px_30px_rgba(142,125,255,0.15)]">
+            <div className="p-4 rounded-3xl bg-[#2E37A4]/12 border border-[#2E37A4]/30 backdrop-blur-xl shadow-[0_8px_30px_rgba(46,55,164,0.10)]">
               <p className="text-sm text-[#c5beff]/80 mb-1">Completed</p>
               <p className="text-2xl font-bold text-[#c5beff]">{stats.completed}</p>
             </div>
@@ -173,7 +173,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ user, onLogout
                   key={scope}
                   onClick={() => setPatientScope(scope)}
                   className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors capitalize ${
-                    patientScope === scope ? 'bg-[#8e7dff]/20 text-[#d6d2ff]' : 'text-white/55 hover:text-white/80'
+                    patientScope === scope ? 'bg-[#2E37A4]/20 text-[#d6d2ff]' : 'text-white/55 hover:text-white/80'
                   }`}
                 >
                   {scope}
@@ -202,7 +202,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ user, onLogout
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-white">{patient.patientName}</span>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        patient.checkupStatus === 'Completed' ? 'bg-[#8e7dff]/20 text-[#d6d2ff]' :
+                        patient.checkupStatus === 'Completed' ? 'bg-[#2E37A4]/20 text-[#d6d2ff]' :
                         patient.checkupStatus === 'In Consultation' ? 'bg-emerald-500/20 text-emerald-300' :
                         patient.checkupStatus === 'Waiting' ? 'bg-amber-500/20 text-amber-300' :
                         patient.checkupStatus === 'Denied' ? 'bg-rose-500/20 text-rose-300' :
@@ -261,7 +261,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ user, onLogout
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         apt.status === 'Pending' ? 'bg-amber-500/20 text-amber-300' :
                         apt.status === 'Approved' ? 'bg-emerald-500/20 text-emerald-300' :
-                        apt.status === 'Completed' ? 'bg-[#8e7dff]/20 text-[#d6d2ff]' :
+                        apt.status === 'Completed' ? 'bg-[#2E37A4]/20 text-[#d6d2ff]' :
                         apt.status === 'Denied' ? 'bg-rose-500/20 text-rose-300' :
                         'bg-white/10 text-white/70'
                       }`}>
@@ -306,7 +306,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ user, onLogout
                     {apt.status === 'Approved' && (
                       <button 
                         onClick={() => updateStatus(apt.id, 'Completed')}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-[#8e7dff]/15 hover:bg-[#8e7dff]/25 text-[#c5beff] rounded-2xl transition-colors border border-[#8e7dff]/30 cursor-pointer"
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-[#2E37A4]/15 hover:bg-[#2E37A4]/25 text-[#c5beff] rounded-2xl transition-colors border border-[#2E37A4]/30 cursor-pointer"
                       >
                         <CheckCircle size={16} />
                         Mark Completed

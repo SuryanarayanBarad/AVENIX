@@ -43,7 +43,7 @@ const statusTone: Record<string, string> = {
   'Confirmed': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
   'Checked in': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
   'Waiting': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-  'In consultation': 'bg-[#8e7dff]/20 text-[#c5beff] border-[#8e7dff]/30',
+  'In consultation': 'bg-[#2E37A4]/20 text-[#c5beff] border-[#2E37A4]/30',
   'Completed': 'bg-white/10 text-white/60 border-white/15',
   'Declined': 'bg-rose-500/20 text-rose-300 border-rose-500/30',
   'Cancelled': 'bg-rose-500/20 text-rose-300 border-rose-500/30',
@@ -58,7 +58,7 @@ const DoctorThumb: React.FC<{ name: string; photoUrl?: string | null }> = ({ nam
     return <img src={photoUrl} alt={name} onError={() => setFailed(true)} className="w-11 h-11 rounded-2xl object-cover border border-white/20 shrink-0" />;
   }
   return (
-    <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#8e7dff] to-[#ff7db8] flex items-center justify-center text-white font-bold text-xs border border-white/20 shrink-0">
+    <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#2E37A4] to-[#00D3C7] flex items-center justify-center text-white font-bold text-xs border border-white/20 shrink-0">
       {initials || <Stethoscope className="w-4 h-4" />}
     </div>
   );
@@ -136,7 +136,7 @@ export const MyVisitView: React.FC<MyVisitViewProps> = ({ refreshKey = 0, onGetT
                 <div className="text-[10px] uppercase tracking-wider text-white/50 font-semibold mt-0.5">Ahead</div>
               </div>
               <div className="glass-panel rounded-2xl px-4 py-3">
-                <div className="text-2xl font-light text-[#8e7dff] font-display">{token.estimatedWaitMinutes}</div>
+                <div className="text-2xl font-light text-[#2E37A4] font-display">{token.estimatedWaitMinutes}</div>
                 <div className="text-[10px] uppercase tracking-wider text-white/50 font-semibold mt-0.5">Min wait</div>
               </div>
               <div className="glass-panel rounded-2xl px-4 py-3">
@@ -156,7 +156,7 @@ export const MyVisitView: React.FC<MyVisitViewProps> = ({ refreshKey = 0, onGetT
               {onGetToken && (
                 <button
                   onClick={onGetToken}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#8e7dff] to-purple-600 text-white font-semibold text-xs shadow-lg shadow-[#8e7dff]/30 border border-white/20 cursor-pointer transition-all"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 text-white font-semibold text-xs shadow-lg shadow-[#2E37A4]/30 border border-white/20 cursor-pointer transition-all"
                 >
                   <Ticket className="w-4 h-4" />
                   Get a token
@@ -215,7 +215,7 @@ export const MyVisitView: React.FC<MyVisitViewProps> = ({ refreshKey = 0, onGetT
 
         <div className="glass-panel rounded-3xl p-5">
           <h3 className="text-sm font-bold text-white font-display flex items-center gap-2 mb-3">
-            <Stethoscope className="w-4 h-4 text-[#8e7dff]" />
+            <Stethoscope className="w-4 h-4 text-[#2E37A4]" />
             Your doctor
           </h3>
           {nextAppointment ? (

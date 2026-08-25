@@ -9,7 +9,7 @@ const listEase = [0.22, 1, 0.36, 1] as const;
 
 /** Colour per derived checkup state, using the app's existing status tones. */
 const checkupTone: Record<string, string> = {
-  'Completed': 'bg-[#8e7dff]/20 text-[#c5beff] border-[#8e7dff]/30',
+  'Completed': 'bg-[#2E37A4]/20 text-[#c5beff] border-[#2E37A4]/30',
   'In consultation': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
   'Waiting': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
   'Checked in': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
@@ -70,7 +70,7 @@ export const MyPatientsView: React.FC<MyPatientsViewProps> = ({ refreshKey = 0 }
       <div className="glass-panel-elevated rounded-3xl overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-white/[0.08] flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
           <h2 className="text-base font-bold text-white font-display flex items-center gap-2">
-            <Users className="w-4 h-4 text-[#8e7dff]" />
+            <Users className="w-4 h-4 text-[#2E37A4]" />
             My Patients
             <span className="text-xs font-medium text-white/45">({patients.length})</span>
           </h2>
@@ -83,7 +83,7 @@ export const MyPatientsView: React.FC<MyPatientsViewProps> = ({ refreshKey = 0 }
                   onClick={() => setScope(option)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize cursor-pointer ${
                     scope === option
-                      ? 'bg-gradient-to-r from-[#8e7dff]/30 to-purple-500/30 text-white font-bold border border-[#8e7dff]/50'
+                      ? 'bg-gradient-to-r from-[#2E37A4]/30 to-purple-500/30 text-white font-bold border border-[#2E37A4]/50'
                       : 'text-white/60 hover:text-white hover:bg-white/[0.08] border border-transparent'
                   }`}
                 >

@@ -88,14 +88,14 @@ const PatientCard: React.FC<{
 
   return (
     <div
-      className="glass-panel rounded-3xl overflow-hidden flex flex-col border border-white/[0.10] hover:border-[#8e7dff]/40 hover:shadow-[0_0_20px_rgba(142,125,255,0.15)] transition-all cursor-pointer"
+      className="glass-panel rounded-3xl overflow-hidden flex flex-col border border-white/[0.10] hover:border-[#2E37A4]/40 hover:shadow-[0_0_20px_rgba(46,55,164,0.10)] transition-all cursor-pointer"
       onClick={onClick}
     >
 
       {/* Card Header */}
       <div className="p-5 pb-3 flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#8e7dff] to-[#ff7db8] flex items-center justify-center text-white shadow-lg shadow-[#8e7dff]/20 border border-white/20">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#2E37A4] to-[#00D3C7] flex items-center justify-center text-white shadow-lg shadow-[#2E37A4]/20 border border-white/20">
             <Icon className="w-5 h-5" />
           </div>
           <div>
@@ -133,7 +133,7 @@ const PatientCard: React.FC<{
                 ? 'linear-gradient(90deg, #4ade80, #22d3ee)'
                 : token.status === 'approaching'
                   ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
-                  : 'linear-gradient(90deg, #8e7dff, #a78bfa)',
+                  : 'linear-gradient(90deg, #2E37A4, #a78bfa)',
             }}
           />
         </div>
@@ -145,13 +145,13 @@ const PatientCard: React.FC<{
           {/* Wait Time Button */}
           <button
             onClick={handleRefreshWait}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#8e7dff]/15 hover:bg-[#8e7dff]/25 border border-[#8e7dff]/30 text-white font-semibold transition-all cursor-pointer active:scale-95 ${isRefreshing ? 'animate-pulse' : ''}`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2E37A4]/15 hover:bg-[#2E37A4]/25 border border-[#2E37A4]/30 text-white font-semibold transition-all cursor-pointer active:scale-95 ${isRefreshing ? 'animate-pulse' : ''}`}
             title="Refresh estimated wait time"
           >
             {isRefreshing ? (
-              <RefreshCw className="w-3.5 h-3.5 text-[#8e7dff] animate-spin" />
+              <RefreshCw className="w-3.5 h-3.5 text-[#2E37A4] animate-spin" />
             ) : (
-              <Timer className="w-3.5 h-3.5 text-[#8e7dff]" />
+              <Timer className="w-3.5 h-3.5 text-[#2E37A4]" />
             )}
             <span>~{token.estWaitMin} min</span>
           </button>
@@ -188,7 +188,7 @@ const DoctorCard: React.FC<{ doctor: PublicDoctor }> = ({ doctor }) => {
     .toUpperCase();
 
   return (
-    <div className="glass-panel rounded-3xl overflow-hidden flex flex-col border border-white/[0.10] hover:border-[#8e7dff]/40 hover:shadow-[0_0_20px_rgba(142,125,255,0.15)] transition-all">
+    <div className="glass-panel rounded-3xl overflow-hidden flex flex-col border border-white/[0.10] hover:border-[#2E37A4]/40 hover:shadow-[0_0_20px_rgba(46,55,164,0.10)] transition-all">
 
       {/* Card Header */}
       <div className="p-5 pb-3 flex items-start justify-between gap-3">
@@ -198,10 +198,10 @@ const DoctorCard: React.FC<{ doctor: PublicDoctor }> = ({ doctor }) => {
               src={doctor.photoUrl}
               alt={doctor.name}
               onError={() => setPhotoFailed(true)}
-              className="w-14 h-14 rounded-2xl object-cover border border-white/20 shadow-lg shadow-[#8e7dff]/20 shrink-0"
+              className="w-14 h-14 rounded-2xl object-cover border border-white/20 shadow-lg shadow-[#2E37A4]/20 shrink-0"
             />
           ) : (
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#8e7dff] to-[#ff7db8] flex items-center justify-center text-white font-bold text-base shadow-lg shadow-[#8e7dff]/20 border border-white/20 shrink-0">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#2E37A4] to-[#00D3C7] flex items-center justify-center text-white font-bold text-base shadow-lg shadow-[#2E37A4]/20 border border-white/20 shrink-0">
               {initials || <UserRound className="w-6 h-6" />}
             </div>
           )}
@@ -221,7 +221,7 @@ const DoctorCard: React.FC<{ doctor: PublicDoctor }> = ({ doctor }) => {
       <div className="px-5 pb-3 space-y-1.5 text-xs text-white/60">
         {doctor.qualification && (
           <div className="flex items-center gap-1.5">
-            <GraduationCap className="w-3.5 h-3.5 text-[#8e7dff]" />
+            <GraduationCap className="w-3.5 h-3.5 text-[#2E37A4]" />
             <span className="truncate">{doctor.qualification}</span>
           </div>
         )}
@@ -236,8 +236,8 @@ const DoctorCard: React.FC<{ doctor: PublicDoctor }> = ({ doctor }) => {
 
       {/* Footer */}
       <div className="mt-auto px-5 py-4 border-t border-white/[0.06] flex items-center justify-between text-xs">
-        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#8e7dff]/15 border border-[#8e7dff]/30 text-white font-semibold">
-          <Stethoscope className="w-3.5 h-3.5 text-[#8e7dff]" />
+        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2E37A4]/15 border border-[#2E37A4]/30 text-white font-semibold">
+          <Stethoscope className="w-3.5 h-3.5 text-[#2E37A4]" />
           {doctor.specialization || doctor.department}
         </span>
         {!!doctor.consultationFee && (
@@ -284,7 +284,7 @@ const SegmentedSwitcher: React.FC<{
             {isActive && (
               <motion.span
                 layoutId="tracker-segment-highlight"
-                className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#8e7dff]/30 to-purple-500/30 border border-[#8e7dff]/50 shadow-[0_0_15px_rgba(142,125,255,0.35)]"
+                className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#2E37A4]/30 to-purple-500/30 border border-[#2E37A4]/50 shadow-[0_0_15px_rgba(46,55,164,0.16)]"
                 transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
               />
             )}
@@ -395,7 +395,7 @@ export const PatientTrackerCarousel: React.FC<PatientTrackerCarouselProps> = ({
   const avgWait = displayTokens.length > 0 ? Math.round(displayTokens.reduce((s, t) => s + t.estWaitMin, 0) / displayTokens.length) : 0;
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] py-6 px-4 sm:px-6 lg:px-8 text-white">
+    <div className="pc min-h-[calc(100vh-4rem)] bg-[var(--pc-page)] py-6 px-4 sm:px-6 lg:px-8 text-[var(--pc-text)]">
 
       {/* Header */}
       <div className="max-w-7xl mx-auto w-full mb-6">
@@ -410,7 +410,7 @@ export const PatientTrackerCarousel: React.FC<PatientTrackerCarouselProps> = ({
             </button>
             <div>
               <h1 className="text-2xl font-bold font-display text-white flex items-center gap-2">
-                <Activity className="w-6 h-6 text-[#8e7dff]" />
+                <Activity className="w-6 h-6 text-[#2E37A4]" />
                 Live Patient Tracker
               </h1>
               <p className="text-xs text-white/50 mt-0.5">

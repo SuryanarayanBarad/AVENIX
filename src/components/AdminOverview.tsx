@@ -39,7 +39,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
   const activeCountersCount = counters.filter(c => c.status !== 'Closed').length;
 
   return (
-    <div className="mt-6 space-y-6 pb-12 text-white">
+    <div className="mt-6 space-y-6 pb-12">
       
       {/* Top Greeting & Operational Status */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -64,7 +64,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
         <div className="p-5 rounded-3xl glass-panel-elevated space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-white/60">Current Queue</span>
-            <div className="w-9 h-9 rounded-2xl bg-[#8e7dff]/20 text-[#8e7dff] flex items-center justify-center border border-[#8e7dff]/30 shadow-sm">
+            <div className="w-9 h-9 rounded-2xl bg-[#2E37A4]/20 text-[#2E37A4] flex items-center justify-center border border-[#2E37A4]/30 shadow-sm">
               <Users className="w-4.5 h-4.5" />
             </div>
           </div>
@@ -102,7 +102,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
         <div className="p-5 rounded-3xl glass-panel-elevated space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-white/60">Facility Density</span>
-            <div className="w-9 h-9 rounded-2xl bg-[#ff7db8]/20 text-[#ff7db8] flex items-center justify-center border border-[#ff7db8]/30 shadow-sm">
+            <div className="w-9 h-9 rounded-2xl bg-[#00D3C7]/20 text-[#00D3C7] flex items-center justify-center border border-[#00D3C7]/30 shadow-sm">
               <Activity className="w-4.5 h-4.5" />
             </div>
           </div>
@@ -110,7 +110,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
             <div className="text-3xl font-light text-white font-display">
               64% <span className="text-xs font-normal text-white/50">Moderate</span>
             </div>
-            <div className="flex items-center gap-1 text-xs font-medium text-[#ff7db8] mt-1">
+            <div className="flex items-center gap-1 text-xs font-medium text-[#00D3C7] mt-1">
               <Radar className="w-3.5 h-3.5" />
               <span>1,284 / 2,000 Capacity</span>
             </div>
@@ -142,7 +142,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
       <div className={`p-6 rounded-3xl transition-all ${
         recommendationApplied 
           ? 'glass-panel-elevated border border-emerald-500/40 bg-emerald-950/30 text-white'
-          : 'glass-hero border border-[#8e7dff]/40 text-white shadow-2xl'
+          : 'glass-hero border border-[#2E37A4]/40 text-white shadow-2xl'
       }`}>
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           
@@ -150,7 +150,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
               recommendationApplied 
                 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' 
-                : 'bg-[#8e7dff]/20 text-[#8e7dff] border-[#8e7dff]/40 shadow-md shadow-[#8e7dff]/20'
+                : 'bg-[#2E37A4]/20 text-[#2E37A4] border-[#2E37A4]/40 shadow-md shadow-[#2E37A4]/20'
             }`}>
               <Sparkles className="w-6 h-6 animate-pulse" />
             </div>
@@ -159,7 +159,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                 <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border backdrop-blur-md ${
                   recommendationApplied 
                     ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' 
-                    : 'bg-[#8e7dff]/20 text-[#8e7dff] border-[#8e7dff]/40'
+                    : 'bg-[#2E37A4]/20 text-[#2E37A4] border-[#2E37A4]/40'
                 }`}>
                   {recommendationApplied ? 'OPTIMIZATION ACTIVE' : 'AI RECOMMENDATION'}
                 </span>
@@ -182,7 +182,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
             {!recommendationApplied && (
               <button
                 onClick={onApplyRecommendation}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#8e7dff] to-purple-600 hover:from-[#7b69fd] hover:to-purple-500 text-white font-bold text-xs shadow-lg shadow-[#8e7dff]/30 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 border border-white/20"
+                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:from-[#3538CD] hover:to-purple-500 text-white font-bold text-xs shadow-lg shadow-[#2E37A4]/30 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 border border-white/20"
               >
                 <Zap className="w-3.5 h-3.5 text-amber-300" />
                 <span>Apply Recommendation</span>
@@ -212,7 +212,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
             </div>
             <button
               onClick={() => onNavigateTab('live-queue')}
-              className="text-xs font-semibold text-[#8e7dff] hover:text-[#a78bfa] flex items-center gap-1 transition-colors cursor-pointer"
+              className="text-xs font-semibold text-[#2E37A4] hover:text-[#a78bfa] flex items-center gap-1 transition-colors cursor-pointer"
             >
               <span>View Full Queue</span>
               <ChevronRight className="w-3.5 h-3.5" />
@@ -235,7 +235,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                 {counters.slice(0, 5).map((c) => {
                   const statusColors = {
                     Active: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-                    Optimal: 'bg-[#8e7dff]/20 text-[#8e7dff] border-[#8e7dff]/30',
+                    Optimal: 'bg-[#2E37A4]/20 text-[#2E37A4] border-[#2E37A4]/30',
                     Overloaded: 'bg-rose-500/20 text-rose-300 border-rose-500/30 animate-pulse',
                     Idle: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
                     Closed: 'bg-white/[0.06] text-white/50 border-white/[0.10]',
@@ -295,8 +295,8 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                   <span className="w-2 h-2 rounded-full bg-white/40" />
                   Historical
                 </span>
-                <span className="flex items-center gap-1 text-[#8e7dff]">
-                  <span className="w-2 h-2 rounded-full bg-[#8e7dff] shadow-[0_0_6px_rgba(142,125,255,0.8)]" />
+                <span className="flex items-center gap-1 text-[#2E37A4]">
+                  <span className="w-2 h-2 rounded-full bg-[#2E37A4] shadow-[0_0_6px_rgba(142,125,255,0.8)]" />
                   AI Forecast
                 </span>
               </div>
@@ -323,19 +323,19 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                 <path
                   d="M 20,80 Q 70,50 120,30 T 220,12 T 320,38 T 380,68"
                   fill="none"
-                  stroke="#8e7dff"
+                  stroke="#2E37A4"
                   strokeWidth="3"
                   style={{ filter: 'drop-shadow(0 0 6px rgba(142, 125, 255, 0.6))' }}
                 />
 
                 {/* Peak Highlight Circle */}
-                <circle cx="220" cy="12" r="5" fill="#ff7db8" />
-                <circle cx="220" cy="12" r="9" fill="#ff7db8" opacity="0.3" />
+                <circle cx="220" cy="12" r="5" fill="#00D3C7" />
+                <circle cx="220" cy="12" r="9" fill="#00D3C7" opacity="0.3" />
                 
                 {/* Labels */}
                 <text x="20" y="115" fontSize="9" fill="rgba(255,255,255,0.4)" textAnchor="middle">09:00</text>
                 <text x="120" y="115" fontSize="9" fill="rgba(255,255,255,0.4)" textAnchor="middle">10:30</text>
-                <text x="220" y="115" fontSize="9" fill="#ff7db8" fontWeight="bold" textAnchor="middle">12:00 (Peak)</text>
+                <text x="220" y="115" fontSize="9" fill="#00D3C7" fontWeight="bold" textAnchor="middle">12:00 (Peak)</text>
                 <text x="320" y="115" fontSize="9" fill="rgba(255,255,255,0.4)" textAnchor="middle">14:00</text>
                 <text x="380" y="115" fontSize="9" fill="rgba(255,255,255,0.4)" textAnchor="middle">16:00</text>
               </svg>
@@ -351,7 +351,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
               </div>
               <button
                 onClick={() => onNavigateTab('crowd-intel')}
-                className="text-xs font-semibold text-[#8e7dff] hover:text-[#a78bfa] flex items-center gap-1 transition-colors cursor-pointer"
+                className="text-xs font-semibold text-[#2E37A4] hover:text-[#a78bfa] flex items-center gap-1 transition-colors cursor-pointer"
               >
                 <span>Full Floorplan</span>
                 <ChevronRight className="w-3.5 h-3.5" />

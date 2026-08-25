@@ -31,7 +31,7 @@ const actionsFor = (status: string): { label: string; next: string; tone: string
     case 'CheckedIn':
     case 'Waiting':
       return [
-        { label: 'Start consultation', next: 'InConsultation', tone: 'text-[#c5beff] bg-[#8e7dff]/15 border-[#8e7dff]/30 hover:bg-[#8e7dff]/25', icon: PlayCircle },
+        { label: 'Start consultation', next: 'InConsultation', tone: 'text-[#c5beff] bg-[#2E37A4]/15 border-[#2E37A4]/30 hover:bg-[#2E37A4]/25', icon: PlayCircle },
       ];
     case 'InConsultation':
       return [
@@ -46,7 +46,7 @@ const statusTone: Record<string, string> = {
   Pending: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
   Approved: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
   Scheduled: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-  InConsultation: 'bg-[#8e7dff]/20 text-[#c5beff] border-[#8e7dff]/30',
+  InConsultation: 'bg-[#2E37A4]/20 text-[#c5beff] border-[#2E37A4]/30',
   Completed: 'bg-white/10 text-white/70 border-white/15',
   Denied: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
 };
@@ -156,7 +156,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({ refreshKey = 0, onCh
                   onClick={() => setFilter(option)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize cursor-pointer ${
                     filter === option
-                      ? 'bg-gradient-to-r from-[#8e7dff]/30 to-purple-500/30 text-white font-bold border border-[#8e7dff]/50'
+                      ? 'bg-gradient-to-r from-[#2E37A4]/30 to-purple-500/30 text-white font-bold border border-[#2E37A4]/50'
                       : 'text-white/60 hover:text-white hover:bg-white/[0.08] border border-transparent'
                   }`}
                 >

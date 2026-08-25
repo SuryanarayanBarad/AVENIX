@@ -111,7 +111,7 @@ const DEFAULT_SERVICES: VisitorServiceOption[] = [
 
 const statusTone: Record<PublicQueueToken['status'], string> = {
   Waiting: 'bg-amber-500/15 text-amber-200 border-amber-400/30',
-  Approaching: 'bg-[#8e7dff]/20 text-purple-100 border-[#8e7dff]/40',
+  Approaching: 'bg-[#2E37A4]/20 text-purple-100 border-[#2E37A4]/40',
   Serving: 'bg-emerald-500/15 text-emerald-200 border-emerald-400/30',
   Completed: 'bg-white/[0.07] text-white/70 border-white/[0.12]',
   Cancelled: 'bg-rose-500/15 text-rose-200 border-rose-400/30',
@@ -137,10 +137,10 @@ export const VisitorStart: React.FC<VisitorStartProps> = ({
   onStartAppointment,
   onFindToken,
 }) => (
-  <main className="min-h-[calc(100vh-4rem)] px-4 py-7 sm:px-6 sm:py-10 text-white">
+  <main className="pc min-h-[calc(100vh-4rem)] bg-[var(--pc-page)] px-4 py-7 sm:px-6 sm:py-10 text-[var(--pc-text)]">
     <div className="mx-auto w-full max-w-lg space-y-5">
       <header className="px-1 text-center sm:text-left">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-gradient-to-tr from-[#8e7dff] to-[#ff7db8] shadow-lg shadow-[#8e7dff]/25 sm:mx-0">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-gradient-to-tr from-[#2E37A4] to-[#00D3C7] shadow-lg shadow-[#2E37A4]/25 sm:mx-0">
           <Building2 className="h-6 w-6" aria-hidden="true" />
         </div>
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#b9b0ff]">Welcome to {facilityName}</p>
@@ -154,7 +154,7 @@ export const VisitorStart: React.FC<VisitorStartProps> = ({
           onClick={onStartWalkIn}
           className="glass-panel-interactive w-full rounded-3xl p-5 text-left shadow-xl cursor-pointer"
         >
-          <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl border border-[#8e7dff]/35 bg-[#8e7dff]/20 text-[#c5beff]">
+          <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl border border-[#2E37A4]/35 bg-[#2E37A4]/20 text-[#c5beff]">
             <Ticket className="h-5 w-5" aria-hidden="true" />
           </span>
           <span className="flex items-start justify-between gap-4">
@@ -305,7 +305,7 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
   };
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] px-4 py-5 sm:px-6 sm:py-8 text-white">
+    <main className="pc min-h-[calc(100vh-4rem)] bg-[var(--pc-page)] px-4 py-5 sm:px-6 sm:py-8 text-[var(--pc-text)]">
       <div className="mx-auto w-full max-w-xl overflow-hidden rounded-[28px] glass-panel-elevated shadow-2xl">
         <header className="flex items-start justify-between gap-3 border-b border-white/[0.12] bg-white/[0.035] px-5 py-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
@@ -319,7 +319,7 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
                 <ArrowLeft className="h-4 w-4" aria-hidden="true" />
               </button>
             )}
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#8e7dff] to-[#ff7db8] shadow-lg shadow-[#8e7dff]/20">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#2E37A4] to-[#00D3C7] shadow-lg shadow-[#2E37A4]/20">
               <Ticket className="h-5 w-5" aria-hidden="true" />
             </span>
             <div className="min-w-0">
@@ -327,7 +327,7 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
               <p className="text-[11px] text-white/55">Walk-in queue</p>
             </div>
           </div>
-          <span className="rounded-full border border-[#8e7dff]/30 bg-[#8e7dff]/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#d6d2ff]">QR visit</span>
+          <span className="rounded-full border border-[#2E37A4]/30 bg-[#2E37A4]/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#d6d2ff]">QR visit</span>
         </header>
 
         {step !== 'token' && (
@@ -357,7 +357,7 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
                       onClick={() => setSelectedServiceId(service.id)}
                       className={`w-full rounded-2xl border p-4 text-left cursor-pointer ${
                         isSelected
-                          ? 'border-[#8e7dff]/55 bg-[#8e7dff]/18 shadow-[0_8px_20px_rgba(142,125,255,0.13)]'
+                          ? 'border-[#2E37A4]/55 bg-[#2E37A4]/18 shadow-[0_8px_20px_rgba(142,125,255,0.13)]'
                           : 'border-white/[0.10] bg-white/[0.035] hover:border-white/[0.22] hover:bg-white/[0.07]'
                       }`}
                       aria-pressed={isSelected}
@@ -386,7 +386,7 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
                 type="button"
                 onClick={() => setStep('details')}
                 disabled={!selectedServiceId}
-                className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#4F46E5]/25 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#2E37A4] to-[#3538CD] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#2E37A4]/25 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
               >
                 Continue
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -441,7 +441,7 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#4F46E5]/25 disabled:cursor-wait disabled:opacity-70 cursor-pointer"
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#2E37A4] to-[#3538CD] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#2E37A4]/25 disabled:cursor-wait disabled:opacity-70 cursor-pointer"
               >
                 {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Ticket className="h-4 w-4" aria-hidden="true" />}
                 {isSubmitting ? 'Generating token…' : 'Generate token'}
@@ -454,11 +454,11 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
               <div className="text-center">
                 <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-emerald-400/35 bg-emerald-500/15 text-emerald-300 shadow-lg shadow-emerald-500/10"><CheckCircle2 className="h-7 w-7" aria-hidden="true" /></span>
                 <p className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-emerald-300">Your token</p>
-                <h1 id="token-result-title" className="mt-1 font-mono text-4xl xs:text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-[#d8d4ff] to-[#ffb5d4]">{token.code}</h1>
+                <h1 id="token-result-title" className="mt-1 font-mono text-4xl xs:text-5xl font-black tracking-tight text-[var(--pc-primary)]">{token.code}</h1>
                 <p className="mt-2 text-xs text-white/60">{token.serviceName}</p>
               </div>
 
-              <div className="rounded-3xl border border-[#8e7dff]/35 bg-[#8e7dff]/12 p-4 text-center">
+              <div className="rounded-3xl border border-[#2E37A4]/35 bg-[#2E37A4]/12 p-4 text-center">
                 <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${statusTone[token.status]}`}>{token.status}</span>
                 <p className="mt-2 text-xs leading-relaxed text-white/70">{statusMessage[token.status]}</p>
               </div>
@@ -482,12 +482,12 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
                   {isRefreshing ? 'Refreshing…' : 'Refresh status'}
                 </button>
                 {onBookAppointment ? (
-                  <button type="button" onClick={onBookAppointment} className="flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-4 py-3 text-xs font-bold text-white shadow-lg shadow-[#4F46E5]/20 cursor-pointer">
+                  <button type="button" onClick={onBookAppointment} className="flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#2E37A4] to-[#3538CD] px-4 py-3 text-xs font-bold text-white shadow-lg shadow-[#2E37A4]/20 cursor-pointer">
                     <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
                     Book doctor visit
                   </button>
                 ) : (
-                  <button type="button" onClick={startAnotherToken} className="flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-4 py-3 text-xs font-bold text-white shadow-lg shadow-[#4F46E5]/20 cursor-pointer">
+                  <button type="button" onClick={startAnotherToken} className="flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#2E37A4] to-[#3538CD] px-4 py-3 text-xs font-bold text-white shadow-lg shadow-[#2E37A4]/20 cursor-pointer">
                     <Ticket className="h-3.5 w-3.5" aria-hidden="true" />
                     New token
                   </button>

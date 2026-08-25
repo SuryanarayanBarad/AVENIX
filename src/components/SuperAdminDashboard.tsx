@@ -41,7 +41,7 @@ const DoctorAvatar: React.FC<{ doctor: { name: string; photoUrl?: string | null 
     );
   }
   return (
-    <div className={`${size} rounded-xl bg-gradient-to-tr from-[#8e7dff] to-[#ff7db8] flex items-center justify-center text-white font-bold text-xs border border-white/20 shrink-0`}>
+    <div className={`${size} rounded-xl bg-gradient-to-tr from-[#2E37A4] to-[#00D3C7] flex items-center justify-center text-white font-bold text-xs border border-white/20 shrink-0`}>
       {initials || <UserRound className="w-4 h-4" />}
     </div>
   );
@@ -402,7 +402,7 @@ export const SuperAdminDashboard: React.FC = () => {
     : doctors;
 
   return (
-    <div className="w-full h-full flex flex-col p-6 space-y-6">
+    <div className="pc w-full h-full flex flex-col bg-[var(--pc-page)] p-6 space-y-6 text-[var(--pc-text)]">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
           <ShieldAlert className="w-6 h-6 text-pink-500" />

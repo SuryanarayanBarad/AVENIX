@@ -399,6 +399,68 @@
 .pc .divide-white\/\[0\.06\] > * + *,
 .pc .divide-white\/\[0\.08\] > * + * { border-color: var(--pc-border); }
 
+/* Status colours inside a Preclinic surface.
+   ---------------------------------------------------------------------------
+   The views use emerald / amber / rose at dark-surface weights: bright 300-400
+   text on a /15-/20 tint. On white that reads washed out and off-palette. These
+   map them onto the kit's own status colours at light-surface weights, matching
+   the outlined pills its tables use.
+
+   Part of the same transitional block above: as a view moves to pc-* classes,
+   its rules here stop matching. */
+.pc .text-emerald-200,
+.pc .text-emerald-300,
+.pc .text-emerald-400,
+.pc .text-green-300,
+.pc .text-green-400 { color: var(--pc-success); }
+
+.pc .text-amber-200,
+.pc .text-amber-300,
+.pc .text-amber-400,
+.pc .text-yellow-300 { color: #B54708; }
+
+.pc .text-rose-200,
+.pc .text-rose-300,
+.pc .text-rose-400,
+.pc .text-red-300,
+.pc .text-red-400 { color: var(--pc-danger); }
+
+.pc .text-blue-300,
+.pc .text-blue-400,
+.pc .text-sky-300 { color: var(--pc-accent-cyan); }
+
+.pc .text-purple-300,
+.pc .text-purple-400 { color: var(--pc-primary); }
+
+/* Tints: a light wash of the same hue instead of a translucent dark overlay. */
+.pc [class*="bg-emerald-"] { background-color: #E9F7EF; }
+.pc [class*="bg-green-"] { background-color: #E9F7EF; }
+.pc [class*="bg-amber-"],
+.pc [class*="bg-yellow-"] { background-color: #FEF3E7; }
+.pc [class*="bg-rose-"],
+.pc [class*="bg-red-"] { background-color: #FEF3F2; }
+.pc [class*="bg-blue-"],
+.pc [class*="bg-sky-"] { background-color: #E8F6FA; }
+.pc [class*="bg-purple-"] { background-color: var(--pc-tint-lilac); }
+
+.pc [class*="border-emerald-"],
+.pc [class*="border-green-"] { border-color: #A6E4C0; }
+.pc [class*="border-amber-"],
+.pc [class*="border-yellow-"] { border-color: #F3C08A; }
+.pc [class*="border-rose-"],
+.pc [class*="border-red-"] { border-color: var(--pc-danger-soft, #F78F8E); }
+.pc [class*="border-blue-"],
+.pc [class*="border-sky-"] { border-color: #9AD4E6; }
+.pc [class*="border-purple-"] { border-color: #C7C9EC; }
+
+/* A solid dot or bar keeps its full-strength colour rather than a wash. */
+.pc .bg-emerald-400,
+.pc .bg-emerald-500 { background-color: var(--pc-success); }
+.pc .bg-amber-400,
+.pc .bg-amber-500 { background-color: var(--pc-warning); }
+.pc .bg-rose-500,
+.pc .bg-red-500 { background-color: var(--pc-danger); }
+
 /* Animations */
 @keyframes pulse-subtle {
 

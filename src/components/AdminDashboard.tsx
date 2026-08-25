@@ -308,7 +308,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           onClick={() => handleSearchResultSelect(result)}
                           className="flex w-full items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-[var(--pc-page)] cursor-pointer"
                         >
-                          <span className="mt-0.5 shrink-0 rounded-full border border-[#8e7dff]/40 bg-[#8e7dff]/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#b4aaff]">
+                          <span className="mt-0.5 shrink-0 rounded-full border border-[#2E37A4]/40 bg-[#2E37A4]/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#b4aaff]">
                             {result.category}
                           </span>
                           <span className="min-w-0">
@@ -334,16 +334,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[var(--pc-border)] bg-[var(--pc-surface)] text-[var(--pc-text-muted)] hover:bg-[var(--pc-page)] hover:text-[var(--pc-text)] text-[13px] font-medium transition-colors cursor-pointer"
               title="Open Visitor Self-Service Kiosk"
             >
-              <ExternalLink className="w-3.5 h-3.5 text-[#8e7dff]" />
+              <ExternalLink className="w-3.5 h-3.5 text-[#2E37A4]" />
               <span>Visitor Kiosk</span>
             </button>
 
             <button
               onClick={onNavigateToVisitorTracker}
-              className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#8e7dff]/20 hover:bg-[#8e7dff]/30 text-white text-xs font-semibold border border-[#8e7dff]/40 shadow-sm transition-all cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#2E37A4]/20 hover:bg-[#2E37A4]/30 text-white text-xs font-semibold border border-[#2E37A4]/40 shadow-sm transition-all cursor-pointer"
               title="Open Mobile Patient Token Live Tracker"
             >
-              <Activity className="w-3.5 h-3.5 text-[#ff7db8]" />
+              <Activity className="w-3.5 h-3.5 text-[#00D3C7]" />
               <span>Patient Tracker</span>
             </button>
 

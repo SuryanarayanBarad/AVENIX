@@ -198,7 +198,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] py-0 px-0 sm:py-8 sm:px-6 flex items-center justify-center text-white">
+    <div className="pc min-h-[calc(100vh-4rem)] bg-[var(--pc-page)] py-0 px-0 sm:py-8 sm:px-6 flex items-center justify-center text-[var(--pc-text)]">
 
       {/* Mobile Frame Mockup Container (Frosted Glass Smartphone)
           On a desktop this is a phone mockup, and it reads well as one. On an
@@ -219,7 +219,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#8e7dff] to-[#ff7db8] flex items-center justify-center text-white shadow-md">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#2E37A4] to-[#00D3C7] flex items-center justify-center text-white shadow-md">
               <Building2 className="w-4 h-4" />
             </div>
             <div>
@@ -241,10 +241,10 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
             <span className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border backdrop-blur-md transition-colors ${
               isServing ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 
               isApproaching ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 
-              'bg-[#8e7dff]/20 text-[#8e7dff] border-[#8e7dff]/40'
+              'bg-[#2E37A4]/20 text-[#2E37A4] border-[#2E37A4]/40'
             }`}>
               <span className={`w-1.5 h-1.5 rounded-full ${isServing || isApproaching ? 'animate-ping' : ''} ${
-                isServing ? 'bg-emerald-400' : isApproaching ? 'bg-amber-400' : 'bg-[#8e7dff]'
+                isServing ? 'bg-emerald-400' : isApproaching ? 'bg-amber-400' : 'bg-[#2E37A4]'
               }`} />
               LIVE
             </span>
@@ -288,7 +288,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
             {/* Center Circular Progress Ring & Token Code */}
             <div className="p-4 sm:p-6 rounded-3xl glass-panel text-center relative overflow-hidden">
               <div className="absolute top-3 right-3">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#8e7dff]/20 text-[#8e7dff] border border-[#8e7dff]/40 backdrop-blur-md">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#2E37A4]/20 text-[#2E37A4] border border-[#2E37A4]/40 backdrop-blur-md">
                   {tokenService}
                 </span>
               </div>
@@ -313,7 +313,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
                     cy="50"
                     r="42"
                     className={`transition-colors ${
-                      isServing ? 'stroke-emerald-400' : isApproaching ? 'stroke-amber-400' : 'stroke-[#8e7dff]'
+                      isServing ? 'stroke-emerald-400' : isApproaching ? 'stroke-amber-400' : 'stroke-[#2E37A4]'
                     }`}
                     strokeWidth="7"
                     strokeDasharray="264"
@@ -325,13 +325,13 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
                   />
                 </svg>
                 <div className="absolute flex flex-col items-center justify-center text-center">
-                  <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-purple-200 font-mono tracking-tight">
+                  <div className="text-4xl font-black text-[var(--pc-primary)] font-mono tracking-tight">
                     {token.code}
                   </div>
                   <div className={`text-[10px] font-bold mt-1 uppercase tracking-wider px-2 py-0.5 rounded-full border transition-colors ${
                     isServing ? 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30' :
                     isApproaching ? 'text-amber-400 bg-amber-500/15 border-amber-500/30' :
-                    isOnWay ? 'text-[#8e7dff] bg-[#8e7dff]/15 border-[#8e7dff]/30' :
+                    isOnWay ? 'text-[#2E37A4] bg-[#2E37A4]/15 border-[#2E37A4]/30' :
                     'text-white/70 bg-white/5 border-white/10'
                   }`}>
                     {isServing ? 'Serving Now' : isOnWay ? 'On My Way' : isApproaching ? 'Next' : 'Waiting'}
@@ -355,7 +355,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
               </div>
 
               <div className="p-3 rounded-2xl glass-panel">
-                <Users className="w-4 h-4 text-[#8e7dff] mx-auto mb-1" />
+                <Users className="w-4 h-4 text-[#2E37A4] mx-auto mb-1" />
                 <div className="text-[10px] text-white/50 font-medium">Ahead</div>
                 <div className="text-base font-light text-white font-display">
                   {isLoading && !queueData ? '...' : currentAhead}
@@ -365,7 +365,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
               <div className="p-3 rounded-2xl glass-panel">
                 <MapPin className="w-4 h-4 text-emerald-400 mx-auto mb-1" />
                 <div className="text-[10px] text-white/50 font-medium">Counter</div>
-                <div className="text-sm font-semibold text-[#8e7dff] font-display truncate">
+                <div className="text-sm font-semibold text-[#2E37A4] font-display truncate">
                   {tokenCounterId}
                 </div>
               </div>
@@ -384,7 +384,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
                 <button
                   type="button"
                   onClick={onGetNewToken ?? onBackToKiosk}
-                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#8e7dff] to-purple-600 px-4 py-3 text-xs font-bold text-white shadow-lg shadow-[#8e7dff]/30 hover:opacity-90 cursor-pointer"
+                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#2E37A4] to-purple-600 px-4 py-3 text-xs font-bold text-white shadow-lg shadow-[#2E37A4]/30 hover:opacity-90 cursor-pointer"
                 >
                   <Ticket className="h-4 w-4" />
                   Get a new token
@@ -456,7 +456,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
             <div className="glass-panel p-5 rounded-3xl">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-sm text-white flex items-center gap-2">
-                  <Users className="w-4 h-4 text-[#8e7dff]" />
+                  <Users className="w-4 h-4 text-[#2E37A4]" />
                   Live Queue Timeline
                 </h3>
                 <div className="text-[10px] font-semibold bg-white/5 px-2 py-1 rounded border border-white/10 text-white/60">
@@ -466,7 +466,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
 
               {isLoading && !queueData ? (
                 <div className="py-8 flex justify-center">
-                  <div className="w-6 h-6 border-2 border-[#8e7dff] border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-6 h-6 border-2 border-[#2E37A4] border-t-transparent rounded-full animate-spin"></div>
                 </div>
               ) : queueData?.queueTokens?.length > 0 ? (
                 <div className="relative pl-4 space-y-6 before:absolute before:inset-0 before:ml-[23px] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-white/[0.1] before:to-transparent">
@@ -479,20 +479,20 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
                         key={`${t.code}-${i}`} 
                         className={`relative flex items-center justify-between p-3 rounded-2xl transition-all ${
                           isMine 
-                            ? 'bg-gradient-to-r from-[#8e7dff]/20 to-purple-500/20 border border-[#8e7dff]/30 shadow-lg shadow-[#8e7dff]/10 scale-[1.02]' 
+                            ? 'bg-gradient-to-r from-[#2E37A4]/20 to-purple-500/20 border border-[#2E37A4]/30 shadow-lg shadow-[#2E37A4]/10 scale-[1.02]' 
                             : 'bg-white/5 border border-white/[0.05]'
                         }`}
                       >
                         {/* Timeline Dot */}
                         <div className={`absolute left-0 -translate-x-[29px] w-4 h-4 rounded-full border-[3px] border-[#0a0a0b] ${
-                          isMine ? 'bg-[#8e7dff] shadow-[0_0_10px_rgba(142,125,255,0.6)]' :
+                          isMine ? 'bg-[#2E37A4] shadow-[0_0_10px_rgba(142,125,255,0.6)]' :
                           isServingToken ? 'bg-emerald-400' : 'bg-white/20'
                         }`} />
                         
                         <div className="flex items-center gap-3">
                           {isMine ? (
-                            <div className="w-8 h-8 rounded-full bg-[#8e7dff]/20 flex items-center justify-center">
-                              <UserCircle2 className="w-4 h-4 text-[#8e7dff]" />
+                            <div className="w-8 h-8 rounded-full bg-[#2E37A4]/20 flex items-center justify-center">
+                              <UserCircle2 className="w-4 h-4 text-[#2E37A4]" />
                             </div>
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
@@ -500,7 +500,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
                             </div>
                           )}
                           <div>
-                            <div className={`font-mono font-bold ${isMine ? 'text-[#8e7dff]' : 'text-white/80'}`}>
+                            <div className={`font-mono font-bold ${isMine ? 'text-[#2E37A4]' : 'text-white/80'}`}>
                               {t.code} {isMine && '(You)'}
                             </div>
                             <div className="text-[10px] text-white/40 capitalize">
@@ -537,17 +537,17 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
           <div className="min-w-full w-full shrink-0 snap-center p-4 sm:p-5 overflow-y-auto space-y-3.5 sm:space-y-4">
             <div className="p-4 rounded-2xl glass-panel space-y-4">
               <div className="flex items-center gap-2">
-                <Navigation className="w-5 h-5 text-[#8e7dff]" />
+                <Navigation className="w-5 h-5 text-[#2E37A4]" />
                 <span className="text-sm font-bold text-white">Wayfinding Guide</span>
               </div>
               
               <div className="p-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-xs text-white/80 space-y-3 backdrop-blur-md">
                 <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-[#8e7dff]/20 text-[#8e7dff] font-bold text-[11px] flex items-center justify-center shrink-0 border border-[#8e7dff]/40">1</span>
+                  <span className="w-6 h-6 rounded-full bg-[#2E37A4]/20 text-[#2E37A4] font-bold text-[11px] flex items-center justify-center shrink-0 border border-[#2E37A4]/40">1</span>
                   <span className="mt-0.5">Exit Main Atrium and turn right down Hallway B.</span>
                 </div>
                 <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-[#8e7dff]/20 text-[#8e7dff] font-bold text-[11px] flex items-center justify-center shrink-0 border border-[#8e7dff]/40">2</span>
+                  <span className="w-6 h-6 rounded-full bg-[#2E37A4]/20 text-[#2E37A4] font-bold text-[11px] flex items-center justify-center shrink-0 border border-[#2E37A4]/40">2</span>
                   <span className="mt-0.5">Pass the Pharmacy Lobby and enter the Triage Zone.</span>
                 </div>
                 <div className="flex items-start gap-3">
@@ -561,7 +561,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
               {/* Mock Map View */}
               <div className="w-full h-48 rounded-xl bg-white/5 border border-white/10 relative overflow-hidden flex items-center justify-center">
                 <div className="absolute inset-0 opacity-20" style={{
-                  backgroundImage: 'radial-gradient(circle at center, #8e7dff 1px, transparent 1px)',
+                  backgroundImage: 'radial-gradient(circle at center, #2E37A4 1px, transparent 1px)',
                   backgroundSize: '16px 16px'
                 }}></div>
                 <div className="text-center z-10">
@@ -576,7 +576,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
           <div className="min-w-full w-full shrink-0 snap-center p-4 sm:p-5 overflow-y-auto space-y-3.5 sm:space-y-4">
             <div className="glass-panel p-5 rounded-3xl space-y-4">
               <h3 className="font-bold text-sm text-white flex items-center gap-2">
-                <Bell className="w-4 h-4 text-[#8e7dff]" />
+                <Bell className="w-4 h-4 text-[#2E37A4]" />
                 Notifications & Alerts
               </h3>
               
@@ -623,8 +623,8 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
                 }`}
               >
                 {/* Glowing hover/active effect */}
-                <div className={`absolute inset-0 bg-[#8e7dff]/20 blur-md rounded-xl transition-opacity duration-300 ${isActive ? 'opacity-100 animate-pulse' : 'opacity-0 group-hover:opacity-100'}`} />
-                <tab.icon className={`w-5 h-5 relative z-10 transition-colors ${isActive ? 'text-[#8e7dff]' : 'group-hover:text-[#8e7dff]/70'}`} />
+                <div className={`absolute inset-0 bg-[#2E37A4]/20 blur-md rounded-xl transition-opacity duration-300 ${isActive ? 'opacity-100 animate-pulse' : 'opacity-0 group-hover:opacity-100'}`} />
+                <tab.icon className={`w-5 h-5 relative z-10 transition-colors ${isActive ? 'text-[#2E37A4]' : 'group-hover:text-[#2E37A4]/70'}`} />
                 <span className={`text-[10px] font-medium relative z-10 transition-colors ${isActive ? 'text-white' : ''}`}>
                   {tab.label}
                 </span>

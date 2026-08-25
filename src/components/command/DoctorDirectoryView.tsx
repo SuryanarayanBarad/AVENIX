@@ -41,7 +41,7 @@ const DoctorAvatar: React.FC<{ doctor: { name: string; photoUrl?: string | null 
     );
   }
   return (
-    <div className={`${size} rounded-xl bg-gradient-to-tr from-[#8e7dff] to-[#ff7db8] flex items-center justify-center text-white font-bold text-xs border border-white/20 shrink-0`}>
+    <div className={`${size} rounded-xl bg-gradient-to-tr from-[#2E37A4] to-[#00D3C7] flex items-center justify-center text-white font-bold text-xs border border-white/20 shrink-0`}>
       {initials || <UserRound className="w-4 h-4" />}
     </div>
   );

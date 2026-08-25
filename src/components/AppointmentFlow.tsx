@@ -90,11 +90,11 @@ const today = new Date().toISOString().slice(0, 10);
 const statusClass: Record<PublicAppointment['status'], string> = {
   'Awaiting approval': 'border-amber-400/30 bg-amber-500/15 text-amber-100',
   Confirmed: 'border-emerald-400/30 bg-emerald-500/15 text-emerald-200',
-  Scheduled: 'border-[#8e7dff]/35 bg-[#8e7dff]/15 text-[#dedaff]',
+  Scheduled: 'border-[#2E37A4]/35 bg-[#2E37A4]/15 text-[#dedaff]',
   Updated: 'border-amber-400/30 bg-amber-500/15 text-amber-100',
   'Checked in': 'border-amber-400/30 bg-amber-500/15 text-amber-100',
   Waiting: 'border-amber-400/30 bg-amber-500/15 text-amber-100',
-  'In consultation': 'border-[#8e7dff]/35 bg-[#8e7dff]/15 text-[#dedaff]',
+  'In consultation': 'border-[#2E37A4]/35 bg-[#2E37A4]/15 text-[#dedaff]',
   Completed: 'border-white/[0.16] bg-white/[0.07] text-white/70',
   Delayed: 'border-amber-400/30 bg-amber-500/15 text-amber-100',
   Declined: 'border-rose-400/30 bg-rose-500/15 text-rose-100',
@@ -327,7 +327,7 @@ export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
                 <ArrowLeft className="h-4 w-4" aria-hidden="true" />
               </button>
             )}
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#4F46E5] to-[#7C3AED] shadow-lg shadow-[#4F46E5]/20">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#2E37A4] to-[#3538CD] shadow-lg shadow-[#2E37A4]/20">
               <CalendarDays className="h-5 w-5" aria-hidden="true" />
             </span>
             <div className="min-w-0">
@@ -374,7 +374,7 @@ export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
                   aria-pressed={specialization === 'all'}
                   className={`rounded-full border px-3 py-1.5 text-[11px] font-bold transition-colors cursor-pointer ${
                     specialization === 'all'
-                      ? 'border-[#8e7dff]/55 bg-[#8e7dff]/20 text-white'
+                      ? 'border-[#2E37A4]/55 bg-[#2E37A4]/20 text-white'
                       : 'border-white/[0.14] bg-white/[0.05] text-white/70 hover:bg-white/[0.10] hover:text-white'
                   }`}
                 >
@@ -394,7 +394,7 @@ export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
                       title={empty ? 'No doctors assigned to this specialization yet' : undefined}
                       className={`rounded-full border px-3 py-1.5 text-[11px] font-bold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${
                         active
-                          ? 'border-[#8e7dff]/55 bg-[#8e7dff]/20 text-white'
+                          ? 'border-[#2E37A4]/55 bg-[#2E37A4]/20 text-white'
                           : 'border-white/[0.14] bg-white/[0.05] text-white/70 hover:bg-white/[0.10] hover:text-white'
                       }`}
                     >
@@ -423,7 +423,7 @@ export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
                       type="button"
                       disabled={unavailable}
                       onClick={() => setDoctorId(candidate.id)}
-                      className={`w-full rounded-2xl border p-4 text-left transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-45 ${selected ? 'border-[#8e7dff]/55 bg-[#8e7dff]/18' : 'border-white/[0.10] bg-white/[0.035] hover:border-white/[0.22] hover:bg-white/[0.07]'}`}
+                      className={`w-full rounded-2xl border p-4 text-left transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-45 ${selected ? 'border-[#2E37A4]/55 bg-[#2E37A4]/18' : 'border-white/[0.10] bg-white/[0.035] hover:border-white/[0.22] hover:bg-white/[0.07]'}`}
                       aria-pressed={selected}
                     >
                       <span className="flex items-start justify-between gap-3">
@@ -431,7 +431,7 @@ export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
                           {candidate.photoUrl ? (
                             <img src={candidate.photoUrl} alt="" className="h-9 w-9 shrink-0 rounded-xl border border-white/20 object-cover" />
                           ) : (
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#8e7dff]/30 bg-[#8e7dff]/15 text-[#d6d2ff]"><Stethoscope className="h-4 w-4" aria-hidden="true" /></span>
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#2E37A4]/30 bg-[#2E37A4]/15 text-[#d6d2ff]"><Stethoscope className="h-4 w-4" aria-hidden="true" /></span>
                           )}
                           <span>
                             <span className="block text-sm font-bold text-white">{candidate.name}</span>
@@ -448,7 +448,7 @@ export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
                   );
                 })}
               </div>
-              <button type="button" disabled={!doctorId} onClick={() => setStep('date')} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#4F46E5]/25 disabled:opacity-50 cursor-pointer">Choose date <ArrowRight className="h-4 w-4" /></button>
+              <button type="button" disabled={!doctorId} onClick={() => setStep('date')} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#2E37A4] to-[#3538CD] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#2E37A4]/25 disabled:opacity-50 cursor-pointer">Choose date <ArrowRight className="h-4 w-4" /></button>
             </section>
           )}
 
@@ -457,16 +457,16 @@ export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
               <h1 id="date-title" className="font-display text-2xl font-bold tracking-tight text-white">Select a date</h1>
               <p className="mt-1 text-xs leading-relaxed text-white/60">For {doctor?.name ?? 'your selected doctor'}.</p>
               <label className="mt-5 block"><span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-white/80"><CalendarDays className="h-3.5 w-3.5 text-[#bdb5ff]" />Appointment date</span><input type="date" min={today} required value={date} onChange={(event) => setDate(event.target.value)} className="glass-input w-full rounded-2xl px-4 py-3 text-sm" /></label>
-              <button type="button" onClick={moveToTime} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#4F46E5]/25 cursor-pointer">View available times <ArrowRight className="h-4 w-4" /></button>
+              <button type="button" onClick={moveToTime} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#2E37A4] to-[#3538CD] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#2E37A4]/25 cursor-pointer">View available times <ArrowRight className="h-4 w-4" /></button>
             </section>
           )}
 
           {step === 'time' && (
             <section aria-labelledby="time-title">
               <div className="flex items-start justify-between gap-3"><div><h1 id="time-title" className="font-display text-2xl font-bold tracking-tight text-white">Available times</h1><p className="mt-1 text-xs leading-relaxed text-white/60">{doctor?.name} · {formatDate(date)}</p></div><button type="button" onClick={loadSlots} className="rounded-xl border border-white/[0.13] bg-white/[0.06] p-2 text-white/70 hover:bg-white/[0.12] cursor-pointer" aria-label="Refresh availability"><RefreshCw className={`h-4 w-4 ${isLoadingSlots ? 'animate-spin' : ''}`} /></button></div>
-              {isLoadingSlots ? <div className="flex min-h-32 items-center justify-center text-xs text-white/60"><LoaderCircle className="mr-2 h-4 w-4 animate-spin text-[#bdb5ff]" />Checking availability…</div> : slots.length ? <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3">{slots.map((slot) => <button key={slot} type="button" onClick={() => setTime(slot)} className={`rounded-2xl border px-3 py-3 text-xs font-bold cursor-pointer ${time === slot ? 'border-[#8e7dff]/60 bg-[#8e7dff]/20 text-white' : 'border-white/[0.11] bg-white/[0.045] text-white/70 hover:bg-white/[0.09]'}`}>{slot}</button>)}</div> : <p className="mt-5 rounded-2xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-100">No appointment times are available for this date. Choose another date or doctor.</p>}
+              {isLoadingSlots ? <div className="flex min-h-32 items-center justify-center text-xs text-white/60"><LoaderCircle className="mr-2 h-4 w-4 animate-spin text-[#bdb5ff]" />Checking availability…</div> : slots.length ? <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3">{slots.map((slot) => <button key={slot} type="button" onClick={() => setTime(slot)} className={`rounded-2xl border px-3 py-3 text-xs font-bold cursor-pointer ${time === slot ? 'border-[#2E37A4]/60 bg-[#2E37A4]/20 text-white' : 'border-white/[0.11] bg-white/[0.045] text-white/70 hover:bg-white/[0.09]'}`}>{slot}</button>)}</div> : <p className="mt-5 rounded-2xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-100">No appointment times are available for this date. Choose another date or doctor.</p>}
               {error && <p className="mt-4 rounded-2xl border border-rose-400/30 bg-rose-500/15 px-3 py-2.5 text-xs text-rose-100" role="alert">{error}</p>}
-              <button type="button" disabled={!time || isLoadingSlots} onClick={() => setStep('details')} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#4F46E5]/25 disabled:opacity-50 cursor-pointer">Continue <ArrowRight className="h-4 w-4" /></button>
+              <button type="button" disabled={!time || isLoadingSlots} onClick={() => setStep('details')} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#2E37A4] to-[#3538CD] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#2E37A4]/25 disabled:opacity-50 cursor-pointer">Continue <ArrowRight className="h-4 w-4" /></button>
             </section>
           )}
 
@@ -482,7 +482,7 @@ export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
               </div>
               {error && <p className="mt-4 rounded-2xl border border-rose-400/30 bg-rose-500/15 px-3 py-2.5 text-xs text-rose-100" role="alert">{error}</p>}
               <p className="mt-4 flex gap-2 text-[11px] leading-relaxed text-white/48"><ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />Your visit reason is visible only to authorised clinical staff. A unique appointment ID is allocated after confirmation.</p>
-              <button type="submit" disabled={isSubmitting} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#4F46E5]/25 disabled:opacity-70 cursor-pointer">{isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CalendarDays className="h-4 w-4" />}{isSubmitting ? 'Confirming appointment…' : 'Confirm appointment'}</button>
+              <button type="submit" disabled={isSubmitting} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#2E37A4] to-[#3538CD] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#2E37A4]/25 disabled:opacity-70 cursor-pointer">{isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CalendarDays className="h-4 w-4" />}{isSubmitting ? 'Confirming appointment…' : 'Confirm appointment'}</button>
             </form>
           )}
 
@@ -492,12 +492,12 @@ export const AppointmentFlow: React.FC<AppointmentFlowProps> = ({
               <dl className="overflow-hidden rounded-3xl border border-white/[0.12] bg-white/[0.045] text-sm"><DetailRow label="Doctor" value={appointment.doctor} /><DetailRow label="Department" value={appointment.department} /><DetailRow label="Date" value={formatDate(appointment.date)} /><DetailRow label="Time" value={appointment.time} /><DetailRow label="Patient" value={appointment.patientName} /><DetailRow label="Reason for Visit" value={appointment.reasonForVisit} /><DetailRow label="Phone" value={appointment.phoneMasked} /></dl>
               {appointment.notification && <div className="rounded-3xl border border-amber-400/30 bg-amber-500/10 p-4"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200">Appointment updated</p><p className="mt-1 text-xs leading-relaxed text-white/75">Your appointment with {appointment.doctor} was moved from <strong className="text-white">{appointment.notification.previousTime}</strong> to <strong className="text-white">{appointment.notification.newTime}</strong>.</p><p className="mt-2 text-[10px] text-white/45">Notification status: {appointment.notification.status}</p></div>}
               {error && <p className="rounded-2xl border border-rose-400/30 bg-rose-500/15 px-3 py-2.5 text-xs text-rose-100" role="alert">{error}</p>}
-              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2"><button type="button" onClick={refreshAppointment} disabled={!onRefreshAppointment || isRefreshing} className="flex items-center justify-center gap-2 rounded-2xl border border-white/[0.14] bg-white/[0.07] px-4 py-3 text-xs font-bold text-white hover:bg-white/[0.13] disabled:opacity-55 cursor-pointer"><RefreshCw className={`h-3.5 w-3.5 text-[#bdb5ff] ${isRefreshing ? 'animate-spin' : ''}`} />{isRefreshing ? 'Refreshing…' : 'View appointment'}</button><button type="button" onClick={() => setStep('reschedule')} className="flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-4 py-3 text-xs font-bold text-white shadow-lg shadow-[#4F46E5]/20 cursor-pointer"><Clock3 className="h-3.5 w-3.5" />Reschedule</button></div>
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2"><button type="button" onClick={refreshAppointment} disabled={!onRefreshAppointment || isRefreshing} className="flex items-center justify-center gap-2 rounded-2xl border border-white/[0.14] bg-white/[0.07] px-4 py-3 text-xs font-bold text-white hover:bg-white/[0.13] disabled:opacity-55 cursor-pointer"><RefreshCw className={`h-3.5 w-3.5 text-[#bdb5ff] ${isRefreshing ? 'animate-spin' : ''}`} />{isRefreshing ? 'Refreshing…' : 'View appointment'}</button><button type="button" onClick={() => setStep('reschedule')} className="flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#2E37A4] to-[#3538CD] px-4 py-3 text-xs font-bold text-white shadow-lg shadow-[#2E37A4]/20 cursor-pointer"><Clock3 className="h-3.5 w-3.5" />Reschedule</button></div>
             </section>
           )}
 
           {step === 'reschedule' && appointment && (
-            <section aria-labelledby="reschedule-title"><button type="button" onClick={goBack} className="mb-4 flex items-center gap-1.5 text-xs font-semibold text-white/55 hover:text-white cursor-pointer"><ArrowLeft className="h-3.5 w-3.5" />Back to appointment</button><h1 id="reschedule-title" className="font-display text-2xl font-bold tracking-tight text-white">Request another time</h1><p className="mt-1 text-xs leading-relaxed text-white/60">We’ll ask the scheduling team to contact you with suitable times. This does not change your appointment automatically.</p><div className="mt-5 rounded-3xl border border-white/[0.12] bg-white/[0.045] p-4 text-xs"><p className="font-bold text-white">Current appointment</p><p className="mt-1 text-white/60">{appointment.doctor} · {formatDate(appointment.date)} · {appointment.time}</p></div>{requestSent ? <div className="mt-5 rounded-3xl border border-emerald-400/30 bg-emerald-500/12 p-4 text-xs leading-relaxed text-emerald-100"><CheckCircle2 className="mb-2 h-5 w-5 text-emerald-300" />Your request has been sent. The appointment remains scheduled until the team confirms a change.</div> : <button type="button" disabled={isSubmitting} onClick={requestAnotherTime} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#4F46E5]/25 disabled:opacity-70 cursor-pointer"><Send className="h-4 w-4" />{isSubmitting ? 'Sending request…' : 'Request another time'}</button>}{error && <p className="mt-4 rounded-2xl border border-rose-400/30 bg-rose-500/15 px-3 py-2.5 text-xs text-rose-100">{error}</p>}</section>
+            <section aria-labelledby="reschedule-title"><button type="button" onClick={goBack} className="mb-4 flex items-center gap-1.5 text-xs font-semibold text-white/55 hover:text-white cursor-pointer"><ArrowLeft className="h-3.5 w-3.5" />Back to appointment</button><h1 id="reschedule-title" className="font-display text-2xl font-bold tracking-tight text-white">Request another time</h1><p className="mt-1 text-xs leading-relaxed text-white/60">We’ll ask the scheduling team to contact you with suitable times. This does not change your appointment automatically.</p><div className="mt-5 rounded-3xl border border-white/[0.12] bg-white/[0.045] p-4 text-xs"><p className="font-bold text-white">Current appointment</p><p className="mt-1 text-white/60">{appointment.doctor} · {formatDate(appointment.date)} · {appointment.time}</p></div>{requestSent ? <div className="mt-5 rounded-3xl border border-emerald-400/30 bg-emerald-500/12 p-4 text-xs leading-relaxed text-emerald-100"><CheckCircle2 className="mb-2 h-5 w-5 text-emerald-300" />Your request has been sent. The appointment remains scheduled until the team confirms a change.</div> : <button type="button" disabled={isSubmitting} onClick={requestAnotherTime} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#2E37A4] to-[#3538CD] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#2E37A4]/25 disabled:opacity-70 cursor-pointer"><Send className="h-4 w-4" />{isSubmitting ? 'Sending request…' : 'Request another time'}</button>}{error && <p className="mt-4 rounded-2xl border border-rose-400/30 bg-rose-500/15 px-3 py-2.5 text-xs text-rose-100">{error}</p>}</section>
           )}
         </div>
       </div>
