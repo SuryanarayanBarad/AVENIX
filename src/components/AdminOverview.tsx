@@ -296,7 +296,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                   Historical
                 </span>
                 <span className="flex items-center gap-1 text-[#2E37A4]">
-                  <span className="w-2 h-2 rounded-full bg-[#2E37A4] shadow-[0_0_6px_rgba(142,125,255,0.8)]" />
+                  <span className="w-2 h-2 rounded-full bg-[#2E37A4] shadow-[0_0_6px_rgba(46,55,164,0.8)]" />
                   AI Forecast
                 </span>
               </div>
@@ -325,7 +325,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                   fill="none"
                   stroke="#2E37A4"
                   strokeWidth="3"
-                  style={{ filter: 'drop-shadow(0 0 6px rgba(142, 125, 255, 0.6))' }}
+                  style={{ filter: 'drop-shadow(0 0 6px rgba(46, 55, 164, 0.6))' }}
                 />
 
                 {/* Peak Highlight Circle */}

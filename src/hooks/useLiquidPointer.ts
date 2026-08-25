@@ -37,8 +37,11 @@ export function useLiquidPointer(): void {
     };
 
     const onMove = (event: PointerEvent) => {
+      // Every control inside a Preclinic surface takes the material, not only
+      // the ones that opt in by class, so the highlight has to follow all of
+      // them. Anything explicitly marked plain is left alone.
       const target = (event.target as Element | null)?.closest?.(
-        '.liquid-glass, .liquid-glass-active',
+        '.liquid-glass, .liquid-glass-active, .pc button:not([data-plain]):not(:disabled)',
       ) as HTMLElement | null;
 
       if (target !== current) {

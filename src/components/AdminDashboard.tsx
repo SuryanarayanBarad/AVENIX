@@ -340,7 +340,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <button
               onClick={onNavigateToVisitorTracker}
-              className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#2E37A4]/20 hover:bg-[#2E37A4]/30 text-white text-xs font-semibold border border-[#2E37A4]/40 shadow-sm transition-all cursor-pointer"
+              className="liquid-glass hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium text-[var(--pc-text)] cursor-pointer"
               title="Open Mobile Patient Token Live Tracker"
             >
               <Activity className="w-3.5 h-3.5 text-[#00D3C7]" />
@@ -355,7 +355,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               >
                 <Bell className="w-4.5 h-4.5" />
                 {alerts.length > 0 && (
-                  <span className="w-2 h-2 rounded-full bg-rose-500 absolute top-1.5 right-1.5 ring-2 ring-[#0c0c1e] animate-ping" />
+                  <span className="w-2 h-2 rounded-full bg-rose-500 absolute top-1.5 right-1.5 ring-2 ring-white animate-ping" />
                 )}
                 {alerts.length > 0 && (
                   <span className="w-2 h-2 rounded-full bg-rose-500 absolute top-1.5 right-1.5" />

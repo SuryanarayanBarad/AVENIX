@@ -321,7 +321,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
                     transition={{ duration: shouldReduceMotion ? 0 : 0.45, ease: trackerEase }}
                     strokeLinecap="round"
                     fill="transparent"
-                    style={{ filter: `drop-shadow(0 0 8px ${isServing ? 'rgba(52, 211, 153, 0.6)' : isApproaching ? 'rgba(251, 191, 36, 0.6)' : 'rgba(142, 125, 255, 0.6)'})` }}
+                    style={{ filter: `drop-shadow(0 0 8px ${isServing ? 'rgba(52, 211, 153, 0.6)' : isApproaching ? 'rgba(251, 191, 36, 0.6)' : 'rgba(46, 55, 164, 0.6)'})` }}
                   />
                 </svg>
                 <div className="absolute flex flex-col items-center justify-center text-center">
@@ -485,7 +485,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
                       >
                         {/* Timeline Dot */}
                         <div className={`absolute left-0 -translate-x-[29px] w-4 h-4 rounded-full border-[3px] border-[#0a0a0b] ${
-                          isMine ? 'bg-[#2E37A4] shadow-[0_0_10px_rgba(142,125,255,0.6)]' :
+                          isMine ? 'bg-[#2E37A4] shadow-[0_0_10px_rgba(46,55,164,0.6)]' :
                           isServingToken ? 'bg-emerald-400' : 'bg-white/20'
                         }`} />
                         

@@ -44,7 +44,7 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-white font-display">Crowd Intelligence & Spatial Sensing</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#8e7dff]/20 text-[#8e7dff] border border-[#8e7dff]/30 backdrop-blur-md">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#2E37A4]/20 text-[#2E37A4] border border-[#2E37A4]/30 backdrop-blur-md">
               LiDAR & Thermal Matrix
             </span>
           </div>
@@ -58,7 +58,7 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
           <button
             onClick={() => setActiveLayer('all')}
             className={`px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer ${
-              activeLayer === 'all' ? 'bg-[#8e7dff] text-white font-bold shadow-md shadow-[#8e7dff]/30' : 'text-white/60 hover:text-white'
+              activeLayer === 'all' ? 'bg-[#2E37A4] text-white font-bold shadow-md shadow-[#2E37A4]/30' : 'text-white/60 hover:text-white'
             }`}
           >
             All Sensors (42)
@@ -66,7 +66,7 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
           <button
             onClick={() => setActiveLayer('lidar')}
             className={`px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer ${
-              activeLayer === 'lidar' ? 'bg-[#8e7dff] text-white font-bold shadow-md shadow-[#8e7dff]/30' : 'text-white/60 hover:text-white'
+              activeLayer === 'lidar' ? 'bg-[#2E37A4] text-white font-bold shadow-md shadow-[#2E37A4]/30' : 'text-white/60 hover:text-white'
             }`}
           >
             LiDAR (18)
@@ -74,7 +74,7 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
           <button
             onClick={() => setActiveLayer('thermal')}
             className={`px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer ${
-              activeLayer === 'thermal' ? 'bg-[#8e7dff] text-white font-bold shadow-md shadow-[#8e7dff]/30' : 'text-white/60 hover:text-white'
+              activeLayer === 'thermal' ? 'bg-[#2E37A4] text-white font-bold shadow-md shadow-[#2E37A4]/30' : 'text-white/60 hover:text-white'
             }`}
           >
             Thermal (24)
@@ -88,16 +88,16 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
         <div className="p-5 rounded-3xl glass-panel-elevated">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-white/60">Total Facility Occupancy</span>
-            <div className="w-8 h-8 rounded-2xl bg-[#8e7dff]/20 text-[#8e7dff] flex items-center justify-center border border-[#8e7dff]/30">
+            <div className="w-8 h-8 rounded-2xl bg-[#2E37A4]/20 text-[#2E37A4] flex items-center justify-center border border-[#2E37A4]/30">
               <Activity className="w-4 h-4" />
             </div>
           </div>
           <div className="text-3xl font-light text-white font-display mt-2">
             {totalOccupancy.toLocaleString()} <span className="text-xs font-normal text-white/50">/ {totalCapacity.toLocaleString()}</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-[#8e7dff] font-semibold mt-1">
+          <div className="flex items-center gap-2 text-xs text-[#2E37A4] font-semibold mt-1">
             <div className="w-20 bg-white/[0.10] h-2 rounded-full overflow-hidden">
-              <div className="h-full bg-[#8e7dff] rounded-full shadow-[0_0_6px_rgba(142,125,255,0.8)]" style={{ width: `${totalOccupancyPct}%` }} />
+              <div className="h-full bg-[#2E37A4] rounded-full shadow-[0_0_6px_rgba(46,55,164,0.8)]" style={{ width: `${totalOccupancyPct}%` }} />
             </div>
             <span>{totalOccupancyPct}% Capacity</span>
           </div>
@@ -145,7 +145,7 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
           {/* Top Floorplan Bar */}
           <div className="flex items-center justify-between z-10">
             <div className="flex items-center gap-2">
-              <Radar className="w-5 h-5 text-[#8e7dff] animate-spin" style={{ animationDuration: '10s' }} />
+              <Radar className="w-5 h-5 text-[#2E37A4] animate-spin" style={{ animationDuration: '10s' }} />
               <div>
                 <h3 className="font-bold text-sm font-display text-white">CityCare Ground Floor Spatial Matrix</h3>
                 <span className="text-[10px] text-white/50 font-mono">Live Sensor Coordinate Grid (Z-Index 0.00m)</span>
@@ -154,11 +154,11 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
 
             <div className="flex items-center gap-3 text-[10px]">
               <span className="flex items-center gap-1 text-white/60">
-                <span className="w-2 h-2 rounded-full bg-[#8e7dff] shadow-[0_0_6px_rgba(142,125,255,0.8)]" />
+                <span className="w-2 h-2 rounded-full bg-[#2E37A4] shadow-[0_0_6px_rgba(46,55,164,0.8)]" />
                 LiDAR
               </span>
               <span className="flex items-center gap-1 text-white/60">
-                <span className="w-2 h-2 rounded-full bg-[#ff7db8] shadow-[0_0_6px_rgba(255,125,184,0.8)]" />
+                <span className="w-2 h-2 rounded-full bg-[#00D3C7] shadow-[0_0_6px_rgba(255,125,184,0.8)]" />
                 Thermal
               </span>
               <span className="flex items-center gap-1 text-rose-400 font-bold">
@@ -187,7 +187,7 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
               const heatColors = {
                 Critical: 'bg-rose-500/25 border-rose-500/60 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.25)]',
                 Congested: 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.2)]',
-                Moderate: 'bg-[#8e7dff]/20 border-[#8e7dff]/50 text-purple-200 shadow-[0_0_15px_rgba(142,125,255,0.2)]',
+                Moderate: 'bg-[#2E37A4]/20 border-[#2E37A4]/50 text-purple-200 shadow-[0_0_15px_rgba(46,55,164,0.2)]',
                 Optimal: 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300',
               };
 
@@ -232,13 +232,13 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
                   onMouseLeave={() => setHoveredNode(null)}
                   className={`absolute w-3.5 h-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full cursor-pointer transition-transform hover:scale-150 ${
                     sensor.type === 'LiDAR'
-                      ? 'bg-[#8e7dff] shadow-[0_0_8px_rgba(142,125,255,0.9)]'
-                      : 'bg-[#ff7db8] shadow-[0_0_8px_rgba(255,125,184,0.9)]'
+                      ? 'bg-[#2E37A4] shadow-[0_0_8px_rgba(46,55,164,0.9)]'
+                      : 'bg-[#00D3C7] shadow-[0_0_8px_rgba(255,125,184,0.9)]'
                   }`}
                   style={{ left: `${sensor.x}%`, top: `${sensor.y}%` }}
                 >
                   <span className={`w-full h-full rounded-full block animate-ping opacity-75 ${
-                    sensor.type === 'LiDAR' ? 'bg-[#8e7dff]' : 'bg-[#ff7db8]'
+                    sensor.type === 'LiDAR' ? 'bg-[#2E37A4]' : 'bg-[#00D3C7]'
                   }`} />
                 </div>
               );
@@ -261,7 +261,7 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
           {/* AI Forecast Time Scrubber Bar (Frosted Glass Bar) */}
           <div className="bg-white/[0.04] rounded-2xl p-3 border border-white/[0.10] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs backdrop-blur-xl">
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-[#8e7dff]" />
+              <Clock className="w-4 h-4 text-[#2E37A4]" />
               <span className="font-bold text-white">AI Inflow Forecast Timeline:</span>
             </div>
 
@@ -272,7 +272,7 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
                   onClick={() => setForecastMinuteOffset(step.offset)}
                   className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     forecastMinuteOffset === step.offset
-                      ? 'bg-[#8e7dff] text-white shadow-md shadow-[#8e7dff]/30'
+                      ? 'bg-[#2E37A4] text-white shadow-md shadow-[#2E37A4]/30'
                       : 'text-white/60 hover:text-white'
                   }`}
                 >
@@ -314,7 +314,7 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
 
               <div className="flex items-center justify-between">
                 <span className="text-white/60">Sensing Tech:</span>
-                <span className="font-bold text-[#8e7dff]">{selectedZone.sensorType}</span>
+                <span className="font-bold text-[#2E37A4]">{selectedZone.sensorType}</span>
               </div>
 
               <div className="flex items-center justify-between">
@@ -349,7 +349,7 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
                   onClick={() => setSelectedZone(z)}
                   className={`w-full p-3 rounded-2xl border text-left flex items-center justify-between transition-all cursor-pointer ${
                     selectedZone.id === z.id
-                      ? 'border-[#8e7dff] bg-[#8e7dff]/20 font-semibold text-white shadow-[0_0_12px_rgba(142,125,255,0.25)]'
+                      ? 'border-[#2E37A4] bg-[#2E37A4]/20 font-semibold text-white shadow-[0_0_12px_rgba(46,55,164,0.25)]'
                       : 'border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] text-white/70 hover:text-white'
                   }`}
                 >

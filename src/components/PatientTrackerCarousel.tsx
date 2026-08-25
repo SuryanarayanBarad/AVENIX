@@ -237,7 +237,7 @@ const DoctorCard: React.FC<{ doctor: PublicDoctor }> = ({ doctor }) => {
 
       {/* Footer */}
       <div className="mt-auto px-5 py-4 border-t border-white/[0.06] flex items-center justify-between text-xs">
-        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2E37A4]/15 border border-[#2E37A4]/30 text-white font-semibold">
+        <span className="liquid-glass flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium text-[var(--pc-text)]">
           <Stethoscope className="w-3.5 h-3.5 text-[#2E37A4]" />
           {doctor.specialization || doctor.department}
         </span>

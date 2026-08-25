@@ -43,7 +43,7 @@ const statusTone: Record<string, string> = {
   'Confirmed': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
   'Checked in': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
   'Waiting': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-  'In consultation': 'bg-[#2E37A4]/20 text-[#c5beff] border-[#2E37A4]/30',
+  'In consultation': 'bg-[#2E37A4]/20 text-[#5B63C4] border-[#2E37A4]/30',
   'Completed': 'bg-white/10 text-white/60 border-white/15',
   'Declined': 'bg-rose-500/20 text-rose-300 border-rose-500/30',
   'Cancelled': 'bg-rose-500/20 text-rose-300 border-rose-500/30',

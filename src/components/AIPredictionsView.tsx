@@ -58,7 +58,7 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-white font-display">AI Arrival & Wait-Time Forecasts</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#8e7dff]/20 text-[#8e7dff] border border-[#8e7dff]/30 backdrop-blur-md">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#2E37A4]/20 text-[#2E37A4] border border-[#2E37A4]/30 backdrop-blur-md">
               94% Model Confidence
             </span>
           </div>
@@ -75,7 +75,7 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
               onClick={() => setTimeHorizon(horizon)}
               className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
                 timeHorizon === horizon
-                  ? 'bg-[#8e7dff] text-white font-bold shadow-md shadow-[#8e7dff]/30'
+                  ? 'bg-[#2E37A4] text-white font-bold shadow-md shadow-[#2E37A4]/30'
                   : 'text-white/60 hover:text-white'
               }`}
             >
@@ -90,12 +90,12 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#8e7dff] to-[#ff7db8] border border-white/20 flex items-center justify-center text-white shadow-lg shadow-[#8e7dff]/30 shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#2E37A4] to-[#00D3C7] border border-white/20 flex items-center justify-center text-white shadow-lg shadow-[#2E37A4]/30 shrink-0">
               <Sparkles className="w-6 h-6 animate-pulse" />
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#8e7dff]">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#2E37A4]">
                   PREDICTIVE SURGE INSIGHT
                 </span>
                 <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold backdrop-blur-md">
@@ -114,7 +114,7 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
           <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={onNavigateCounterOpt}
-              className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#8e7dff] to-purple-600 hover:opacity-90 text-white font-bold text-xs shadow-lg shadow-[#8e7dff]/30 active:scale-95 transition-all flex items-center gap-2 cursor-pointer border border-white/20"
+              className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:opacity-90 text-white font-bold text-xs shadow-lg shadow-[#2E37A4]/30 active:scale-95 transition-all flex items-center gap-2 cursor-pointer border border-white/20"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               <span>Deploy Counter Balancer</span>
@@ -152,9 +152,9 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
             step="0.1"
             value={surgeMultiplier}
             onChange={(e) => setSurgeMultiplier(parseFloat(e.target.value))}
-            className="w-full accent-[#8e7dff] cursor-pointer"
+            className="w-full accent-[#2E37A4] cursor-pointer"
           />
-          <span className="font-bold text-[#8e7dff] font-mono text-xs w-12 text-right">
+          <span className="font-bold text-[#2E37A4] font-mono text-xs w-12 text-right">
             +{Math.round((surgeMultiplier - 1) * 100)}%
           </span>
         </div>
@@ -175,8 +175,8 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
                 <span className="w-2.5 h-2.5 rounded-full bg-white/30" />
                 Historical
               </span>
-              <span className="flex items-center gap-1.5 text-[#8e7dff]">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#8e7dff] shadow-[0_0_6px_rgba(142,125,255,0.8)]" />
+              <span className="flex items-center gap-1.5 text-[#2E37A4]">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#2E37A4] shadow-[0_0_6px_rgba(46,55,164,0.8)]" />
                 AI Forecast
               </span>
             </div>
@@ -213,7 +213,7 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
                       width="16"
                       height={predHeight}
                       rx="4"
-                      fill="#8e7dff"
+                      fill="#2E37A4"
                     />
 
                     {/* Time label */}
@@ -250,7 +250,7 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
               {/* Confidence Band Area */}
               <path
                 d="M 30,130 Q 150,90 250,30 T 450,110 L 450,150 Q 350,90 250,70 T 30,150 Z"
-                fill="#8e7dff"
+                fill="#2E37A4"
                 opacity="0.12"
               />
 
@@ -258,9 +258,9 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
               <path
                 d="M 30,140 Q 150,100 250,48 T 450,130"
                 fill="none"
-                stroke="#8e7dff"
+                stroke="#2E37A4"
                 strokeWidth="3.5"
-                filter="drop-shadow(0 0 6px rgba(142,125,255,0.7))"
+                filter="drop-shadow(0 0 6px rgba(46,55,164,0.7))"
               />
 
               {/* Data points */}
@@ -275,7 +275,7 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
                       cx={x + 16}
                       cy={y}
                       r="5"
-                      fill={isOverSLA ? '#f43f5e' : '#8e7dff'}
+                      fill={isOverSLA ? '#f43f5e' : '#2E37A4'}
                       stroke="#ffffff"
                       strokeWidth="2"
                     />

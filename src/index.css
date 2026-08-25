@@ -67,8 +67,8 @@
   --text-primary: #ffffff;
   --text-secondary: rgba(255, 255, 255, 0.65);
   --text-muted: rgba(255, 255, 255, 0.45);
-  --accent: #8e7dff;
-  --accent-secondary: #ff7db8;
+  --accent: #2E37A4;
+  --accent-secondary: #00D3C7;
   --motion-fast: 160ms;
   --motion-standard: 220ms;
   --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -189,7 +189,7 @@
     background: rgba(255, 255, 255, 0.05);
     border-color: rgba(255, 255, 255, 0.15);
     transform: translateY(-2px);
-    box-shadow: 0 10px 30px -5px rgba(142, 125, 255, 0.2);
+    box-shadow: 0 10px 30px -5px rgba(46, 55, 164, 0.2);
   }
 }
 
@@ -205,11 +205,11 @@
 }
 
 .glass-hero {
-  background: linear-gradient(135deg, rgba(142, 125, 255, 0.2) 0%, rgba(255, 125, 184, 0.12) 50%, rgba(255, 255, 255, 0.04) 100%);
+  background: linear-gradient(135deg, rgba(46, 55, 164, 0.2) 0%, rgba(0, 211, 199, 0.12) 50%, rgba(255, 255, 255, 0.04) 100%);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.22);
-  box-shadow: 0 12px 40px 0 rgba(142, 125, 255, 0.18);
+  box-shadow: 0 12px 40px 0 rgba(46, 55, 164, 0.18);
 }
 
 .glass-input {
@@ -225,8 +225,8 @@
 
 .glass-input:focus {
   background: rgba(255, 255, 255, 0.11);
-  border-color: #8e7dff;
-  box-shadow: 0 0 0 3px rgba(142, 125, 255, 0.25);
+  border-color: #2E37A4;
+  box-shadow: 0 0 0 3px rgba(46, 55, 164, 0.25);
   outline: none;
 }
 
@@ -238,12 +238,12 @@
 }
 
 .glass-pill-active {
-  background: rgba(142, 125, 255, 0.3);
+  background: rgba(46, 55, 164, 0.3);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(142, 125, 255, 0.5);
+  border: 1px solid rgba(46, 55, 164, 0.5);
   color: #ffffff;
-  box-shadow: 0 0 15px rgba(142, 125, 255, 0.35);
+  box-shadow: 0 0 15px rgba(46, 55, 164, 0.35);
 }
 
 /* ---------------------------------------------------------------------------
@@ -361,9 +361,17 @@
   to { --lg-angle: 360deg; }
 }
 
+/* The rim is a pseudo-element, so the pane needs a positioning context. An
+   element that is already fixed, absolute or sticky is one — and claiming
+   `relative` on it silently un-fixes it. That is what put the floating copilot
+   button at the top of the page instead of above the bottom-right corner. */
+.liquid-glass:not(.fixed):not(.absolute):not(.sticky),
+.liquid-glass-active:not(.fixed):not(.absolute):not(.sticky) {
+  position: relative;
+}
+
 .liquid-glass,
 .liquid-glass-active {
-  position: relative;
   isolation: isolate;
   --lg-x: 30%;
   --lg-y: 0%;
@@ -520,9 +528,13 @@
 /* Semantic actions. Confirm and decline carry meaning, so they keep a filled
    colour rather than becoming clear glass — but lit from within, like the
    primary, so they belong to the same material. */
+.pc-btn-success:not(.fixed):not(.absolute):not(.sticky),
+.pc-btn-danger:not(.fixed):not(.absolute):not(.sticky) {
+  position: relative;
+}
+
 .pc-btn-success,
 .pc-btn-danger {
-  position: relative;
   isolation: isolate;
   --lg-x: 30%;
   --lg-y: 0%;
@@ -592,8 +604,11 @@
    each one. Anything that already opts in, is the filled primary, or is a bare
    link-style control is left alone.
 --------------------------------------------------------------------------- */
-.pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]) {
+.pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):not(.fixed):not(.absolute):not(.sticky) {
   position: relative;
+}
+
+.pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]) {
   isolation: isolate;
   --lg-x: 30%;
   --lg-y: 0%;
@@ -639,6 +654,28 @@
     opacity: 0.9;
     animation: lg-drift 6s linear infinite;
   }
+
+  /* At rest the pane is clear. Under the pointer the tint arrives and tracks
+     the cursor, so the colour appears where you are actually pointing rather
+     than washing the whole control at once. */
+  .pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):hover {
+    background:
+      radial-gradient(130px circle at var(--lg-x) var(--lg-y), rgba(46, 55, 164, 0.20), transparent 62%),
+      radial-gradient(110px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.85), transparent 55%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.28) 100%);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+      0 6px 18px -10px rgba(46, 55, 164, 0.26);
+  }
+
+  /* The same on an explicit pane. */
+  .liquid-glass:hover {
+    background:
+      radial-gradient(150px circle at var(--lg-x) var(--lg-y), rgba(46, 55, 164, 0.18), transparent 64%),
+      radial-gradient(120px circle at var(--lg-x) var(--lg-y), rgba(255, 255, 255, 0.9), transparent 56%),
+      linear-gradient(105deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 46%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.3) 100%);
+  }
 }
 
 /* A phone pays the most for a blur and sees the least of it. Half the radius
@@ -656,8 +693,11 @@
 }
 
 /* A filled primary is glass too, lit from within rather than transparent. */
-.pc button.pc-btn-primary:not(:disabled) {
+.pc button.pc-btn-primary:not(:disabled):not(.fixed):not(.absolute):not(.sticky) {
   position: relative;
+}
+
+.pc button.pc-btn-primary:not(:disabled) {
   isolation: isolate;
   --lg-x: 30%;
   --lg-y: 0%;
@@ -940,5 +980,5 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(142, 125, 255, 0.4);
+  background: rgba(46, 55, 164, 0.4);
 }

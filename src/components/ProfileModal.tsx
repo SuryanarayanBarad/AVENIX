@@ -146,10 +146,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, user, onClos
                 <img
                   src={photoPreview}
                   alt={user.name}
-                  className="w-16 h-16 rounded-2xl object-cover border border-white/20 shadow-lg shadow-[#8e7dff]/20"
+                  className="w-16 h-16 rounded-2xl object-cover border border-white/20 shadow-lg shadow-[#2E37A4]/20"
                 />
               ) : (
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#8e7dff] to-[#ff7db8] flex items-center justify-center text-white font-bold text-lg border border-white/20 shadow-lg shadow-[#8e7dff]/20">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#2E37A4] to-[#00D3C7] flex items-center justify-center text-white font-bold text-lg border border-white/20 shadow-lg shadow-[#2E37A4]/20">
                   {initials || <UserIcon className="w-6 h-6" />}
                 </div>
               )}
@@ -159,7 +159,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, user, onClos
                   onClick={() => fileInputRef.current?.click()}
                   className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.15] text-white font-semibold transition-all cursor-pointer"
                 >
-                  <Camera className="w-3.5 h-3.5 text-[#8e7dff]" />
+                  <Camera className="w-3.5 h-3.5 text-[#2E37A4]" />
                   Upload photo
                 </button>
                 {photoPreview && (
@@ -238,7 +238,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, user, onClos
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 px-5 py-3 rounded-2xl bg-gradient-to-r from-[#8e7dff] to-purple-600 hover:opacity-90 text-white font-bold shadow-lg shadow-[#8e7dff]/30 cursor-pointer border border-white/20 disabled:opacity-50"
+                className="flex-1 px-5 py-3 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:opacity-90 text-white font-bold shadow-lg shadow-[#2E37A4]/30 cursor-pointer border border-white/20 disabled:opacity-50"
               >
                 {loading ? 'Saving...' : 'Save'}
               </button>

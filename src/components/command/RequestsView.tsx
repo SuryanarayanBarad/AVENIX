@@ -31,7 +31,7 @@ const actionsFor = (status: string): { label: string; next: string; tone: string
     case 'CheckedIn':
     case 'Waiting':
       return [
-        { label: 'Start consultation', next: 'InConsultation', tone: 'text-[#c5beff] bg-[#2E37A4]/15 border-[#2E37A4]/30 hover:bg-[#2E37A4]/25', icon: PlayCircle },
+        { label: 'Start consultation', next: 'InConsultation', tone: 'text-[#5B63C4] bg-[#2E37A4]/15 border-[#2E37A4]/30 hover:bg-[#2E37A4]/25', icon: PlayCircle },
       ];
     case 'InConsultation':
       return [
@@ -46,7 +46,7 @@ const statusTone: Record<string, string> = {
   Pending: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
   Approved: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
   Scheduled: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-  InConsultation: 'bg-[#2E37A4]/20 text-[#c5beff] border-[#2E37A4]/30',
+  InConsultation: 'bg-[#2E37A4]/20 text-[#5B63C4] border-[#2E37A4]/30',
   Completed: 'bg-white/10 text-white/70 border-white/15',
   Denied: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
 };

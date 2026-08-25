@@ -39,7 +39,7 @@ export const FairnessLogicView: React.FC<FairnessLogicViewProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-white font-display">Fairness & Transparent AI Logic</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#8e7dff]/20 text-[#8e7dff] border border-[#8e7dff]/30 backdrop-blur-md">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#2E37A4]/20 text-[#2E37A4] border border-[#2E37A4]/30 backdrop-blur-md">
               Audit Grade: A+ (94/100)
             </span>
           </div>
@@ -50,7 +50,7 @@ export const FairnessLogicView: React.FC<FairnessLogicViewProps> = ({
 
         <button
           onClick={() => onOpenCopilot('Explain the mathematical fairness principles behind QueueMind multi-factor routing')}
-          className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#8e7dff] to-purple-600 hover:opacity-90 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-[#8e7dff]/30 transition-all self-start sm:self-auto cursor-pointer border border-white/20"
+          className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:opacity-90 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-[#2E37A4]/30 transition-all self-start sm:self-auto cursor-pointer border border-white/20"
         >
           <Sparkles className="w-4 h-4 text-white animate-pulse" />
           <span>Audit Fairness Report</span>
@@ -63,7 +63,7 @@ export const FairnessLogicView: React.FC<FairnessLogicViewProps> = ({
         <div className="p-5 rounded-3xl glass-panel-elevated space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-white/60">Fairness Index</span>
-            <div className="w-8 h-8 rounded-2xl bg-[#8e7dff]/20 text-[#8e7dff] flex items-center justify-center font-bold border border-[#8e7dff]/30">
+            <div className="w-8 h-8 rounded-2xl bg-[#2E37A4]/20 text-[#2E37A4] flex items-center justify-center font-bold border border-[#2E37A4]/30">
               <Scale className="w-4 h-4" />
             </div>
           </div>
@@ -94,7 +94,7 @@ export const FairnessLogicView: React.FC<FairnessLogicViewProps> = ({
         <div className="p-5 rounded-3xl glass-panel-elevated space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-white/60">Demographic Protection</span>
-            <div className="w-8 h-8 rounded-2xl bg-[#ff7db8]/20 text-[#ff7db8] flex items-center justify-center font-bold border border-[#ff7db8]/30">
+            <div className="w-8 h-8 rounded-2xl bg-[#00D3C7]/20 text-[#00D3C7] flex items-center justify-center font-bold border border-[#00D3C7]/30">
               <Heart className="w-4 h-4" />
             </div>
           </div>
@@ -118,7 +118,7 @@ export const FairnessLogicView: React.FC<FairnessLogicViewProps> = ({
               <h2 className="text-base font-bold text-white font-display">Priority Rules & Multipliers</h2>
               <p className="text-xs text-white/60">Interactive weights applied to queue positioning logic</p>
             </div>
-            <span className="text-[10px] font-bold text-[#8e7dff] bg-[#8e7dff]/20 px-2.5 py-1 rounded-full border border-[#8e7dff]/30 backdrop-blur-md">
+            <span className="text-[10px] font-bold text-[#2E37A4] bg-[#2E37A4]/20 px-2.5 py-1 rounded-full border border-[#2E37A4]/30 backdrop-blur-md">
               Real-time Active
             </span>
           </div>
@@ -132,7 +132,7 @@ export const FairnessLogicView: React.FC<FairnessLogicViewProps> = ({
                     <p className="text-[11px] text-white/60 mt-0.5">{w.description}</p>
                   </div>
                   <div className="text-right shrink-0 ml-3">
-                    <span className="font-extrabold text-[#8e7dff] font-mono text-sm bg-white/[0.08] px-2.5 py-1 rounded-xl border border-white/[0.12] backdrop-blur-md">
+                    <span className="font-extrabold text-[#2E37A4] font-mono text-sm bg-white/[0.08] px-2.5 py-1 rounded-xl border border-white/[0.12] backdrop-blur-md">
                       {w.multiplier.toFixed(1)}x
                     </span>
                   </div>
@@ -147,7 +147,7 @@ export const FairnessLogicView: React.FC<FairnessLogicViewProps> = ({
                     step="0.1"
                     value={w.multiplier}
                     onChange={(e) => handleSliderChange(w.id, parseFloat(e.target.value))}
-                    className="w-full accent-[#8e7dff] cursor-pointer"
+                    className="w-full accent-[#2E37A4] cursor-pointer"
                   />
                   <span className="text-[10px] text-white/40 font-mono">
                     {w.category === 'Clinical' ? '10.0x' : '3.0x'}
@@ -173,7 +173,7 @@ export const FairnessLogicView: React.FC<FairnessLogicViewProps> = ({
               <div key={log.id} className="p-3.5 rounded-2xl glass-panel space-y-1.5 text-xs">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-[#8e7dff] font-mono">{log.tokenId}</span>
+                    <span className="font-bold text-[#2E37A4] font-mono">{log.tokenId}</span>
                     <span className="font-bold text-white">{log.action}</span>
                   </div>
                   <span className="text-[10px] text-white/40 font-mono">{log.timestamp}</span>
@@ -189,8 +189,8 @@ export const FairnessLogicView: React.FC<FairnessLogicViewProps> = ({
             ))}
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-[#8e7dff]/15 border border-[#8e7dff]/30 text-white text-xs flex items-center gap-2.5 backdrop-blur-md">
-            <ShieldCheck className="w-4 h-4 text-[#8e7dff] shrink-0" />
+          <div className="p-3.5 rounded-2xl bg-[#2E37A4]/15 border border-[#2E37A4]/30 text-white text-xs flex items-center gap-2.5 backdrop-blur-md">
+            <ShieldCheck className="w-4 h-4 text-[#2E37A4] shrink-0" />
             <span className="text-[11px] text-white/80">All decision rationale is cryptographically logged for clinical compliance.</span>
           </div>
         </div>

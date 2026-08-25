@@ -213,7 +213,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-white font-display">Appointments & Doctor Schedules</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#8e7dff]/20 text-[#8e7dff] border border-[#8e7dff]/30 backdrop-blur-md">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#2E37A4]/20 text-[#2E37A4] border border-[#2E37A4]/30 backdrop-blur-md">
               142 Today
             </span>
           </div>
@@ -224,7 +224,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#8e7dff] to-purple-600 hover:opacity-90 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-[#8e7dff]/30 active:scale-95 transition-all self-start sm:self-auto cursor-pointer border border-white/20"
+          className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:opacity-90 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-[#2E37A4]/30 active:scale-95 transition-all self-start sm:self-auto cursor-pointer border border-white/20"
         >
           <Plus className="w-4 h-4" />
           <span>Book Appointment</span>
@@ -271,7 +271,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                               setCurrentMonth(i);
                               setShowMonthSelector(false);
                             }}
-                            className={`text-xs py-1.5 rounded-lg font-medium ${isDisabled ? 'text-white/20 cursor-not-allowed' : currentMonth === i ? 'bg-[#8e7dff] text-white' : 'text-white/70 hover:bg-white/[0.08] hover:text-white cursor-pointer'}`}
+                            className={`text-xs py-1.5 rounded-lg font-medium ${isDisabled ? 'text-white/20 cursor-not-allowed' : currentMonth === i ? 'bg-[#2E37A4] text-white' : 'text-white/70 hover:bg-white/[0.08] hover:text-white cursor-pointer'}`}
                           >
                             {new Date(2000, i).toLocaleString('default', { month: 'short' })}
                           </button>
@@ -313,15 +313,15 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                     onClick={() => setSelectedDate(day)}
                     className={`py-2 rounded-xl font-medium transition-all relative cursor-pointer ${
                       isSelected
-                        ? 'bg-[#8e7dff] text-white font-bold shadow-md shadow-[#8e7dff]/40'
+                        ? 'bg-[#2E37A4] text-white font-bold shadow-md shadow-[#2E37A4]/40'
                         : isToday
-                        ? 'bg-[#8e7dff]/20 text-[#8e7dff] font-bold border border-[#8e7dff]/40'
+                        ? 'bg-[#2E37A4]/20 text-[#2E37A4] font-bold border border-[#2E37A4]/40'
                         : 'text-white/70 hover:bg-white/[0.08] hover:text-white'
                     }`}
                   >
                     <span>{day}</span>
                     {isToday && !isSelected && (
-                      <span className="w-1 h-1 rounded-full bg-[#8e7dff] mx-auto block mt-0.5" />
+                      <span className="w-1 h-1 rounded-full bg-[#2E37A4] mx-auto block mt-0.5" />
                     )}
                   </button>
                 );
@@ -331,7 +331,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
           {/* AI Copilot Insights Card */}
           <div className="p-6 rounded-3xl glass-panel-elevated bg-[#12122b]/95 border border-white/[0.18] shadow-2xl space-y-3 backdrop-blur-2xl">
-            <div className="flex items-center gap-2 text-[#8e7dff]">
+            <div className="flex items-center gap-2 text-[#2E37A4]">
               <Sparkles className="w-4 h-4" />
               <span className="text-xs font-bold uppercase tracking-wider">AI Schedule Intelligence</span>
             </div>
@@ -340,7 +340,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             </p>
             <button
               onClick={() => onOpenCopilot('Analyze today\'s doctor schedules and identify potential delay risks')}
-              className="text-xs font-semibold text-[#8e7dff] hover:text-purple-300 flex items-center gap-1 pt-1 cursor-pointer transition-colors"
+              className="text-xs font-semibold text-[#2E37A4] hover:text-purple-300 flex items-center gap-1 pt-1 cursor-pointer transition-colors"
             >
               <span>Ask Schedule Copilot</span>
               <ChevronRight className="w-3.5 h-3.5" />
@@ -360,7 +360,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             </div>
             <div className="p-5 rounded-3xl glass-panel-elevated">
               <span className="text-xs text-white/50 font-medium">Checked In / Waiting</span>
-              <div className="text-2xl font-light text-[#8e7dff] font-display mt-0.5">{checkedInCount}</div>
+              <div className="text-2xl font-light text-[#2E37A4] font-display mt-0.5">{checkedInCount}</div>
             </div>
             <div className="p-5 rounded-3xl glass-panel-elevated">
               <span className="text-xs text-white/50 font-medium">Avg Consultation Wait</span>
@@ -414,7 +414,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                     const statusColors = {
                       'In Consultation': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 font-bold shadow-[0_0_8px_rgba(74,222,128,0.4)]',
                       'Waiting': 'bg-amber-500/20 text-amber-300 border-amber-500/30 font-semibold',
-                      'Checked In': 'bg-[#8e7dff]/20 text-[#8e7dff] border-[#8e7dff]/30',
+                      'Checked In': 'bg-[#2E37A4]/20 text-[#2E37A4] border-[#2E37A4]/30',
                       'Scheduled': 'bg-white/[0.06] text-white/70 border-white/[0.10]',
                       'Completed': 'bg-white/[0.04] text-white/40 border-white/[0.06] line-through',
                       'Delayed': 'bg-rose-500/20 text-rose-300 border-rose-500/30',
@@ -431,7 +431,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                         {/* Token & Patient */}
                         <td className="py-4 px-5">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-[#8e7dff] font-mono">{apt.tokenCode}</span>
+                            <span className="font-bold text-[#2E37A4] font-mono">{apt.tokenCode}</span>
                             <span className="font-semibold text-white">{apt.patientName}</span>
                           </div>
                           {apt.demographic !== 'Standard' && (
@@ -460,7 +460,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                             {apt.status === 'Scheduled' && (
                               <button
                                 onClick={() => handleCheckIn(apt)}
-                                className="px-3 py-1.5 rounded-xl bg-[#8e7dff]/20 hover:bg-[#8e7dff]/30 text-[#8e7dff] font-bold text-[11px] border border-[#8e7dff]/40 transition-colors cursor-pointer"
+                                className="px-3 py-1.5 rounded-xl bg-[#2E37A4]/20 hover:bg-[#2E37A4]/30 text-[#2E37A4] font-bold text-[11px] border border-[#2E37A4]/40 transition-colors cursor-pointer"
                               >
                                 Check In
                               </button>
@@ -645,7 +645,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                 <button
                   type="submit"
                   disabled={isBooking}
-                  className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#8e7dff] to-purple-600 hover:opacity-90 disabled:opacity-60 text-white font-bold shadow-lg shadow-[#8e7dff]/30 cursor-pointer border border-white/20"
+                  className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:opacity-90 disabled:opacity-60 text-white font-bold shadow-lg shadow-[#2E37A4]/30 cursor-pointer border border-white/20"
                 >
                   {isBooking ? 'Booking…' : 'Confirm Booking'}
                 </button>

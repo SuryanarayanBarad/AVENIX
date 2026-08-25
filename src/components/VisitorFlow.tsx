@@ -154,7 +154,7 @@ export const VisitorStart: React.FC<VisitorStartProps> = ({
           onClick={onStartWalkIn}
           className="glass-panel-interactive w-full rounded-3xl p-5 text-left shadow-xl cursor-pointer"
         >
-          <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl border border-[#2E37A4]/35 bg-[#2E37A4]/20 text-[#c5beff]">
+          <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl border border-[#2E37A4]/35 bg-[#2E37A4]/20 text-[#5B63C4]">
             <Ticket className="h-5 w-5" aria-hidden="true" />
           </span>
           <span className="flex items-start justify-between gap-4">
@@ -327,14 +327,14 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
               <p className="text-[11px] text-white/55">Walk-in queue</p>
             </div>
           </div>
-          <span className="rounded-full border border-[#2E37A4]/30 bg-[#2E37A4]/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#d6d2ff]">QR visit</span>
+          <span className="rounded-full border border-[#2E37A4]/30 bg-[#2E37A4]/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#5B63C4]">QR visit</span>
         </header>
 
         {step !== 'token' && (
           <div className="border-b border-white/[0.10] px-5 py-3 sm:px-6">
             <ol className="grid grid-cols-2 gap-2 text-[10px] font-semibold uppercase tracking-wide" aria-label="Walk-in progress">
-              <li className={step === 'service' ? 'text-[#c5beff]' : 'text-white/45'}>1. Service</li>
-              <li className={step === 'details' ? 'text-[#c5beff]' : 'text-white/45'}>2. Your details</li>
+              <li className={step === 'service' ? 'text-[#5B63C4]' : 'text-white/45'}>1. Service</li>
+              <li className={step === 'details' ? 'text-[#5B63C4]' : 'text-white/45'}>2. Your details</li>
             </ol>
           </div>
         )}
@@ -357,7 +357,7 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
                       onClick={() => setSelectedServiceId(service.id)}
                       className={`w-full rounded-2xl border p-4 text-left cursor-pointer ${
                         isSelected
-                          ? 'border-[#2E37A4]/55 bg-[#2E37A4]/18 shadow-[0_8px_20px_rgba(142,125,255,0.13)]'
+                          ? 'border-[#2E37A4]/55 bg-[#2E37A4]/18 shadow-[0_8px_20px_rgba(46,55,164,0.13)]'
                           : 'border-white/[0.10] bg-white/[0.035] hover:border-white/[0.22] hover:bg-white/[0.07]'
                       }`}
                       aria-pressed={isSelected}
@@ -367,14 +367,14 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
                           <span className="block text-sm font-bold text-white">{service.name}</span>
                           {service.description && <span className="mt-1 block text-[11px] leading-relaxed text-white/55">{service.description}</span>}
                         </span>
-                        {isSelected && <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#bdb5ff]" aria-hidden="true" />}
+                        {isSelected && <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#8C93D6]" aria-hidden="true" />}
                       </span>
                       <span className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-white/55">
                         {typeof service.estimatedWaitMinutes === 'number' && (
                           <span className="flex items-center gap-1"><Clock3 className="h-3.5 w-3.5 text-amber-300" aria-hidden="true" />~{service.estimatedWaitMinutes} min</span>
                         )}
                         {typeof service.peopleWaiting === 'number' && (
-                          <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5 text-[#bdb5ff]" aria-hidden="true" />{service.peopleWaiting} waiting</span>
+                          <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5 text-[#8C93D6]" aria-hidden="true" />{service.peopleWaiting} waiting</span>
                         )}
                       </span>
                     </button>
@@ -409,7 +409,7 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
 
               <div className="mt-5 space-y-4">
                 <label className="block">
-                  <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-white/80"><UserRound className="h-3.5 w-3.5 text-[#bdb5ff]" aria-hidden="true" />Name <span className="font-normal text-white/40">(optional)</span></span>
+                  <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-white/80"><UserRound className="h-3.5 w-3.5 text-[#8C93D6]" aria-hidden="true" />Name <span className="font-normal text-white/40">(optional)</span></span>
                   <input
                     value={name}
                     onChange={(event) => setName(event.target.value)}
@@ -464,7 +464,7 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
               </div>
 
               <dl className="grid grid-cols-2 gap-2.5">
-                <TokenMetric icon={<Users className="h-4 w-4 text-[#bdb5ff]" />} label="People ahead" value={`${metricNumber(token.peopleAhead)}`} />
+                <TokenMetric icon={<Users className="h-4 w-4 text-[#8C93D6]" />} label="People ahead" value={`${metricNumber(token.peopleAhead)}`} />
                 <TokenMetric icon={<Clock3 className="h-4 w-4 text-amber-300" />} label="Estimated wait" value={`${metricNumber(token.estimatedWaitMinutes)} min`} />
                 <TokenMetric icon={<Building2 className="h-4 w-4 text-emerald-300" />} label="Counter" value={token.counterName || 'Not assigned'} wide />
               </dl>
@@ -478,7 +478,7 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
                   disabled={!onRefreshToken || isRefreshing}
                   className="flex items-center justify-center gap-2 rounded-2xl border border-white/[0.14] bg-white/[0.07] px-4 py-3 text-xs font-bold text-white hover:bg-white/[0.13] disabled:cursor-not-allowed disabled:opacity-55 cursor-pointer"
                 >
-                  <RefreshCw className={`h-3.5 w-3.5 text-[#bdb5ff] ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
+                  <RefreshCw className={`h-3.5 w-3.5 text-[#8C93D6] ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
                   {isRefreshing ? 'Refreshing…' : 'Refresh status'}
                 </button>
                 {onBookAppointment ? (

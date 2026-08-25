@@ -129,8 +129,8 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ user, onLogout
               <p className="text-2xl font-bold text-emerald-400">{stats.approved}</p>
             </div>
             <div className="p-4 rounded-3xl bg-[#2E37A4]/12 border border-[#2E37A4]/30 backdrop-blur-xl shadow-[0_8px_30px_rgba(46,55,164,0.10)]">
-              <p className="text-sm text-[#c5beff]/80 mb-1">Completed</p>
-              <p className="text-2xl font-bold text-[#c5beff]">{stats.completed}</p>
+              <p className="text-sm text-[#5B63C4]/80 mb-1">Completed</p>
+              <p className="text-2xl font-bold text-[#5B63C4]">{stats.completed}</p>
             </div>
           </div>
         )}
@@ -151,7 +151,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ user, onLogout
             </div>
             <div className="glass-panel p-4 rounded-3xl">
               <p className="text-sm text-white/55 mb-1">Completed Checkups</p>
-              <p className="text-2xl font-bold text-[#c5beff]">{stats.completedCheckups ?? 0}</p>
+              <p className="text-2xl font-bold text-[#5B63C4]">{stats.completedCheckups ?? 0}</p>
             </div>
             <div className="glass-panel p-4 rounded-3xl">
               <p className="text-sm text-white/55 mb-1">Pending (All Time)</p>
@@ -164,7 +164,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ user, onLogout
         <div className="glass-panel-elevated rounded-3xl overflow-hidden">
           <div className="p-4 sm:p-5 border-b border-white/[0.08] flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
             <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-              <Users size={18} className="text-[#c5beff]" />
+              <Users size={18} className="text-[#5B63C4]" />
               My Patients
             </h2>
             <div className="flex bg-white/[0.06] p-1 rounded-xl border border-white/[0.12] gap-1">
@@ -202,7 +202,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ user, onLogout
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-white">{patient.patientName}</span>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        patient.checkupStatus === 'Completed' ? 'bg-[#2E37A4]/20 text-[#d6d2ff]' :
+                        patient.checkupStatus === 'Completed' ? 'bg-[#2E37A4]/20 text-[#5B63C4]' :
                         patient.checkupStatus === 'In Consultation' ? 'bg-emerald-500/20 text-emerald-300' :
                         patient.checkupStatus === 'Waiting' ? 'bg-amber-500/20 text-amber-300' :
                         patient.checkupStatus === 'Denied' ? 'bg-rose-500/20 text-rose-300' :
@@ -242,7 +242,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ user, onLogout
         <div className="glass-panel-elevated rounded-3xl overflow-hidden">
           <div className="p-4 sm:p-5 border-b border-white/[0.08] flex justify-between items-center">
             <h2 className="text-lg font-semibold text-white">Your Appointments</h2>
-            <button onClick={() => fetchDashboardData()} className="text-sm text-[#c5beff] hover:text-[#d6d2ff]">
+            <button onClick={() => fetchDashboardData()} className="text-sm text-[#5B63C4] hover:text-[#5B63C4]">
               Refresh
             </button>
           </div>
@@ -261,7 +261,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ user, onLogout
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         apt.status === 'Pending' ? 'bg-amber-500/20 text-amber-300' :
                         apt.status === 'Approved' ? 'bg-emerald-500/20 text-emerald-300' :
-                        apt.status === 'Completed' ? 'bg-[#2E37A4]/20 text-[#d6d2ff]' :
+                        apt.status === 'Completed' ? 'bg-[#2E37A4]/20 text-[#5B63C4]' :
                         apt.status === 'Denied' ? 'bg-rose-500/20 text-rose-300' :
                         'bg-white/10 text-white/70'
                       }`}>
@@ -306,7 +306,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ user, onLogout
                     {apt.status === 'Approved' && (
                       <button 
                         onClick={() => updateStatus(apt.id, 'Completed')}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-[#2E37A4]/15 hover:bg-[#2E37A4]/25 text-[#c5beff] rounded-2xl transition-colors border border-[#2E37A4]/30 cursor-pointer"
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-[#2E37A4]/15 hover:bg-[#2E37A4]/25 text-[#5B63C4] rounded-2xl transition-colors border border-[#2E37A4]/30 cursor-pointer"
                       >
                         <CheckCircle size={16} />
                         Mark Completed

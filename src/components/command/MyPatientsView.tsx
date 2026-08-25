@@ -9,7 +9,7 @@ const listEase = [0.22, 1, 0.36, 1] as const;
 
 /** Colour per derived checkup state, using the app's existing status tones. */
 const checkupTone: Record<string, string> = {
-  'Completed': 'bg-[#2E37A4]/20 text-[#c5beff] border-[#2E37A4]/30',
+  'Completed': 'bg-[#2E37A4]/20 text-[#5B63C4] border-[#2E37A4]/30',
   'In consultation': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
   'Waiting': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
   'Checked in': 'bg-amber-500/20 text-amber-300 border-amber-500/30',

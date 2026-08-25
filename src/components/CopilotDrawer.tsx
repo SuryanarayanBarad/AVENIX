@@ -161,14 +161,14 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
         {/* Header */}
         <div className="p-4 bg-white/[0.04] border-b border-white/[0.10] text-white flex items-center justify-between backdrop-blur-xl">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#8e7dff] to-[#ff7db8] flex items-center justify-center text-white shadow-md shadow-[#8e7dff]/25 border border-white/20">
+            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#2E37A4] to-[#00D3C7] flex items-center justify-center text-white shadow-md shadow-[#2E37A4]/25 border border-white/20">
               <Sparkles className="w-5 h-5 animate-pulse" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-sm font-display text-white">QueueMind AI Copilot</h3>
                 {model && (
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#8e7dff]/20 text-[#8e7dff] border border-[#8e7dff]/40 font-mono backdrop-blur-md">
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#2E37A4]/20 text-[#2E37A4] border border-[#2E37A4]/40 font-mono backdrop-blur-md">
                     {model}
                   </span>
                 )}
@@ -191,7 +191,7 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(74,222,128,0.8)]" />
             <span>42 LiDAR & Thermal Nodes Connected</span>
           </div>
-          <span className="font-mono text-[#8e7dff] font-bold">147 Queued</span>
+          <span className="font-mono text-[#2E37A4] font-bold">147 Queued</span>
         </div>
 
         {/* Chat Message Stream */}
@@ -204,7 +204,7 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
               }`}
             >
               {m.sender === 'ai' && (
-                <div className="w-8 h-8 rounded-2xl bg-[#8e7dff]/20 border border-[#8e7dff]/40 text-[#8e7dff] flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                <div className="w-8 h-8 rounded-2xl bg-[#2E37A4]/20 border border-[#2E37A4]/40 text-[#2E37A4] flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
                   <Bot className="w-4 h-4" />
                 </div>
               )}
@@ -212,7 +212,7 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
               <div
                 className={`max-w-[85%] p-4 rounded-3xl space-y-2 ${
                   m.sender === 'user'
-                    ? 'bg-gradient-to-r from-[#8e7dff] to-purple-600 text-white rounded-br-md shadow-lg shadow-[#8e7dff]/20 border border-white/20'
+                    ? 'bg-gradient-to-r from-[#2E37A4] to-purple-600 text-white rounded-br-md shadow-lg shadow-[#2E37A4]/20 border border-white/20'
                     : 'glass-panel rounded-tl-md text-white border border-white/[0.12]'
                 }`}
               >
@@ -239,11 +239,11 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
 
           {isLoading && (
             <div className="flex gap-3 text-xs justify-start">
-              <div className="w-8 h-8 rounded-2xl bg-[#8e7dff]/20 border border-[#8e7dff]/40 text-[#8e7dff] flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-2xl bg-[#2E37A4]/20 border border-[#2E37A4]/40 text-[#2E37A4] flex items-center justify-center shrink-0">
                 <Bot className="w-4 h-4 animate-spin" />
               </div>
               <div className="p-4 rounded-3xl glass-panel rounded-tl-md text-white/70 flex items-center gap-2 border border-white/[0.12]">
-                <Loader2 className="w-4 h-4 animate-spin text-[#8e7dff]" />
+                <Loader2 className="w-4 h-4 animate-spin text-[#2E37A4]" />
                 <span>Reading the live queue…</span>
               </div>
             </div>
@@ -265,7 +265,7 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
                   key={i}
                   type="button"
                   onClick={() => handleSendMessage(suggestion)}
-                  className="px-3 py-1.5 rounded-xl bg-white/[0.08] hover:bg-[#8e7dff]/25 hover:border-[#8e7dff]/50 text-white text-[10px] font-medium border border-white/[0.12] transition-all text-left cursor-pointer backdrop-blur-md"
+                  className="px-3 py-1.5 rounded-xl bg-white/[0.08] hover:bg-[#2E37A4]/25 hover:border-[#2E37A4]/50 text-white text-[10px] font-medium border border-white/[0.12] transition-all text-left cursor-pointer backdrop-blur-md"
                 >
                   {suggestion}
                 </button>
@@ -293,7 +293,7 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
             <button
               type="submit"
               disabled={!inputText.trim() || isLoading}
-              className="p-3 rounded-2xl bg-gradient-to-r from-[#8e7dff] to-purple-600 hover:opacity-90 disabled:opacity-40 text-white font-bold shadow-lg shadow-[#8e7dff]/30 active:scale-95 transition-all cursor-pointer border border-white/20"
+              className="p-3 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:opacity-90 disabled:opacity-40 text-white font-bold shadow-lg shadow-[#2E37A4]/30 active:scale-95 transition-all cursor-pointer border border-white/20"
             >
               <Send className="w-4 h-4" />
             </button>
