@@ -179,20 +179,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       collapsed ? 'justify-center px-0' : 'justify-between px-2.5'
                     } ${
                       isActive
-                        ? 'bg-[var(--pc-primary)] font-medium text-white'
+                        ? 'liquid-glass-active font-medium'
                         : 'font-normal text-[var(--pc-text-muted)] hover:bg-[var(--pc-page)] hover:text-[var(--pc-text)]'
                     }`}
                     title={collapsed ? item.label : undefined}
                   >
                     <span className="flex items-center gap-3 min-w-0">
-                      <Icon className={`w-[18px] h-[18px] shrink-0 ${isActive ? 'text-white' : 'text-[var(--pc-text-subtle)] group-hover:text-[var(--pc-primary)]'}`} />
+                      <Icon className={`w-[18px] h-[18px] shrink-0 ${isActive ? 'text-[var(--pc-primary)]' : 'text-[var(--pc-text-subtle)] group-hover:text-[var(--pc-primary)]'}`} />
                       {!collapsed && <span className="truncate">{item.label}</span>}
                     </span>
 
                     {!collapsed && item.badge !== undefined && (
                       <span
                         className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                          isActive ? 'bg-white/20 text-white' : item.badgeColor
+                          isActive ? 'bg-white/70 text-[var(--pc-primary)]' : item.badgeColor
                         }`}
                       >
                         {item.badge}

@@ -88,8 +88,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                     LIVE SENSING
                   </span>
                 </div>
-                <div className="hidden sm:flex items-center gap-1.5 text-xs text-white/60">
-                  <span className="font-medium text-white/80">CityCare Central Hospital</span>
+                <div className="hidden sm:flex items-center gap-1.5 text-xs text-[var(--pc-text-muted)]">
+                  <span className="font-medium text-[var(--pc-text)]">CityCare Central Hospital</span>
                   <span>•</span>
                   <span>Ground & Triage</span>
                 </div>
@@ -103,8 +103,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => handleNav('landing')}
               className={`flex w-full min-w-0 items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-center transition-all cursor-pointer ${isViewActive('landing')
-                  ? 'bg-gradient-to-r from-[#2E37A4]/30 to-purple-500/30 text-white font-bold border border-[#2E37A4]/50 shadow-[0_0_15px_rgba(142,125,255,0.35)]'
-                  : 'text-white/70 hover:text-white hover:bg-white/[0.08]'
+                  ? 'liquid-glass-active font-semibold'
+                  : 'text-[var(--pc-text-muted)] hover:text-[var(--pc-text)] liquid-glass'
                 }`}
             >
               <Globe className="w-3.5 h-3.5" />
@@ -114,8 +114,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => handleNav('kiosk')}
               className={`flex w-full min-w-0 items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-center transition-all cursor-pointer ${isViewActive('kiosk')
-                  ? 'bg-gradient-to-r from-[#2E37A4]/30 to-purple-500/30 text-white font-bold border border-[#2E37A4]/50 shadow-[0_0_15px_rgba(142,125,255,0.35)]'
-                  : 'text-white/70 hover:text-white hover:bg-white/[0.08]'
+                  ? 'liquid-glass-active font-semibold'
+                  : 'text-[var(--pc-text-muted)] hover:text-[var(--pc-text)] liquid-glass'
                 }`}
             >
               <Monitor className="w-3.5 h-3.5" />
@@ -126,8 +126,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={() => handleNav('doctor')}
                 className={`flex w-full min-w-0 items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-center transition-all cursor-pointer ${isViewActive('doctor')
-                    ? 'bg-gradient-to-r from-[#2E37A4]/30 to-purple-500/30 text-white font-bold border border-[#2E37A4]/50 shadow-[0_0_15px_rgba(142,125,255,0.35)]'
-                    : 'text-white/70 hover:text-white hover:bg-white/[0.08]'
+                    ? 'liquid-glass-active font-semibold'
+                    : 'text-[var(--pc-text-muted)] hover:text-[var(--pc-text)] liquid-glass'
                   }`}
               >
                 <Activity className="w-3.5 h-3.5" />
@@ -137,8 +137,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={() => handleNav('patient-tracker')}
                 className={`flex w-full min-w-0 items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-center transition-all cursor-pointer ${isViewActive('patient-tracker')
-                    ? 'bg-gradient-to-r from-[#2E37A4]/30 to-purple-500/30 text-white font-bold border border-[#2E37A4]/50 shadow-[0_0_15px_rgba(142,125,255,0.35)]'
-                    : 'text-white/70 hover:text-white hover:bg-white/[0.08]'
+                    ? 'liquid-glass-active font-semibold'
+                    : 'text-[var(--pc-text-muted)] hover:text-[var(--pc-text)] liquid-glass'
                   }`}
               >
                 <Smartphone className="w-3.5 h-3.5" />
@@ -149,8 +149,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => handleNav('admin')}
               className={`flex w-full min-w-0 items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-center transition-all cursor-pointer ${isViewActive('admin')
-                  ? 'bg-gradient-to-r from-[#2E37A4]/30 to-purple-500/30 text-white font-bold border border-[#2E37A4]/50 shadow-[0_0_15px_rgba(142,125,255,0.35)]'
-                  : 'text-white/70 hover:text-white hover:bg-white/[0.08]'
+                  ? 'liquid-glass-active font-semibold'
+                  : 'text-[var(--pc-text-muted)] hover:text-[var(--pc-text)] liquid-glass'
                 }`}
             >
               <LayoutDashboard className="w-3.5 h-3.5" />
@@ -162,7 +162,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => handleNav('super-admin')}
                 className={`flex w-full min-w-0 items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-center transition-all cursor-pointer ${isViewActive('super-admin')
                     ? 'bg-gradient-to-r from-[#00D3C7]/30 to-pink-500/30 text-white font-bold border border-[#00D3C7]/50 shadow-[0_0_15px_rgba(255,125,184,0.35)]'
-                    : 'text-white/70 hover:text-white hover:bg-white/[0.08]'
+                    : 'text-[var(--pc-text-muted)] hover:text-[var(--pc-text)] liquid-glass'
                   }`}
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
@@ -181,7 +181,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
                 aria-label={isMobileNavOpen ? 'Close navigation' : 'Open navigation'}
                 aria-expanded={isMobileNavOpen}
-                className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/[0.07] border border-white/[0.14] text-white/80 hover:text-white hover:bg-white/[0.12] backdrop-blur-md cursor-pointer transition-colors"
+                className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/[0.07] border border-white/[0.14] text-[var(--pc-text)] hover:text-white hover:bg-white/[0.12] backdrop-blur-md cursor-pointer transition-colors"
               >
                 {isMobileNavOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
               </button>
@@ -201,8 +201,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                             setIsMobileNavOpen(false);
                           }}
                           className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs text-left transition-all cursor-pointer ${active
-                              ? 'bg-gradient-to-r from-[#2E37A4]/30 to-purple-500/30 text-white font-bold border border-[#2E37A4]/50'
-                              : 'text-white/70 hover:text-white hover:bg-white/[0.08] border border-transparent'
+                              ? 'liquid-glass-active font-semibold'
+                              : 'text-[var(--pc-text)] hover:text-white hover:bg-white/[0.08] border border-transparent'
                             }`}
                         >
                           <Icon className="w-3.5 h-3.5 shrink-0" />
@@ -216,7 +216,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             {/* Privacy Compliance Pill */}
-            <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.12] text-[11px] text-white/80 font-medium backdrop-blur-md">
+            <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.12] text-[11px] text-[var(--pc-text)] font-medium backdrop-blur-md">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
               <span>Zero-PII LiDAR</span>
             </div>
@@ -241,14 +241,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                   )}
                   <div className="hidden sm:block text-left">
                     <p className="text-xs font-semibold text-white leading-tight">{displayName}</p>
-                    <p className="text-[10px] text-white/60 leading-tight">{displayRole}</p>
+                    <p className="text-[10px] text-[var(--pc-text-muted)] leading-tight">{displayRole}</p>
                   </div>
-                  <ChevronDown className="w-3 h-3 text-white/60 ml-1" />
+                  <ChevronDown className="w-3 h-3 text-[var(--pc-text-muted)] ml-1" />
                 </button>
               ) : (
                 <button
                   onClick={() => onLoginClick?.()}
-                  className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-[#2E37A4] to-purple-500 text-white font-semibold text-xs shadow-[0_0_15px_rgba(142,125,255,0.4)] hover:shadow-[0_0_20px_rgba(142,125,255,0.6)] transition-all cursor-pointer"
+                  className="pc-btn-primary flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold cursor-pointer"
                 >
                   Sign In
                 </button>
@@ -263,7 +263,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         onProfileClick?.();
                         setIsProfileMenuOpen(false);
                       }}
-                      className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
+                      className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm text-[var(--pc-text)] hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
                     >
                       <UserCog className="w-4 h-4" />
                       Profile

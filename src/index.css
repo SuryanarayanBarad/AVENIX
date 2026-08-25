@@ -330,6 +330,99 @@
 .pc-btn-ghost:not(:disabled):active { transform: translateY(0) scale(0.985); }
 
 /* ---------------------------------------------------------------------------
+   Liquid glass
+   ---------------------------------------------------------------------------
+   A selected control should read as a pane of tinted glass laid over the page,
+   the way Apple's material does, rather than a solid indigo block stamped on
+   top of it. Four things together produce that:
+
+     1. the page blurred and over-saturated behind it, so it looks like glass
+        with something underneath rather than paint
+     2. a vertical tint, denser at the top, so it has thickness
+     3. a specular sweep across the upper-left, which is what reads as a
+        curved surface catching light
+     4. a bright inner rim along the top edge and a soft indigo bloom beneath,
+        so the pane sits above the page instead of in it
+
+   The sweep is a background layer, not a pseudo-element, so it can never paint
+   over the label inside.
+--------------------------------------------------------------------------- */
+.liquid-glass,
+.liquid-glass-active {
+  position: relative;
+  isolation: isolate;
+  transition-property: background-color, box-shadow, border-color, transform, color;
+  transition-duration: var(--motion-standard);
+  transition-timing-function: var(--motion-ease);
+}
+
+/* Resting: clear glass, barely there. */
+.liquid-glass {
+  background:
+    linear-gradient(105deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 46%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.28) 100%);
+  backdrop-filter: blur(12px) saturate(170%);
+  -webkit-backdrop-filter: blur(12px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.9),
+    0 6px 18px -10px rgba(10, 27, 57, 0.20);
+}
+
+/* Selected: the same pane, tinted with the brand and lit a little harder. */
+.liquid-glass-active {
+  background:
+    linear-gradient(105deg, rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0) 44%),
+    linear-gradient(180deg, rgba(46, 55, 164, 0.26) 0%, rgba(46, 55, 164, 0.13) 100%);
+  backdrop-filter: blur(16px) saturate(200%);
+  -webkit-backdrop-filter: blur(16px) saturate(200%);
+  border: 1px solid rgba(46, 55, 164, 0.32);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.88),
+    inset 0 -10px 18px -12px rgba(46, 55, 164, 0.40),
+    0 8px 22px -10px rgba(46, 55, 164, 0.38);
+  color: var(--pc-primary);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .liquid-glass:hover {
+    background:
+      linear-gradient(105deg, rgba(255, 255, 255, 0.68) 0%, rgba(255, 255, 255, 0) 48%),
+      linear-gradient(180deg, rgba(46, 55, 164, 0.12) 0%, rgba(46, 55, 164, 0.05) 100%);
+    border-color: rgba(46, 55, 164, 0.22);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+      0 8px 22px -10px rgba(46, 55, 164, 0.28);
+  }
+
+  .liquid-glass-active:hover {
+    background:
+      linear-gradient(105deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 46%),
+      linear-gradient(180deg, rgba(46, 55, 164, 0.32) 0%, rgba(46, 55, 164, 0.17) 100%);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.92),
+      inset 0 -10px 18px -12px rgba(46, 55, 164, 0.44),
+      0 10px 26px -10px rgba(46, 55, 164, 0.44);
+  }
+}
+
+/* Pressing compresses the pane rather than darkening it. */
+.liquid-glass:active,
+.liquid-glass-active:active {
+  transform: scale(0.985);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.7),
+    inset 0 2px 8px 0 rgba(46, 55, 164, 0.22);
+}
+
+/* backdrop-filter is what sells it. Without support the tint alone would look
+   flat and washed out, so fall back to an opaque surface instead. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .liquid-glass { background: var(--pc-surface); }
+  .liquid-glass-active { background: var(--pc-tint-lilac); }
+}
+
+/* ---------------------------------------------------------------------------
    TRANSITIONAL: dark-glass markup inside a Preclinic shell
    ---------------------------------------------------------------------------
    The Command Center shell and sidebar are converted; the views inside them

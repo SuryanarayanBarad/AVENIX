@@ -341,9 +341,9 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
                       key={s.type}
                       onClick={() => setSelectedService(s.type)}
                       aria-pressed={isSelected}
-                      className={`p-3.5 sm:p-5 rounded-3xl text-left transition-all flex flex-col justify-between relative group cursor-pointer ${isSelected
-                        ? 'bg-[#2E37A4]/20 border-2 border-[#2E37A4] shadow-[0_0_25px_rgba(46,55,164,0.18)] backdrop-blur-2xl'
-                        : 'glass-panel-interactive border border-white/[0.12] hover:border-white/[0.25]'
+                      className={`p-3.5 sm:p-5 rounded-3xl text-left flex flex-col justify-between relative group cursor-pointer ${isSelected
+                        ? 'liquid-glass-active'
+                        : 'liquid-glass'
                         }`}
                     >
                       {/* Badge if any */}
@@ -354,10 +354,10 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
                       )}
 
                       <div className="space-y-2 sm:space-y-3">
-                        <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center ${isSelected
-                          ? 'bg-[#2E37A4] text-white shadow-md shadow-[#2E37A4]/40'
-                          : 'bg-white/[0.08] text-white/80 group-hover:bg-[#2E37A4]/20 group-hover:text-[#2E37A4]'
-                          } transition-colors border border-white/10`}>
+                        <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center transition-colors ${isSelected
+                          ? 'bg-[var(--pc-primary)] text-white shadow-md shadow-[#2E37A4]/30'
+                          : 'bg-[var(--pc-tint-lilac)] text-[var(--pc-primary)]'
+                          }`}>
                           <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
                         <div>
