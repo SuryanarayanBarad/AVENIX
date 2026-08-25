@@ -425,16 +425,16 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
                       type="button"
                       onClick={() => setDemographic(demo.type)}
                       aria-pressed={demographic === demo.type}
-                      className={`p-2.5 sm:p-3 rounded-2xl border text-left transition-all cursor-pointer ${demographic === demo.type
-                        ? 'border-[#2E37A4] bg-[#2E37A4]/25 font-semibold text-white shadow-[0_0_15px_rgba(46,55,164,0.14)]'
-                        : 'border-white/[0.10] bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white'
+                      className={`p-2.5 sm:p-3 rounded-2xl text-left cursor-pointer ${demographic === demo.type
+                        ? 'liquid-glass-active font-semibold'
+                        : 'liquid-glass'
                         }`}
                     >
-                      <div className="font-semibold text-xs text-white leading-snug">{demo.label}</div>
+                      <div className="font-semibold text-xs leading-snug">{demo.label}</div>
                       {/* The qualifier is guidance, not a control: it makes each
                           tile a three-line block on a phone, so it waits for a
                           wider screen. The label alone still says what it is. */}
-                      <div className="hidden sm:block text-[10px] text-white/50 mt-0.5">{demo.desc}</div>
+                      <div className="hidden sm:block text-[10px] text-[var(--pc-text-muted)] mt-0.5">{demo.desc}</div>
                     </button>
                     );
                   })}

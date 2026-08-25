@@ -399,7 +399,7 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
               <button
                 type="button"
                 onClick={() => setStep('service')}
-                className="mb-4 flex items-center gap-1.5 text-xs font-semibold text-white/55 hover:text-white cursor-pointer"
+                data-plain className="mb-4 flex items-center gap-1.5 text-xs font-semibold text-white/55 hover:text-white cursor-pointer"
               >
                 <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
                 Change service

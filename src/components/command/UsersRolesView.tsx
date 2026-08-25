@@ -57,7 +57,7 @@ export const UsersRolesView: React.FC = () => {
           <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
           <div className="min-w-0">
             <p className="font-medium">{loadError}</p>
-            <button onClick={loadData} className="mt-1 text-xs font-semibold text-red-200 underline underline-offset-2 hover:text-white">
+            <button onClick={loadData} data-plain className="mt-1 text-xs font-semibold text-red-200 underline underline-offset-2 hover:text-white">
               Try again
             </button>
           </div>

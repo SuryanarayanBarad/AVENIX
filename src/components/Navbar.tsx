@@ -71,16 +71,20 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Logo & Facility Identity */}
           <div className="flex items-center gap-3 shrink-0">
+            {/* data-plain: this is the masthead, not a control. Without it the
+                global glass rule gives it a pane and a rim, which reads as a
+                box drawn around the logo. */}
             <button
+              data-plain
               onClick={() => handleNav('landing')}
-              className="flex items-center gap-2.5 text-left group cursor-pointer"
+              className="flex items-center gap-2.5 text-left group cursor-pointer bg-transparent"
             >
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#2E37A4] via-indigo-500 to-[#00D3C7] flex items-center justify-center text-white shadow-lg shadow-[#2E37A4]/25 border border-white/20 group-hover:scale-105 transition-transform">
                 <Activity className="w-5 h-5" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-lg text-white tracking-tight font-display">
+                  <span className="font-bold text-lg text-[var(--pc-text)] tracking-tight font-display">
                     QueueMind<span className="text-[#2E37A4]">AI</span>
                   </span>
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 backdrop-blur-md">
