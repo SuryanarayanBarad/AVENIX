@@ -386,7 +386,7 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
                 type="button"
                 onClick={() => setStep('details')}
                 disabled={!selectedServiceId}
-                className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#2E37A4] to-[#3538CD] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#2E37A4]/25 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                className="mt-5 flex w-full items-center justify-center gap-2 pc-btn-primary px-4 py-3.5 text-[13px] font-semibold disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
               >
                 Continue
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -441,7 +441,7 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#2E37A4] to-[#3538CD] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#2E37A4]/25 disabled:cursor-wait disabled:opacity-70 cursor-pointer"
+                className="mt-5 flex w-full items-center justify-center gap-2 pc-btn-primary px-4 py-3.5 text-[13px] font-semibold disabled:cursor-wait disabled:opacity-70 cursor-pointer"
               >
                 {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Ticket className="h-4 w-4" aria-hidden="true" />}
                 {isSubmitting ? 'Generating token…' : 'Generate token'}
@@ -482,12 +482,12 @@ export const WalkInTokenFlow: React.FC<WalkInTokenFlowProps> = ({
                   {isRefreshing ? 'Refreshing…' : 'Refresh status'}
                 </button>
                 {onBookAppointment ? (
-                  <button type="button" onClick={onBookAppointment} className="flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#2E37A4] to-[#3538CD] px-4 py-3 text-xs font-bold text-white shadow-lg shadow-[#2E37A4]/20 cursor-pointer">
+                  <button type="button" onClick={onBookAppointment} className="flex items-center justify-center gap-2 pc-btn-primary px-4 py-3 text-[13px] font-semibold cursor-pointer">
                     <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
                     Book doctor visit
                   </button>
                 ) : (
-                  <button type="button" onClick={startAnotherToken} className="flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#2E37A4] to-[#3538CD] px-4 py-3 text-xs font-bold text-white shadow-lg shadow-[#2E37A4]/20 cursor-pointer">
+                  <button type="button" onClick={startAnotherToken} className="flex items-center justify-center gap-2 pc-btn-primary px-4 py-3 text-[13px] font-semibold cursor-pointer">
                     <Ticket className="h-3.5 w-3.5" aria-hidden="true" />
                     New token
                   </button>
