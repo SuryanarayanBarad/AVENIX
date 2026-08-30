@@ -224,7 +224,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="px-4 py-2.5 rounded-2xl bg-[var(--pc-primary)] hover:opacity-90 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-[#2E37A4]/30 active:scale-95 transition-all self-start sm:self-auto cursor-pointer border border-white/20"
+          className="pc-btn-primary px-4 py-2.5 text-xs flex items-center gap-2 active:scale-95 transition-all self-start sm:self-auto cursor-pointer font-semibold"
         >
           <Plus className="w-4 h-4" />
           <span>Book Appointment</span>
@@ -645,7 +645,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                 <button
                   type="submit"
                   disabled={isBooking}
-                  className="px-5 py-2.5 rounded-2xl bg-[var(--pc-primary)] hover:opacity-90 disabled:opacity-60 text-white font-bold shadow-lg shadow-[#2E37A4]/30 cursor-pointer border border-white/20"
+                  className="pc-btn-primary px-5 py-2.5 disabled:opacity-60 cursor-pointer font-semibold"
                 >
                   {isBooking ? 'Booking…' : 'Confirm Booking'}
                 </button>

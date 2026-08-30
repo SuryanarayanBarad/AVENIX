@@ -182,7 +182,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
             {!recommendationApplied && (
               <button
                 onClick={onApplyRecommendation}
-                className="px-4 py-2.5 rounded-2xl bg-[var(--pc-primary)] hover:from-[#3538CD] hover:to-[#3538CD] text-white font-bold text-xs shadow-lg shadow-[#2E37A4]/30 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 border border-white/20"
+                className="pc-btn-primary px-4 py-2.5 hover:from-[#3538CD] hover:to-[#3538CD] text-xs active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 font-semibold"
               >
                 <Zap className="w-3.5 h-3.5 text-amber-300" />
                 <span>Apply Recommendation</span>

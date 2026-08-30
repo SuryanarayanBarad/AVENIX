@@ -238,7 +238,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, user, onClos
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 px-5 py-3 rounded-2xl bg-[var(--pc-primary)] hover:opacity-90 text-white font-bold shadow-lg shadow-[#2E37A4]/30 cursor-pointer border border-white/20 disabled:opacity-50"
+                className="pc-btn-primary flex-1 px-5 py-3 cursor-pointer disabled:opacity-50 font-semibold"
               >
                 {loading ? 'Saving...' : 'Save'}
               </button>

@@ -81,7 +81,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="flex flex-wrap items-center justify-center gap-3.5 pt-4">
               <button
                 onClick={() => launch('admin')}
-                className="px-6 py-3.5 rounded-2xl bg-[var(--pc-primary)] hover:from-[#3538CD] hover:to-[#3538CD] text-white font-semibold text-sm shadow-lg shadow-[#2E37A4]/30 flex items-center gap-2 group transition-all cursor-pointer active:scale-95 border border-white/20"
+                className="pc-btn-primary group flex items-center gap-2 px-6 py-3.5 text-sm font-semibold cursor-pointer"
               >
                 <LayoutDashboard className="w-4 h-4" />
                 <span>Launch Admin Operations</span>

@@ -120,7 +120,7 @@ export const LiveQueueView: React.FC<LiveQueueViewProps> = ({
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="px-4 py-2.5 rounded-2xl bg-[var(--pc-primary)] hover:from-[#3538CD] hover:to-[#3538CD] text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-[#2E37A4]/30 active:scale-95 transition-all self-start sm:self-auto cursor-pointer border border-white/20"
+          className="pc-btn-primary px-4 py-2.5 hover:from-[#3538CD] hover:to-[#3538CD] text-xs flex items-center gap-2 active:scale-95 transition-all self-start sm:self-auto cursor-pointer font-semibold"
         >
           <Plus className="w-4 h-4" />
           <span>Manual Token Intake</span>
@@ -460,7 +460,7 @@ export const LiveQueueView: React.FC<LiveQueueViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-2xl bg-[var(--pc-primary)] hover:opacity-90 text-white font-bold shadow-lg shadow-[#2E37A4]/30 cursor-pointer border border-white/20"
+                  className="pc-btn-primary px-5 py-2.5 cursor-pointer font-semibold"
                 >
                   Issue Token
                 </button>

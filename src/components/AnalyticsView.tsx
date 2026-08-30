@@ -282,7 +282,7 @@ export const AnalyticsView: React.FC = () => {
             type="button"
             onClick={handleExport}
             disabled={downloading}
-            className="flex items-center gap-1.5 rounded-2xl border border-white/20 bg-[var(--pc-primary)] px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-[#2E37A4]/30 transition-all cursor-pointer hover:from-[#3538CD] hover:to-[#3538CD] disabled:cursor-wait disabled:opacity-70"
+            className="flex items-center gap-1.5 rounded-2xl pc-btn-primary px-4 py-2.5 text-[13px] font-semibold transition-all cursor-pointer hover:from-[#3538CD] hover:to-[#3538CD] disabled:cursor-wait disabled:opacity-70"
           >
             <Download className="h-3.5 w-3.5" />
             <span>{downloading ? 'Exporting...' : 'Export Report'}</span>

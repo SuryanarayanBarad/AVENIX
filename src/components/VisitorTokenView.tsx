@@ -391,7 +391,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
                 <button
                   type="button"
                   onClick={onGetNewToken ?? onBackToKiosk}
-                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-[var(--pc-primary)] px-4 py-3 text-xs font-bold text-white shadow-lg shadow-[#2E37A4]/30 hover:opacity-90 cursor-pointer"
+                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl pc-btn-primary px-4 py-3 text-[13px] font-semibold hover:opacity-90 cursor-pointer"
                 >
                   <Ticket className="h-4 w-4" />
                   Get a new token

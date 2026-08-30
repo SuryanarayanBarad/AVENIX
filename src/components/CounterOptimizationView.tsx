@@ -89,18 +89,18 @@ export const CounterOptimizationView: React.FC<CounterOptimizationViewProps> = (
   };
 
   return (
-    <div className="space-y-6 pb-12 text-white">
+    <div className="space-y-6 pb-12">
       
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-white font-display">AI Counter Optimization & Balancing</h1>
+            <h1 className="text-2xl font-bold text-[var(--pc-text)] font-display">AI Counter Optimization & Balancing</h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#2E37A4]/20 text-[#2E37A4] border border-[#2E37A4]/30 backdrop-blur-md">
               Dynamic Load Balancer
             </span>
           </div>
-          <p className="text-xs text-white/60 mt-1">
+          <p className="mt-1 text-[13px] text-[var(--pc-text-muted)]">
             Simulate and deploy automated staff reassignments to eliminate queue bottlenecks while maintaining fairness SLAs.
           </p>
         </div>
@@ -110,7 +110,7 @@ export const CounterOptimizationView: React.FC<CounterOptimizationViewProps> = (
           {isOptimized && (
             <button
               onClick={handleReset}
-              className="px-3.5 py-2.5 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/[0.12] text-white font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer backdrop-blur-md"
+              className="liquid-glass flex items-center gap-1.5 rounded-md px-3.5 py-2.5 text-[13px] font-medium text-[var(--pc-text)] cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Reset to Baseline</span>
@@ -120,7 +120,7 @@ export const CounterOptimizationView: React.FC<CounterOptimizationViewProps> = (
           <button
             onClick={handleRunOptimization}
             disabled={isRunning}
-            className="px-6 py-2.5 rounded-2xl bg-[var(--pc-primary)] hover:opacity-90 text-white font-bold text-xs shadow-lg shadow-[#2E37A4]/30 flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer border border-white/20"
+            className="pc-btn-primary flex items-center gap-2 px-5 py-2.5 text-[13px] font-semibold disabled:opacity-50 cursor-pointer"
           >
             {isRunning ? (
               <>
@@ -141,8 +141,8 @@ export const CounterOptimizationView: React.FC<CounterOptimizationViewProps> = (
       <div className="p-6 rounded-3xl glass-panel-elevated space-y-4">
         <div className="flex items-center justify-between border-b border-white/[0.10] pb-3">
           <div>
-            <h2 className="text-base font-bold text-white font-display">Simulation Impact Analysis</h2>
-            <p className="text-xs text-white/60">Live operational delta when dynamic load rebalancing is applied</p>
+            <h2 className="text-base font-bold text-[var(--pc-text)] font-display">Simulation Impact Analysis</h2>
+            <p className="text-[13px] text-[var(--pc-text-muted)]">Live operational delta when dynamic load rebalancing is applied</p>
           </div>
           <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 backdrop-blur-md">
             {isOptimized ? 'OPTIMIZED PROFILE APPLIED' : 'PROJECTED SIMULATION'}
@@ -153,9 +153,9 @@ export const CounterOptimizationView: React.FC<CounterOptimizationViewProps> = (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
           <div className="p-4 rounded-2xl glass-panel space-y-1">
-            <span className="text-[11px] font-semibold text-white/50">Average Wait Time</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--pc-text-subtle)]">Average Wait Time</span>
             <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold text-white/40 line-through">18m</span>
+              <span className="text-xl font-bold text-[var(--pc-text-subtle)] line-through">18m</span>
               <ArrowRight className="w-3.5 h-3.5 text-white/40" />
               <span className="text-2xl font-light text-emerald-400 font-display">9m</span>
             </div>
@@ -163,7 +163,7 @@ export const CounterOptimizationView: React.FC<CounterOptimizationViewProps> = (
           </div>
 
           <div className="p-4 rounded-2xl glass-panel space-y-1">
-            <span className="text-[11px] font-semibold text-white/50">Fairness & Parity Score</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--pc-text-subtle)]">Fairness & Parity Score</span>
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-bold text-white/40">94</span>
               <ArrowRight className="w-3.5 h-3.5 text-white/40" />
@@ -173,7 +173,7 @@ export const CounterOptimizationView: React.FC<CounterOptimizationViewProps> = (
           </div>
 
           <div className="p-4 rounded-2xl glass-panel space-y-1">
-            <span className="text-[11px] font-semibold text-white/50">Overloaded Counters</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--pc-text-subtle)]">Overloaded Counters</span>
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-bold text-rose-400">2</span>
               <ArrowRight className="w-3.5 h-3.5 text-white/40" />
@@ -183,7 +183,7 @@ export const CounterOptimizationView: React.FC<CounterOptimizationViewProps> = (
           </div>
 
           <div className="p-4 rounded-2xl glass-panel space-y-1">
-            <span className="text-[11px] font-semibold text-white/50">Queue Variance (Std. Dev)</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--pc-text-subtle)]">Queue Variance (Std. Dev)</span>
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-bold text-white/40">±11.4</span>
               <ArrowRight className="w-3.5 h-3.5 text-white/40" />

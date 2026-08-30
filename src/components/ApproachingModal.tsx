@@ -115,7 +115,7 @@ export const ApproachingModal: React.FC<ApproachingModalProps> = ({
           <div className="space-y-2.5 pt-1">
             <button
               onClick={onConfirmOnWay}
-              className="w-full py-3.5 px-4 rounded-2xl bg-[var(--pc-primary)] hover:from-[#3538CD] hover:to-[#3538CD] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#2E37A4]/30 active:scale-98 transition-all cursor-pointer border border-white/20"
+              className="pc-btn-primary w-full py-3.5 px-4 hover:from-[#3538CD] hover:to-[#3538CD] text-sm flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer font-semibold"
             >
               <span>I'm on my way</span>
               <ArrowRight className="w-4 h-4" />

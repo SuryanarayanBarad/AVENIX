@@ -598,11 +598,11 @@
    each one. Anything that already opts in, is the filled primary, or is a bare
    link-style control is left alone.
 --------------------------------------------------------------------------- */
-.pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-[#"]):not(.fixed):not(.absolute):not(.sticky) {
+.pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-[#"]):not([class*="bg-[var("]):not(.fixed):not(.absolute):not(.sticky) {
   position: relative;
 }
 
-.pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-[#"]) {
+.pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-[#"]):not([class*="bg-[var("]) {
   isolation: isolate;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.2) 100%);
@@ -617,7 +617,7 @@
    A conic gradient sitting still is cheap; two hundred of them animating at
    once is a dropped frame rate, and only the one being pointed at is being
    looked at anyway. */
-.pc button:not(:disabled):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-[#"])::before {
+.pc button:not(:disabled):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-[#"]):not([class*="bg-[var("])::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -641,7 +641,7 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .pc button:not(:disabled):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-[#"]):hover::before {
+  .pc button:not(:disabled):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-[#"]):not([class*="bg-[var("]):hover::before {
     opacity: 0.9;
     animation: lg-drift 6s linear infinite;
   }
@@ -649,7 +649,7 @@
   /* At rest the pane is clear. Under the pointer the tint arrives and tracks
      the cursor, so the colour appears where you are actually pointing rather
      than washing the whole control at once. */
-  .pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-[#"]):hover {
+  .pc button:not(:disabled):not(.liquid-glass):not(.liquid-glass-active):not(.pc-btn-primary):not([data-plain]):not([class*="bg-gradient"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-[#"]):not([class*="bg-[var("]):hover {
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.36) 100%);
     border-color: rgba(46, 55, 164, 0.18);
