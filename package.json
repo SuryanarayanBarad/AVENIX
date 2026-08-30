@@ -15,7 +15,8 @@
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "deploy:migrate": "prisma migrate deploy"
+    "deploy:migrate": "prisma migrate deploy",
+    "check:contrast": "node scripts/check-contrast.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -352,9 +352,9 @@ export const AnalyticsView: React.FC = () => {
 
           <div className="h-56 w-full pt-4">
             <svg className="h-full w-full overflow-visible" viewBox="0 0 450 180" role="img" aria-label={`${report.label} queue load and wait duration chart`}>
-              <line x1="0" y1="30" x2="450" y2="30" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
-              <line x1="0" y1="80" x2="450" y2="80" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
-              <line x1="0" y1="130" x2="450" y2="130" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+              <line x1="0" y1="30" x2="450" y2="30" stroke="var(--pc-border)" strokeWidth="1" />
+              <line x1="0" y1="80" x2="450" y2="80" stroke="var(--pc-border)" strokeWidth="1" />
+              <line x1="0" y1="130" x2="450" y2="130" stroke="var(--pc-border)" strokeWidth="1" />
 
               {report.queueLoad.map((point, index) => {
                 const x = 35 + index * 70;
@@ -365,7 +365,7 @@ export const AnalyticsView: React.FC = () => {
                   <g key={point.time}>
                     <rect x={x} y={150 - barHeight} width="24" height={barHeight} rx="6" fill="#2E37A4" opacity="0.7" />
                     <circle cx={x + 12} cy={waitY} r="4.5" fill="#00D3C7" stroke="#ffffff" strokeWidth="1.5" />
-                    <text x={x + 12} y="168" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="middle">{point.time}</text>
+                    <text x={x + 12} y="168" fontSize="10" fill="var(--pc-text-muted)" textAnchor="middle">{point.time}</text>
                   </g>
                 );
               })}

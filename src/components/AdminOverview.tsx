@@ -306,15 +306,15 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
             <div className="h-36 w-full pt-2">
               <svg className="w-full h-full overflow-visible" viewBox="0 0 400 120">
                 {/* Background grid lines */}
-                <line x1="0" y1="30" x2="400" y2="30" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
-                <line x1="0" y1="60" x2="400" y2="60" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
-                <line x1="0" y1="90" x2="400" y2="90" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+                <line x1="0" y1="30" x2="400" y2="30" stroke="var(--pc-border)" strokeWidth="1" />
+                <line x1="0" y1="60" x2="400" y2="60" stroke="var(--pc-border)" strokeWidth="1" />
+                <line x1="0" y1="90" x2="400" y2="90" stroke="var(--pc-border)" strokeWidth="1" />
 
                 {/* Historical Line */}
                 <path
                   d="M 20,85 Q 70,55 120,40 T 220,25 T 320,50 T 380,75"
                   fill="none"
-                  stroke="rgba(255,255,255,0.3)"
+                  stroke="var(--pc-border-strong)"
                   strokeWidth="2"
                   strokeDasharray="4 4"
                 />
@@ -333,11 +333,11 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                 <circle cx="220" cy="12" r="9" fill="#00D3C7" opacity="0.3" />
                 
                 {/* Labels */}
-                <text x="20" y="115" fontSize="9" fill="rgba(255,255,255,0.4)" textAnchor="middle">09:00</text>
-                <text x="120" y="115" fontSize="9" fill="rgba(255,255,255,0.4)" textAnchor="middle">10:30</text>
+                <text x="20" y="115" fontSize="9" fill="var(--pc-text-muted)" textAnchor="middle">09:00</text>
+                <text x="120" y="115" fontSize="9" fill="var(--pc-text-muted)" textAnchor="middle">10:30</text>
                 <text x="220" y="115" fontSize="9" fill="#00D3C7" fontWeight="bold" textAnchor="middle">12:00 (Peak)</text>
-                <text x="320" y="115" fontSize="9" fill="rgba(255,255,255,0.4)" textAnchor="middle">14:00</text>
-                <text x="380" y="115" fontSize="9" fill="rgba(255,255,255,0.4)" textAnchor="middle">16:00</text>
+                <text x="320" y="115" fontSize="9" fill="var(--pc-text-muted)" textAnchor="middle">14:00</text>
+                <text x="380" y="115" fontSize="9" fill="var(--pc-text-muted)" textAnchor="middle">16:00</text>
               </svg>
             </div>
           </div>

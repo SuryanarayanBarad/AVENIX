@@ -185,9 +185,9 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
           {/* SVG Inflow Bars */}
           <div className="h-56 w-full pt-4">
             <svg className="w-full h-full overflow-visible" viewBox="0 0 500 180">
-              <line x1="0" y1="30" x2="500" y2="30" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
-              <line x1="0" y1="75" x2="500" y2="75" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
-              <line x1="0" y1="120" x2="500" y2="120" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+              <line x1="0" y1="30" x2="500" y2="30" stroke="var(--pc-border)" strokeWidth="1" />
+              <line x1="0" y1="75" x2="500" y2="75" stroke="var(--pc-border)" strokeWidth="1" />
+              <line x1="0" y1="120" x2="500" y2="120" stroke="var(--pc-border)" strokeWidth="1" />
 
               {scaledPredictions.map((pt, i) => {
                 const x = 30 + i * barStep;
@@ -203,7 +203,7 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
                       width="16"
                       height={histHeight}
                       rx="4"
-                      fill="rgba(255,255,255,0.15)"
+                      fill="var(--pc-page)"
                     />
 
                     {/* Predicted bar with gradient / glow */}
@@ -217,7 +217,7 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
                     />
 
                     {/* Time label */}
-                    <text x={x + 16} y="170" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="middle">
+                    <text x={x + 16} y="170" fontSize="10" fill="var(--pc-text-muted)" textAnchor="middle">
                       {pt.timeSlot}
                     </text>
                   </g>

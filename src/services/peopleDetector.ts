@@ -179,12 +179,36 @@ class PeopleDetectionService {
       }
     };
 
-    // Run detection every 1.5 seconds for balanced performance
-    const intervalId = window.setInterval(detect, 1500);
+    /**
+     * Two guards around the loop, both about not wasting a device's CPU on
+     * work nobody can see.
+     *
+     * Inference is not instant. On a modest laptop a frame can take longer than
+     * the interval, and setInterval does not care — it queues the next call
+     * anyway, so the ticks pile up and every one of them competes for the same
+     * thread. `busy` drops a tick rather than stacking it.
+     *
+     * A hidden tab is worse: the feed is not being watched, but the model keeps
+     * running and the fans keep spinning. Detection pauses with the tab and
+     * resumes with it, which on a laptop is the difference between a warm
+     * machine and a cool one during a demo.
+     */
+    let busy = false;
+    const tick = async () => {
+      if (busy || document.hidden) return;
+      busy = true;
+      try {
+        await detect();
+      } finally {
+        busy = false;
+      }
+    };
+
+    const intervalId = window.setInterval(tick, 1500);
     this.detectionLoops.set(cameraId, intervalId);
 
-    // Run first detection immediately
-    detect();
+    // One immediate pass, so the first count appears without waiting a cycle.
+    void tick();
   }
 
   /**

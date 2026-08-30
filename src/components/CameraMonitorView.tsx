@@ -54,7 +54,7 @@ const CameraTile: React.FC<{
       }`}
     >
       {/* Video + overlay container */}
-      <div className="relative aspect-video bg-black/40">
+      <div className="relative aspect-video bg-[#0A1B39]">
         <video
           ref={videoRef}
           className="absolute inset-0 w-full h-full object-cover"
@@ -70,16 +70,17 @@ const CameraTile: React.FC<{
         {/* Live badge */}
         <div className="absolute top-3 left-3 z-10 px-2.5 py-1 bg-black/60 backdrop-blur border border-white/10 rounded-lg flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          <span className="text-[10px] font-semibold text-white/90 tracking-wider uppercase">Live</span>
+          <span className="text-[10px] font-semibold text-[#fff] tracking-wider uppercase">Live</span>
         </div>
 
         {/* People count badge */}
         {det && (
           <div className="absolute top-3 right-3 z-10 px-2.5 py-1 bg-black/60 backdrop-blur border border-white/10 rounded-lg flex items-center gap-1.5">
-            <svg className="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-3.5 h-3.5 text-[#7ec8ff]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
-            <span className="text-xs font-bold text-white">{det.peopleCount}</span>
+            <span className="text-sm font-bold text-[#fff] tabular-nums">{det.peopleCount}</span>
+            <span className="text-[10px] font-medium text-[#ffffffa6]">in view</span>
           </div>
         )}
 
@@ -87,9 +88,9 @@ const CameraTile: React.FC<{
         {det && (
           <div className="absolute bottom-3 left-3 z-10">
             <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
-              det.density === 'High' ? 'bg-red-500/30 text-red-300' :
-              det.density === 'Medium' ? 'bg-orange-500/30 text-orange-300' :
-              'bg-green-500/30 text-green-300'
+              det.density === 'High' ? 'bg-[#EF1E1E] text-[#fff]' :
+              det.density === 'Medium' ? 'bg-[#E04F16] text-[#fff]' :
+              'bg-[#1B7F46] text-[#fff]'
             }`}>
               {det.density} Density
             </span>
@@ -101,7 +102,7 @@ const CameraTile: React.FC<{
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
             <div className="text-center space-y-2">
               <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
-              <p className="text-xs text-white/70">Loading AI Model...</p>
+              <p className="text-xs text-[#ffffffb3]">Starting the detector…</p>
             </div>
           </div>
         )}
@@ -110,8 +111,8 @@ const CameraTile: React.FC<{
       {/* Camera info bar */}
       <div className="p-3 flex justify-between items-center">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-white truncate">{cam.backendRecord.name}</p>
-          <p className="text-[11px] text-white/40">{cam.backendRecord.location}</p>
+          <p className="text-sm font-medium text-[var(--pc-text)] truncate">{cam.backendRecord.name}</p>
+          <p className="text-[11px] text-[var(--pc-text-muted)]">{cam.backendRecord.location}</p>
         </div>
         <button
           onClick={(e) => { e.stopPropagation(); onDisconnect(); }}
@@ -255,14 +256,15 @@ export function CameraMonitorView() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-light tracking-tight text-white mb-2">Camera & Sensor Monitor</h2>
-          <p className="text-white/60 text-sm">
-            AI-powered people detection. All processing happens locally in your browser. No biometric data is stored.
+          <h2 className="text-2xl font-bold tracking-tight text-[var(--pc-text)]">Camera Monitoring</h2>
+          <p className="mt-1 text-sm text-[var(--pc-text-muted)]">
+            Each connected camera is read by an on-device model that counts how many people are in
+            frame. Nothing leaves this machine — no image is uploaded, and no face is identified or stored.
           </p>
         </div>
         <button
           onClick={() => setShowAddForm(true)}
-          className="shrink-0 px-5 py-2.5 bg-gradient-to-r from-[#2E37A4] to-purple-600 text-white font-semibold text-sm rounded-xl shadow-lg shadow-[#2E37A4]/20 hover:opacity-90 transition-all cursor-pointer border border-white/10 flex items-center gap-2"
+          className="pc-btn-primary shrink-0 flex items-center gap-2 px-5 py-2.5 text-sm font-semibold cursor-pointer"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -289,13 +291,18 @@ export function CameraMonitorView() {
             onClick={e => e.stopPropagation()}
           >
             <div>
-              <h3 className="text-xl font-bold text-white font-display">Add Camera</h3>
-              <p className="text-xs text-white/50 mt-1">Give your camera a name and location. Your webcam will be used as the video source.</p>
+              <h3 className="text-xl font-bold text-[var(--pc-text)] font-display">Connect a camera</h3>
+              <p className="mt-1 text-xs leading-relaxed text-[var(--pc-text-muted)]">
+                Name the position you are monitoring — a lobby, a ward entrance. The video comes from a
+                camera attached to this computer, which is what a browser is allowed to open; a hospital
+                CCTV stream reaches it by pointing that camera at the wall display, or through a bridge
+                that republishes the stream as a webcam device.
+              </p>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-white/80 font-bold text-xs mb-1.5">Camera Name *</label>
+                <label className="block text-[var(--pc-text)] font-medium text-[13px] mb-1.5">Camera Name *</label>
                 <input
                   type="text"
                   placeholder="e.g. Main Lobby Camera"
@@ -306,7 +313,7 @@ export function CameraMonitorView() {
                 />
               </div>
               <div>
-                <label className="block text-white/80 font-bold text-xs mb-1.5">Location</label>
+                <label className="block text-[var(--pc-text)] font-medium text-[13px] mb-1.5">Location</label>
                 <input
                   type="text"
                   placeholder="e.g. Front Desk, Waiting Hall"
