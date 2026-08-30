@@ -47,6 +47,7 @@
   --pc-success-text: #1B7F46;   /* 5.04:1 on white — #27AE60 is 2.87:1 */
   --pc-danger: #EF1E1E;         /* fills */
   --pc-danger-text: #C81E1E;    /* 5.74:1 on white */
+  --pc-info-text: #0E7490;      /* 5.36:1 on white — #06AED4 is 2.62:1 */
 
   /* 6px is the kit's default corner; 20px is used for pills and larger cards. */
   --pc-radius: 6px;
@@ -889,6 +890,7 @@
 .pc .text-amber-400,
 .pc .text-yellow-300 { color: #B54708; }
 
+.pc .text-rose-100\/90,
 .pc .text-rose-200\/90,
 .pc .text-rose-200\/80,
 .pc .text-rose-200\/70,
@@ -907,7 +909,13 @@
 .pc .text-blue-200,
 .pc .text-blue-300,
 .pc .text-blue-400,
-.pc .text-sky-300 { color: var(--pc-accent-cyan); }
+.pc .text-sky-300,
+.pc .text-blue-100\/90,
+.pc .text-blue-100\/80,
+.pc .text-blue-200\/90,
+.pc .text-blue-200\/80,
+.pc .text-blue-200\/70,
+.pc .text-blue-300\/80 { color: var(--pc-info-text); }
 
 .pc .text-purple-300,
 .pc .text-purple-400 { color: var(--pc-primary); }

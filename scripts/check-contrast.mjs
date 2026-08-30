@@ -42,10 +42,14 @@ const unmapped = usedOpacities.filter((v) => !css.includes(`.pc .text-white\\/${
 ck(`all ${usedOpacities.length} text-white opacities are mapped`, unmapped.length === 0,
   unmapped.map((v) => '/' + v).join(', '));
 
+// Base tones AND their opacity variants. Tailwind emits a distinct class for
+// each opacity, so mapping text-blue-200 does nothing for text-blue-200/80 —
+// which is how the camera privacy notice stayed pale on a pale blue panel.
 const tones = [...new Set(
-  [...src.matchAll(/text-(emerald|rose|amber|green|red|blue)-(50|100|200)\b/g)].map((m) => `${m[1]}-${m[2]}`),
+  [...src.matchAll(/text-(emerald|rose|amber|green|red|blue|sky)-(50|100|200)(\/\d+)?\b/g)]
+    .map((m) => `${m[1]}-${m[2]}${m[3] ?? ''}`),
 )];
-const unmappedTones = tones.filter((t) => !css.includes(`.pc .text-${t}`));
+const unmappedTones = tones.filter((t) => !css.includes(`.pc .text-${t.replace('/', '\\/')}`));
 ck(`all ${tones.length} near-white status tones are mapped`, unmappedTones.length === 0,
   unmappedTones.join(', '));
 
