@@ -44,6 +44,21 @@ export const superAdminApi = {
     return request<ManagedDoctor[]>('/doctors');
   },
 
+  /** Correct a specialization's name. Doctors stay attached to it. */
+  async renameDepartment(id: string, name: string) {
+    return request<{ id: string; name: string }>(`/departments/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name }),
+    });
+  },
+
+  /** Remove a specialization. Refused while any doctor still belongs to it. */
+  async deleteDepartment(id: string) {
+    return request<{ deleted: boolean; name: string }>(`/departments/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
   async createDepartment(name: string) {
     return request<{ id: string; name: string }>('/departments', {
       method: 'POST',

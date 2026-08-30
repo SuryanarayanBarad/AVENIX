@@ -122,8 +122,8 @@ const SpecializationPicker: React.FC<{
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className={`w-full flex items-center justify-between gap-2 bg-black/20 border rounded-lg px-4 py-2 text-left outline-none transition-colors ${
-          open ? 'border-pink-500/50' : 'border-[var(--pc-border)] hover:border-[var(--pc-border)]'
+        className={`pc-input w-full flex items-center justify-between gap-2 px-4 py-2 text-left transition-colors ${
+          open ? 'border-[var(--pc-primary)]' : 'border-[var(--pc-border)] hover:border-[var(--pc-border)]'
         } ${selected ? 'text-white' : 'text-white/40'}`}
       >
         <span className="truncate">{selected ? selected.name : 'Select specialization...'}</span>
@@ -151,7 +151,7 @@ const SpecializationPicker: React.FC<{
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                   placeholder="Search specializations..."
-                  className="w-full bg-black/30 border border-[var(--pc-border)] rounded-lg pl-9 pr-3 py-2 text-sm text-white outline-none focus:border-pink-500/50"
+                  className="pc-input w-full py-2 pl-9 pr-3 text-sm"
                 />
               </div>
             </div>
@@ -166,7 +166,7 @@ const SpecializationPicker: React.FC<{
                       type="button"
                       onClick={() => { onChange(d.id); close(); }}
                       className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left hover:bg-white/5 transition-colors ${
-                        d.id === value ? 'text-pink-400' : 'text-white/80'
+                        d.id === value ? 'text-[var(--pc-primary)]' : 'text-white/80'
                       }`}
                     >
                       <span className="truncate">{d.name}</span>
@@ -187,7 +187,7 @@ const SpecializationPicker: React.FC<{
                       onClick={() => pickNew(name)}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-white/70 hover:bg-white/5 hover:text-white transition-colors disabled:opacity-50"
                     >
-                      <Plus className="w-3.5 h-3.5 shrink-0 text-pink-400" />
+                      <Plus className="w-3.5 h-3.5 shrink-0 text-[var(--pc-primary)]" />
                       <span className="truncate">{name}</span>
                     </button>
                   ))}
@@ -199,7 +199,7 @@ const SpecializationPicker: React.FC<{
                   type="button"
                   disabled={creating}
                   onClick={() => pickNew(query.trim())}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-pink-400 hover:bg-white/5 transition-colors disabled:opacity-50 border-t border-[var(--pc-border)] mt-1"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-[var(--pc-primary)] hover:bg-white/5 transition-colors disabled:opacity-50 border-t border-[var(--pc-border)] mt-1"
                 >
                   <Plus className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">Create "{query.trim()}"</span>
@@ -226,7 +226,7 @@ const Field: React.FC<{ label: string; children: React.ReactNode; className?: st
   </div>
 );
 
-const inputClass = 'w-full bg-black/20 border border-[var(--pc-border)] rounded-lg px-4 py-2 text-white outline-none focus:border-pink-500/50 transition-colors';
+const inputClass = 'w-full pc-input transition-colors';
 
 export const SuperAdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
@@ -305,6 +305,31 @@ export const SuperAdminDashboard: React.FC = () => {
     } catch (err: any) {
       alert(err.message || 'Failed to create specialization');
       return null;
+    }
+  };
+
+  const handleRenameDept = async (id: string, current: string) => {
+    const next = window.prompt(`Rename "${current}" to:`, current);
+    if (!next || next.trim() === current) return;
+    try {
+      const updated = await superAdminApi.renameDepartment(id, next.trim());
+      setDepartments(prev => prev
+        .map(d => (d.id === id ? updated : d))
+        .sort((a, b) => a.name.localeCompare(b.name)));
+      // Doctors carry the department name, so their rows have to follow it.
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || 'That specialization could not be renamed.');
+    }
+  };
+
+  const handleDeleteDept = async (id: string, name: string) => {
+    if (!window.confirm(`Remove "${name}"? Doctors must be moved off it first.`)) return;
+    try {
+      await superAdminApi.deleteDepartment(id);
+      setDepartments(prev => prev.filter(d => d.id !== id));
+    } catch (err: any) {
+      alert(err.message || 'That specialization could not be removed.');
     }
   };
 
@@ -405,31 +430,31 @@ export const SuperAdminDashboard: React.FC = () => {
     <div className="pc w-full h-full flex flex-col bg-[var(--pc-page)] p-6 space-y-6 text-[var(--pc-text)]">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <ShieldAlert className="w-6 h-6 text-pink-500" />
+          <ShieldAlert className="w-6 h-6 text-[#B54708]" />
           Super Admin Management
         </h2>
         <div className="flex flex-wrap bg-white/5 p-1 rounded-xl gap-1">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'overview' ? 'bg-pink-500/20 text-pink-400' : 'text-white/60 hover:text-white'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'overview' ? 'liquid-glass-active font-semibold' : 'text-[var(--pc-text-muted)] hover:text-[var(--pc-text)]'}`}
           >
             System Overview
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'users' ? 'bg-pink-500/20 text-pink-400' : 'text-white/60 hover:text-white'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'users' ? 'liquid-glass-active font-semibold' : 'text-[var(--pc-text-muted)] hover:text-[var(--pc-text)]'}`}
           >
             User Management
           </button>
           <button
             onClick={() => setActiveTab('doctors')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'doctors' ? 'bg-pink-500/20 text-pink-400' : 'text-white/60 hover:text-white'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'doctors' ? 'liquid-glass-active font-semibold' : 'text-[var(--pc-text-muted)] hover:text-[var(--pc-text)]'}`}
           >
             Doctors &amp; Specializations
           </button>
           <button
             onClick={() => setActiveTab('audit')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'audit' ? 'bg-pink-500/20 text-pink-400' : 'text-white/60 hover:text-white'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'audit' ? 'liquid-glass-active font-semibold' : 'text-[var(--pc-text-muted)] hover:text-[var(--pc-text)]'}`}
           >
             Audit Logs
           </button>
@@ -487,7 +512,7 @@ export const SuperAdminDashboard: React.FC = () => {
           <div className="bg-white/5 border border-[var(--pc-border)] rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-white/70 font-medium">Connected Cameras</h3>
-              <Camera className="w-5 h-5 text-pink-400" />
+              <Camera className="w-5 h-5 text-[var(--pc-primary)]" />
             </div>
             <div className="text-3xl font-bold text-white">{stats.activeCameras}</div>
           </div>
@@ -511,7 +536,7 @@ export const SuperAdminDashboard: React.FC = () => {
                   <td className="p-4">{u.name}</td>
                   <td className="p-4 text-white/70">{u.email}</td>
                   <td className="p-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${u.role === 'SUPER_ADMIN' ? 'bg-pink-500/20 text-pink-400' :
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${u.role === 'SUPER_ADMIN' ? 'bg-[#FEF3E7] text-[#B54708]' :
                         u.role === 'ADMIN' ? 'bg-[var(--pc-tint-lilac)]/20 text-[var(--pc-primary)]' :
                           'bg-white/10 text-white/70'
                       }`}>
@@ -548,7 +573,7 @@ export const SuperAdminDashboard: React.FC = () => {
           {/* Toolbar — counts on the left, the two actions on the right */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-sm text-white/60">
-              <Stethoscope className="w-4 h-4 text-pink-400" />
+              <Stethoscope className="w-4 h-4 text-[var(--pc-primary)]" />
               <span><span className="text-white font-semibold">{doctors.length}</span> doctors</span>
               <span className="text-white/25">•</span>
               <span><span className="text-white font-semibold">{departments.length}</span> specializations</span>
@@ -564,7 +589,7 @@ export const SuperAdminDashboard: React.FC = () => {
               </button>
               <button
                 onClick={() => setShowDoctorForm(!showDoctorForm)}
-                className="flex items-center justify-center gap-2 bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                className="pc-btn-primary flex items-center justify-center gap-2 px-4 py-2 text-[13px] font-semibold cursor-pointer"
               >
                 {showDoctorForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                 {showDoctorForm ? 'Cancel' : 'Add Doctor'}
@@ -593,14 +618,40 @@ export const SuperAdminDashboard: React.FC = () => {
                   onChange={e => setNewDeptName(e.target.value)}
                   required
                 />
-                <button type="submit" className="bg-pink-500 hover:bg-pink-600 text-white px-5 py-2 rounded-lg font-medium shrink-0">
+                <button type="submit" className="pc-btn-primary shrink-0 px-5 py-2 text-[13px] font-semibold cursor-pointer">
                   Add
                 </button>
               </form>
               <div className="flex flex-wrap gap-2">
+                {/* Each specialization can be corrected or removed. Without
+                    this a typo or a lower-case duplicate was permanent, and
+                    went on offering patients the same specialty twice. */}
                 {departments.map(d => (
-                  <span key={d.id} className="bg-white/10 px-3 py-1.5 rounded-full text-white/80 text-sm">
+                  <span
+                    key={d.id}
+                    className="liquid-glass group inline-flex items-center gap-1.5 rounded-full py-1.5 pl-3 pr-1.5 text-sm text-[var(--pc-text)]"
+                  >
                     {d.name}
+                    <button
+                      type="button"
+                      data-plain
+                      title={`Rename ${d.name}`}
+                      aria-label={`Rename ${d.name}`}
+                      onClick={() => handleRenameDept(d.id, d.name)}
+                      className="rounded p-1 text-[var(--pc-text-subtle)] transition-colors hover:text-[var(--pc-primary)] cursor-pointer"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                    <button
+                      type="button"
+                      data-plain
+                      title={`Remove ${d.name}`}
+                      aria-label={`Remove ${d.name}`}
+                      onClick={() => handleDeleteDept(d.id, d.name)}
+                      className="rounded p-1 text-[var(--pc-text-subtle)] transition-colors hover:text-[var(--pc-danger-text)] cursor-pointer"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
                   </span>
                 ))}
                 {departments.length === 0 && <div className="text-white/50 text-sm">No specializations yet.</div>}
@@ -741,7 +792,7 @@ export const SuperAdminDashboard: React.FC = () => {
                 <button
                   type="submit"
                   disabled={savingDoctor}
-                  className="w-full sm:w-auto bg-pink-500 hover:bg-pink-600 disabled:opacity-50 text-white px-6 py-2.5 rounded-lg font-medium transition-colors"
+                  className="pc-btn-primary w-full sm:w-auto px-6 py-2.5 text-[13px] font-semibold disabled:opacity-50 cursor-pointer"
                 >
                   {savingDoctor ? 'Saving...' : 'Save doctor'}
                 </button>
@@ -769,7 +820,7 @@ export const SuperAdminDashboard: React.FC = () => {
                   value={doctorSearch}
                   onChange={e => setDoctorSearch(e.target.value)}
                   placeholder="Search doctors..."
-                  className="w-full bg-black/20 border border-[var(--pc-border)] rounded-lg pl-9 pr-3 py-2 text-sm text-white outline-none focus:border-pink-500/50"
+                  className="pc-input w-full py-2 pl-9 pr-3 text-sm"
                 />
               </div>
             </div>
@@ -792,12 +843,23 @@ export const SuperAdminDashboard: React.FC = () => {
                         <div className="flex items-center gap-3">
                           <DoctorAvatar doctor={doc} />
                           {editingId === doc.id ? (
-                            <input
-                              type="text"
-                              className="bg-black/30 border border-[var(--pc-border)] rounded-lg px-2 py-1 text-white text-sm outline-none focus:border-pink-500/50 w-40"
-                              value={editDraft.name}
-                              onChange={e => setEditDraft({ ...editDraft, name: e.target.value })}
-                            />
+                            <div className="space-y-1.5">
+                              <input
+                                type="text"
+                                aria-label="Doctor name"
+                                className="pc-input w-44 px-2.5 py-1.5 text-sm"
+                                value={editDraft.name}
+                                onChange={e => setEditDraft({ ...editDraft, name: e.target.value })}
+                              />
+                              <input
+                                type="text"
+                                aria-label="Qualification"
+                                placeholder="MBBS, MD"
+                                className="pc-input w-44 px-2.5 py-1.5 text-xs"
+                                value={editDraft.qualification}
+                                onChange={e => setEditDraft({ ...editDraft, qualification: e.target.value })}
+                              />
+                            </div>
                           ) : (
                             <div className="min-w-0">
                               <div className="font-medium truncate">{doc.name}</div>
@@ -812,7 +874,7 @@ export const SuperAdminDashboard: React.FC = () => {
                       <td className="p-4">
                         {editingId === doc.id ? (
                           <select
-                            className="bg-black/30 border border-[var(--pc-border)] rounded-lg px-2 py-1 text-white text-sm outline-none focus:border-pink-500/50 max-w-[10rem]"
+                            className="pc-input px-2.5 py-1.5 text-sm max-w-[10rem]"
                             value={editDraft.departmentId}
                             onChange={e => setEditDraft({ ...editDraft, departmentId: e.target.value })}
                           >
@@ -828,15 +890,35 @@ export const SuperAdminDashboard: React.FC = () => {
                       </td>
                       <td className="p-4 text-white/70 hidden sm:table-cell">
                         {editingId === doc.id ? (
-                          <input
-                            type="number"
-                            min={0}
-                            className="bg-black/30 border border-[var(--pc-border)] rounded-lg px-2 py-1 text-white text-sm outline-none focus:border-pink-500/50 w-20"
-                            value={editDraft.experienceYears || ''}
-                            onChange={e => setEditDraft({ ...editDraft, experienceYears: Number(e.target.value) })}
-                          />
+                          <div className="space-y-1.5">
+                            <label className="block">
+                              <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-[var(--pc-text-subtle)]">Years</span>
+                              <input
+                                type="number"
+                                min={0}
+                                className="pc-input w-24 px-2.5 py-1.5 text-sm"
+                                value={editDraft.experienceYears || ''}
+                                onChange={e => setEditDraft({ ...editDraft, experienceYears: Number(e.target.value) })}
+                              />
+                            </label>
+                            <label className="block">
+                              <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-[var(--pc-text-subtle)]">Fee</span>
+                              <input
+                                type="number"
+                                min={0}
+                                className="pc-input w-24 px-2.5 py-1.5 text-sm"
+                                value={editDraft.consultationFee || ''}
+                                onChange={e => setEditDraft({ ...editDraft, consultationFee: Number(e.target.value) })}
+                              />
+                            </label>
+                          </div>
                         ) : (
-                          <span className="text-sm">{doc.experienceYears ? `${doc.experienceYears} yrs` : '—'}</span>
+                          <div className="text-sm">
+                            <div>{doc.experienceYears ? `${doc.experienceYears} yrs` : '—'}</div>
+                            {doc.consultationFee > 0 && (
+                              <div className="text-xs text-[var(--pc-text-muted)]">Fee {doc.consultationFee}</div>
+                            )}
+                          </div>
                         )}
                       </td>
                       <td className="p-4 text-right">

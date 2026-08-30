@@ -4172,12 +4172,19 @@ app.post('/api/super-admin/departments', apiRoute(async (req, res) => {
   if (!superAdmin) return;
 
   const body = bodyAsObject(req);
-  const name = requiredString(body.name, 'Specialization name', 80);
+  const name = requiredString(body.name, 'Specialization name', 80).trim();
   const facility = await getCachedFacilityOrThrow();
 
-  const existing = await prisma.department.findFirst({ where: { facilityId: facility.id, name } });
+  // Case-insensitive, because "cardiology" and "Cardiology" are the same
+  // specialization to everyone except a string comparison. The exact check let
+  // both exist, which then splits a doctor list in two and offers a patient the
+  // same specialty twice.
+  const existing = await prisma.department.findFirst({
+    where: { facilityId: facility.id, name: { equals: name, mode: 'insensitive' } },
+  });
   if (existing) {
-    throw new ApiError(409, 'DEPARTMENT_EXISTS', 'That specialization already exists.');
+    throw new ApiError(409, 'DEPARTMENT_EXISTS',
+      `That specialization already exists as "${existing.name}".`);
   }
 
   const department = await DepartmentRepo.create(facility.id, name);
@@ -4185,6 +4192,77 @@ app.post('/api/super-admin/departments', apiRoute(async (req, res) => {
   await recordAudit({ id: superAdmin.id, role: 'SUPER_ADMIN' }, 'create_department', 'department', department.id);
 
   res.json({ id: department.id, name: department.name });
+}));
+
+
+/**
+ * PATCH /api/super-admin/departments/:id — rename a specialization.
+ *
+ * Specializations could be created but never corrected, so a typo or a
+ * lower-case duplicate was permanent and went on offering patients the same
+ * specialty twice. Renaming keeps every doctor attached, which is the whole
+ * point: the alternative was deleting and re-adding, which detaches them.
+ */
+app.patch('/api/super-admin/departments/:id', apiRoute(async (req, res) => {
+  const superAdmin = await requireSuperAdmin(req, res);
+  if (!superAdmin) return;
+
+  const name = requiredString(bodyAsObject(req).name, 'Specialization name', 80).trim();
+  const facility = await getCachedFacilityOrThrow();
+
+  const department = await prisma.department.findFirst({
+    where: { id: req.params.id, facilityId: facility.id },
+  });
+  if (!department) throw new ApiError(404, 'NOT_FOUND', 'That specialization was not found.');
+
+  const clash = await prisma.department.findFirst({
+    where: {
+      facilityId: facility.id,
+      name: { equals: name, mode: 'insensitive' },
+      id: { not: department.id },
+    },
+  });
+  if (clash) {
+    throw new ApiError(409, 'DEPARTMENT_EXISTS', `Another specialization is already called "${clash.name}".`);
+  }
+
+  const updated = await prisma.department.update({ where: { id: department.id }, data: { name } });
+  invalidateReferenceCache();
+  await recordAudit({ id: superAdmin.id, role: 'SUPER_ADMIN' }, 'rename_department', 'department', updated.id);
+
+  res.json({ id: updated.id, name: updated.name });
+}));
+
+/**
+ * DELETE /api/super-admin/departments/:id — remove a specialization.
+ *
+ * Refused while any doctor still belongs to it. Every doctor must have a
+ * department, so removing one out from under them would leave rows pointing at
+ * nothing — and the fix for a duplicate is to move its doctors first, which the
+ * refusal says explicitly rather than failing on a foreign key.
+ */
+app.delete('/api/super-admin/departments/:id', apiRoute(async (req, res) => {
+  const superAdmin = await requireSuperAdmin(req, res);
+  if (!superAdmin) return;
+
+  const facility = await getCachedFacilityOrThrow();
+  const department = await prisma.department.findFirst({
+    where: { id: req.params.id, facilityId: facility.id },
+    include: { _count: { select: { doctors: true } } },
+  });
+  if (!department) throw new ApiError(404, 'NOT_FOUND', 'That specialization was not found.');
+
+  if (department._count.doctors > 0) {
+    throw new ApiError(409, 'DEPARTMENT_IN_USE',
+      `${department._count.doctors} doctor(s) are still listed under "${department.name}". ` +
+      'Move them to another specialization first.');
+  }
+
+  await prisma.department.delete({ where: { id: department.id } });
+  invalidateReferenceCache();
+  await recordAudit({ id: superAdmin.id, role: 'SUPER_ADMIN' }, 'delete_department', 'department', department.id);
+
+  res.json({ deleted: true, name: department.name });
 }));
 
 app.get('/api/super-admin/doctors', apiRoute(async (req, res) => {
