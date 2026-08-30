@@ -51,7 +51,7 @@ export const ApproachingModal: React.FC<ApproachingModalProps> = ({
       >
         
         {/* Header alert stripe */}
-        <div className="bg-gradient-to-r from-amber-500/30 via-orange-500/20 to-purple-500/20 text-white p-6 relative border-b border-white/10 backdrop-blur-xl">
+        <div className="bg-gradient-to-r from-amber-500/30 via-orange-500/20 to-[#3538CD]/20 text-white p-6 relative border-b border-white/10 backdrop-blur-xl">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-white/60 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
@@ -115,7 +115,7 @@ export const ApproachingModal: React.FC<ApproachingModalProps> = ({
           <div className="space-y-2.5 pt-1">
             <button
               onClick={onConfirmOnWay}
-              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:from-[#3538CD] hover:to-purple-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#2E37A4]/30 active:scale-98 transition-all cursor-pointer border border-white/20"
+              className="w-full py-3.5 px-4 rounded-2xl bg-[var(--pc-primary)] hover:from-[#3538CD] hover:to-[#3538CD] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#2E37A4]/30 active:scale-98 transition-all cursor-pointer border border-white/20"
             >
               <span>I'm on my way</span>
               <ArrowRight className="w-4 h-4" />

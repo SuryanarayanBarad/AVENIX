@@ -51,8 +51,8 @@ const RANGE_OPTIONS: Array<{ value: AnalyticsRange; label: string }> = [
 ];
 
 const departmentColors = [
-  'bg-gradient-to-r from-[#2E37A4] to-purple-600',
-  'bg-gradient-to-r from-blue-400 to-indigo-500',
+  'bg-[var(--pc-primary)]',
+  'bg-gradient-to-r from-blue-400 to-[#3538CD]',
   'bg-gradient-to-r from-emerald-400 to-teal-500',
   'bg-gradient-to-r from-[#00D3C7] to-rose-500',
   'bg-gradient-to-r from-cyan-400 to-blue-500',
@@ -282,7 +282,7 @@ export const AnalyticsView: React.FC = () => {
             type="button"
             onClick={handleExport}
             disabled={downloading}
-            className="flex items-center gap-1.5 rounded-2xl border border-white/20 bg-gradient-to-r from-[#2E37A4] to-purple-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-[#2E37A4]/30 transition-all cursor-pointer hover:from-[#3538CD] hover:to-purple-500 disabled:cursor-wait disabled:opacity-70"
+            className="flex items-center gap-1.5 rounded-2xl border border-white/20 bg-[var(--pc-primary)] px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-[#2E37A4]/30 transition-all cursor-pointer hover:from-[#3538CD] hover:to-[#3538CD] disabled:cursor-wait disabled:opacity-70"
           >
             <Download className="h-3.5 w-3.5" />
             <span>{downloading ? 'Exporting...' : 'Export Report'}</span>

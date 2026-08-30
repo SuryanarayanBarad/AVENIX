@@ -266,7 +266,7 @@ export const TokenManageModal: React.FC<TokenManageModalProps> = ({
               type="button"
               disabled={busy}
               onClick={save}
-              className="rounded-2xl border border-white/20 bg-gradient-to-r from-[#2E37A4] to-purple-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-[#2E37A4]/30 hover:opacity-90 disabled:opacity-50 cursor-pointer"
+              className="rounded-2xl border border-white/20 bg-[var(--pc-primary)] px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-[#2E37A4]/30 hover:opacity-90 disabled:opacity-50 cursor-pointer"
             >
               {busy ? 'Saving…' : 'Save changes'}
             </button>

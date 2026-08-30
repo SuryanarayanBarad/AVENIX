@@ -98,7 +98,7 @@ export const UsersRolesView: React.FC = () => {
                   <td className="p-4 text-white/70">{u.email}</td>
                   <td className="p-4">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${u.role === 'SUPER_ADMIN' ? 'bg-pink-500/20 text-pink-400' :
-                        u.role === 'ADMIN' ? 'bg-purple-500/20 text-purple-400' :
+                        u.role === 'ADMIN' ? 'bg-[var(--pc-tint-lilac)]/20 text-[var(--pc-primary)]' :
                           u.role === 'DOCTOR' ? 'bg-blue-500/20 text-blue-300' :
                             'bg-white/10 text-white/70'
                       }`}>

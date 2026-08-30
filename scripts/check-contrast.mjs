@@ -85,5 +85,19 @@ for (const file of files) {
 }
 ck('no SVG mark is painted white', whitePaint.length === 0, whitePaint.slice(0, 3).join(' | '));
 
+// 6. The kit has one accent. Tailwind's purple, violet, indigo and fuchsia
+//    are not in it, and a selected control rendered in one reads as a
+//    different product — which is exactly how the doctor dashboard's segments
+//    came out violet while everything around them was indigo glass.
+const offPalette = [];
+for (const file of files.concat([join(root, 'src/App.tsx')])) {
+  const text = readFileSync(file, 'utf8');
+  for (const m of text.matchAll(/\b(?:bg|text|from|to|via|border|shadow|ring)-(?:purple|violet|indigo|fuchsia)-\d+/g)) {
+    offPalette.push(`${file.split('/').pop()}: ${m[0]}`);
+  }
+}
+ck('nothing paints outside the kit palette', offPalette.length === 0,
+  offPalette.slice(0, 3).join(' | '));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

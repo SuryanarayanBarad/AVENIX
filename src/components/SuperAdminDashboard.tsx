@@ -480,7 +480,7 @@ export const SuperAdminDashboard: React.FC = () => {
           <div className="bg-white/5 border border-[var(--pc-border)] rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-white/70 font-medium">Active Tokens</h3>
-              <FileText className="w-5 h-5 text-purple-400" />
+              <FileText className="w-5 h-5 text-[var(--pc-primary)]" />
             </div>
             <div className="text-3xl font-bold text-white">{stats.activeTokens}</div>
           </div>
@@ -512,7 +512,7 @@ export const SuperAdminDashboard: React.FC = () => {
                   <td className="p-4 text-white/70">{u.email}</td>
                   <td className="p-4">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${u.role === 'SUPER_ADMIN' ? 'bg-pink-500/20 text-pink-400' :
-                        u.role === 'ADMIN' ? 'bg-purple-500/20 text-purple-400' :
+                        u.role === 'ADMIN' ? 'bg-[var(--pc-tint-lilac)]/20 text-[var(--pc-primary)]' :
                           'bg-white/10 text-white/70'
                       }`}>
                       {u.role}

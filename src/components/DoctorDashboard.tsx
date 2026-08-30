@@ -87,7 +87,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ user, onLogout
       <header className="bg-white/[0.05] backdrop-blur-2xl border-b border-white/[0.12] p-4 sm:p-5 sticky top-0 z-10 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-4">
-            <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-[#2E37A4] via-indigo-500 to-[#00D3C7] flex items-center justify-center text-white shadow-lg shadow-[#2E37A4]/25 border border-white/20">
+            <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-[#2E37A4] via-[#3538CD] to-[#00D3C7] flex items-center justify-center text-white shadow-lg shadow-[#2E37A4]/25 border border-white/20">
               <UserIcon className="text-white" size={20} />
             </div>
             <div>

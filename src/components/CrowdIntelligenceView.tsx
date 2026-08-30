@@ -187,7 +187,7 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
               const heatColors = {
                 Critical: 'bg-rose-500/25 border-rose-500/60 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.25)]',
                 Congested: 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.2)]',
-                Moderate: 'bg-[#2E37A4]/20 border-[#2E37A4]/50 text-purple-200 shadow-[0_0_15px_rgba(46,55,164,0.2)]',
+                Moderate: 'bg-[#2E37A4]/20 border-[#2E37A4]/50 text-[var(--pc-primary)] shadow-[0_0_15px_rgba(46,55,164,0.2)]',
                 Optimal: 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300',
               };
 

@@ -391,7 +391,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
                 <button
                   type="button"
                   onClick={onGetNewToken ?? onBackToKiosk}
-                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-gradient-to-r from-[#2E37A4] to-purple-600 px-4 py-3 text-xs font-bold text-white shadow-lg shadow-[#2E37A4]/30 hover:opacity-90 cursor-pointer"
+                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-[var(--pc-primary)] px-4 py-3 text-xs font-bold text-white shadow-lg shadow-[#2E37A4]/30 hover:opacity-90 cursor-pointer"
                 >
                   <Ticket className="h-4 w-4" />
                   Get a new token
@@ -486,7 +486,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
                         key={`${t.code}-${i}`} 
                         className={`relative flex items-center justify-between p-3 rounded-2xl transition-all ${
                           isMine 
-                            ? 'bg-gradient-to-r from-[#2E37A4]/20 to-purple-500/20 border border-[#2E37A4]/30 shadow-lg shadow-[#2E37A4]/10 scale-[1.02]' 
+                            ? 'bg-gradient-to-r from-[#2E37A4]/20 to-[#3538CD]/20 border border-[#2E37A4]/30 shadow-lg shadow-[#2E37A4]/10 scale-[1.02]' 
                             : 'bg-white/5 border border-white/[0.05]'
                         }`}
                       >

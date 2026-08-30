@@ -83,7 +83,7 @@ export const MyPatientsView: React.FC<MyPatientsViewProps> = ({ refreshKey = 0 }
                   onClick={() => setScope(option)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize cursor-pointer ${
                     scope === option
-                      ? 'bg-gradient-to-r from-[#2E37A4]/30 to-purple-500/30 text-white font-bold border border-[#2E37A4]/50'
+                      ? 'liquid-glass-active font-semibold'
                       : 'text-white/60 hover:text-white hover:bg-white/[0.08] border border-transparent'
                   }`}
                 >

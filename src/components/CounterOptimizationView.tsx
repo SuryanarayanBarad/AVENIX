@@ -120,7 +120,7 @@ export const CounterOptimizationView: React.FC<CounterOptimizationViewProps> = (
           <button
             onClick={handleRunOptimization}
             disabled={isRunning}
-            className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:opacity-90 text-white font-bold text-xs shadow-lg shadow-[#2E37A4]/30 flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer border border-white/20"
+            className="px-6 py-2.5 rounded-2xl bg-[var(--pc-primary)] hover:opacity-90 text-white font-bold text-xs shadow-lg shadow-[#2E37A4]/30 flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer border border-white/20"
           >
             {isRunning ? (
               <>
@@ -187,9 +187,9 @@ export const CounterOptimizationView: React.FC<CounterOptimizationViewProps> = (
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-bold text-white/40">±11.4</span>
               <ArrowRight className="w-3.5 h-3.5 text-white/40" />
-              <span className="text-2xl font-light text-purple-300 font-display">±2.8</span>
+              <span className="text-2xl font-light text-[var(--pc-primary)] font-display">±2.8</span>
             </div>
-            <span className="text-[10px] font-bold text-purple-300 block">Balanced Counter Stress</span>
+            <span className="text-[10px] font-bold text-[var(--pc-primary)] block">Balanced Counter Stress</span>
           </div>
 
         </div>

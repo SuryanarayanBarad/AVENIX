@@ -285,7 +285,7 @@ const SegmentedSwitcher: React.FC<{
             {isActive && (
               <motion.span
                 layoutId="tracker-segment-highlight"
-                className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#2E37A4]/30 to-purple-500/30 border border-[#2E37A4]/50 shadow-[0_0_15px_rgba(46,55,164,0.16)]"
+                className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#2E37A4]/30 to-[#3538CD]/30 border border-[#2E37A4]/50 shadow-[0_0_15px_rgba(46,55,164,0.16)]"
                 transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
               />
             )}

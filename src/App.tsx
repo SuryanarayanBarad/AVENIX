@@ -361,7 +361,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-[#0a0a16] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#2E37A4] via-indigo-500 to-[#00D3C7] flex items-center justify-center text-white shadow-lg shadow-[#2E37A4]/25 animate-pulse">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#2E37A4] via-[#3538CD] to-[#00D3C7] flex items-center justify-center text-white shadow-lg shadow-[#2E37A4]/25 animate-pulse">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
           </div>
           <p className="text-white/60 font-medium text-sm tracking-wide">Initializing QueueMind AI...</p>

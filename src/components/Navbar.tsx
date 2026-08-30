@@ -79,7 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleNav('landing')}
               className="flex items-center gap-2.5 text-left group cursor-pointer bg-transparent"
             >
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#2E37A4] via-indigo-500 to-[#00D3C7] flex items-center justify-center text-white shadow-lg shadow-[#2E37A4]/25 border border-white/20 group-hover:scale-105 transition-transform">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#2E37A4] via-[#3538CD] to-[#00D3C7] flex items-center justify-center text-white shadow-lg shadow-[#2E37A4]/25 border border-white/20 group-hover:scale-105 transition-transform">
                 <Activity className="w-5 h-5" />
               </div>
               <div>

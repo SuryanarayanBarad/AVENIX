@@ -334,7 +334,7 @@ export function CameraMonitorView() {
               <button
                 onClick={handleAddCamera}
                 disabled={connecting || !newCameraName.trim()}
-                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-[#2E37A4] to-purple-600 text-white font-bold text-sm rounded-2xl shadow-lg shadow-[#2E37A4]/20 hover:opacity-90 transition-all cursor-pointer disabled:opacity-50 border border-white/10"
+                className="flex-1 px-4 py-2.5 bg-[var(--pc-primary)] text-white font-bold text-sm rounded-2xl shadow-lg shadow-[#2E37A4]/20 hover:opacity-90 transition-all cursor-pointer disabled:opacity-50 border border-white/10"
               >
                 {connecting ? 'Connecting...' : 'Connect'}
               </button>
@@ -357,7 +357,7 @@ export function CameraMonitorView() {
           </p>
           <button
             onClick={() => setShowAddForm(true)}
-            className="px-6 py-2.5 bg-gradient-to-r from-[#2E37A4] to-purple-600 text-white font-semibold text-sm rounded-xl shadow-lg shadow-[#2E37A4]/20 hover:opacity-90 transition-all cursor-pointer border border-white/10"
+            className="px-6 py-2.5 bg-[var(--pc-primary)] text-white font-semibold text-sm rounded-xl shadow-lg shadow-[#2E37A4]/20 hover:opacity-90 transition-all cursor-pointer border border-white/10"
           >
             Add Your First Camera
           </button>

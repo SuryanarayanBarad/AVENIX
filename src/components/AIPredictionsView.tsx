@@ -114,7 +114,7 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
           <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={onNavigateCounterOpt}
-              className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:opacity-90 text-white font-bold text-xs shadow-lg shadow-[#2E37A4]/30 active:scale-95 transition-all flex items-center gap-2 cursor-pointer border border-white/20"
+              className="px-4 py-2.5 rounded-2xl bg-[var(--pc-primary)] hover:opacity-90 text-white font-bold text-xs shadow-lg shadow-[#2E37A4]/30 active:scale-95 transition-all flex items-center gap-2 cursor-pointer border border-white/20"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               <span>Deploy Counter Balancer</span>

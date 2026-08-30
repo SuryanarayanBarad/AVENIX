@@ -310,7 +310,7 @@ export const VisitorKiosk: React.FC<VisitorKioskProps> = ({
                     if (onViewToken) onViewToken(issuedToken);
                     if (onTokenGenerated) onTokenGenerated(issuedToken);
                   }}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:from-[#3538CD] hover:to-purple-500 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#2E37A4]/30 cursor-pointer active:scale-98 transition-all border border-white/20"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-[var(--pc-primary)] hover:from-[#3538CD] hover:to-[#3538CD] text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#2E37A4]/30 cursor-pointer active:scale-98 transition-all border border-white/20"
                 >
                   <span>{t.trackOnMobile}</span>
                   <ArrowRight className="w-4 h-4" />

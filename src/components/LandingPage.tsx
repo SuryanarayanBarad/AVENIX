@@ -67,7 +67,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             {/* Main Headline */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white font-display leading-[1.1]">
               Smarter Queues. <br className="hidden sm:inline" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2E37A4] via-purple-300 to-[#00D3C7]">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2E37A4] via-[#3538CD] to-[#00D3C7]">
                 Fairer Service.
               </span>
             </h1>
@@ -81,7 +81,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="flex flex-wrap items-center justify-center gap-3.5 pt-4">
               <button
                 onClick={() => launch('admin')}
-                className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:from-[#3538CD] hover:to-purple-500 text-white font-semibold text-sm shadow-lg shadow-[#2E37A4]/30 flex items-center gap-2 group transition-all cursor-pointer active:scale-95 border border-white/20"
+                className="px-6 py-3.5 rounded-2xl bg-[var(--pc-primary)] hover:from-[#3538CD] hover:to-[#3538CD] text-white font-semibold text-sm shadow-lg shadow-[#2E37A4]/30 flex items-center gap-2 group transition-all cursor-pointer active:scale-95 border border-white/20"
               >
                 <LayoutDashboard className="w-4 h-4" />
                 <span>Launch Admin Operations</span>
@@ -168,7 +168,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <span>Northwest Regional Triage</span>
             </div>
             <div className="flex items-center gap-2 text-white/80 font-bold text-sm tracking-wide">
-              <Building2 className="w-4 h-4 text-purple-400" />
+              <Building2 className="w-4 h-4 text-[var(--pc-primary)]" />
               <span>Apex Specialty Hospital</span>
             </div>
           </div>
@@ -203,10 +203,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {/* Step 2 */}
           <div className="glass-panel p-6 rounded-3xl relative group hover:border-[#2E37A4]/50 transition-all">
-            <div className="w-11 h-11 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 flex items-center justify-center mb-4 shadow-inner">
+            <div className="w-11 h-11 rounded-2xl bg-[var(--pc-tint-lilac)] border border-[#C7C9EC] text-[var(--pc-primary)] flex items-center justify-center mb-4 shadow-inner">
               <Cpu className="w-5 h-5" />
             </div>
-            <div className="text-xs font-bold text-indigo-300 uppercase tracking-wider mb-1 font-mono">02. PREDICT</div>
+            <div className="text-xs font-bold text-[var(--pc-primary)] uppercase tracking-wider mb-1 font-mono">02. PREDICT</div>
             <h4 className="text-lg font-bold text-white mb-2">AI Inflow Forecast</h4>
             <p className="text-xs text-white/65 leading-relaxed">
               Neural models calculate wait times and forecast arrival surges 15 to 60 minutes before bottlenecks form.
@@ -215,10 +215,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {/* Step 3 */}
           <div className="glass-panel p-6 rounded-3xl relative group hover:border-[#2E37A4]/50 transition-all">
-            <div className="w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-300 flex items-center justify-center mb-4 shadow-inner">
+            <div className="w-11 h-11 rounded-2xl bg-[var(--pc-tint-lilac)]/15 border border-[#C7C9EC]/30 text-[var(--pc-primary)] flex items-center justify-center mb-4 shadow-inner">
               <SlidersHorizontal className="w-5 h-5" />
             </div>
-            <div className="text-xs font-bold text-purple-300 uppercase tracking-wider mb-1 font-mono">03. OPTIMIZE</div>
+            <div className="text-xs font-bold text-[var(--pc-primary)] uppercase tracking-wider mb-1 font-mono">03. OPTIMIZE</div>
             <h4 className="text-lg font-bold text-white mb-2">Dynamic Rebalance</h4>
             <p className="text-xs text-white/65 leading-relaxed">
               Underutilized counters are dynamically shifted to overloaded queues with clinical fairness protections for elderly & pediatric cases.

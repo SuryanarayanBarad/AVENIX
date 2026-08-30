@@ -111,7 +111,7 @@ const DEFAULT_SERVICES: VisitorServiceOption[] = [
 
 const statusTone: Record<PublicQueueToken['status'], string> = {
   Waiting: 'bg-amber-500/15 text-amber-200 border-amber-400/30',
-  Approaching: 'bg-[#2E37A4]/20 text-purple-100 border-[#2E37A4]/40',
+  Approaching: 'bg-[#2E37A4]/20 text-[var(--pc-primary)] border-[#2E37A4]/40',
   Serving: 'bg-emerald-500/15 text-emerald-200 border-emerald-400/30',
   Completed: 'bg-white/[0.07] text-white/70 border-white/[0.12]',
   Cancelled: 'bg-rose-500/15 text-rose-200 border-rose-400/30',

@@ -121,7 +121,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
         <div className="p-5 rounded-3xl glass-panel-elevated space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-white/60">Active Counters</span>
-            <div className="w-9 h-9 rounded-2xl bg-purple-500/20 text-purple-300 flex items-center justify-center border border-purple-500/30 shadow-sm">
+            <div className="w-9 h-9 rounded-2xl bg-[var(--pc-tint-lilac)]/20 text-[var(--pc-primary)] flex items-center justify-center border border-[#C7C9EC]/30 shadow-sm">
               <SlidersHorizontal className="w-4.5 h-4.5" />
             </div>
           </div>
@@ -182,7 +182,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
             {!recommendationApplied && (
               <button
                 onClick={onApplyRecommendation}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:from-[#3538CD] hover:to-purple-500 text-white font-bold text-xs shadow-lg shadow-[#2E37A4]/30 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 border border-white/20"
+                className="px-4 py-2.5 rounded-2xl bg-[var(--pc-primary)] hover:from-[#3538CD] hover:to-[#3538CD] text-white font-bold text-xs shadow-lg shadow-[#2E37A4]/30 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 border border-white/20"
               >
                 <Zap className="w-3.5 h-3.5 text-amber-300" />
                 <span>Apply Recommendation</span>

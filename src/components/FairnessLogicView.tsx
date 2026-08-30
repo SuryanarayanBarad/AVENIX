@@ -50,7 +50,7 @@ export const FairnessLogicView: React.FC<FairnessLogicViewProps> = ({
 
         <button
           onClick={() => onOpenCopilot('Explain the mathematical fairness principles behind QueueMind multi-factor routing')}
-          className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#2E37A4] to-purple-600 hover:opacity-90 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-[#2E37A4]/30 transition-all self-start sm:self-auto cursor-pointer border border-white/20"
+          className="px-4 py-2.5 rounded-2xl bg-[var(--pc-primary)] hover:opacity-90 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-[#2E37A4]/30 transition-all self-start sm:self-auto cursor-pointer border border-white/20"
         >
           <Sparkles className="w-4 h-4 text-white animate-pulse" />
           <span>Audit Fairness Report</span>
