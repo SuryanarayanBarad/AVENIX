@@ -50,6 +50,46 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
     lowerBoundWait: Math.round(p.lowerBoundWait * (1 + (surgeMultiplier - 1) * 1.4)),
   }));
 
+  // ---- chart geometry -------------------------------------------------
+  // Both charts used fixed multipliers (`value * 1.2`, `160 - wait * 3.5`) with
+  // no scale, so a busy forecast drew bars straight out of the frame and the
+  // wait points drifted off the line. Deriving the scale from the data keeps
+  // every series inside the plot at any horizon or surge setting.
+  const PLOT_TOP = 26;
+  const PLOT_BOTTOM = 150;
+  const PLOT_HEIGHT = PLOT_BOTTOM - PLOT_TOP;
+
+  const maxArrivals = Math.max(
+    1,
+    ...scaledPredictions.map((p) => Math.max(p.historicalArrivals, p.predictedArrivals)),
+  );
+  const arrivalY = (value: number) => PLOT_BOTTOM - (value / maxArrivals) * PLOT_HEIGHT;
+
+  // Always keep the 20-minute SLA line on screen, even on a calm forecast.
+  const maxWait = Math.max(
+    25,
+    ...scaledPredictions.map((p) => Math.max(p.upperBoundWait, p.predictedWaitMin)),
+  );
+  const waitY = (value: number) => PLOT_BOTTOM - (value / maxWait) * PLOT_HEIGHT;
+  const pointX = (i: number) => 30 + i * barStep + 16;
+
+  /** Smooth-ish series path; a single point still renders as a dot. */
+  const linePath = scaledPredictions
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${pointX(i)},${waitY(p.predictedWaitMin)}`)
+    .join(' ');
+
+  /** Confidence band drawn from the real bounds: up the highs, back the lows. */
+  const bandPath = scaledPredictions.length > 1
+    ? [
+        ...scaledPredictions.map((p, i) => `${i === 0 ? 'M' : 'L'} ${pointX(i)},${waitY(p.upperBoundWait)}`),
+        ...scaledPredictions.slice().reverse().map((p, i) => {
+          const idx = scaledPredictions.length - 1 - i;
+          return `L ${pointX(idx)},${waitY(p.lowerBoundWait)}`;
+        }),
+        'Z',
+      ].join(' ')
+    : '';
+
   return (
     <div className="space-y-6 pb-12 text-white">
       
@@ -185,36 +225,57 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
           {/* SVG Inflow Bars */}
           <div className="h-56 w-full pt-4">
             <svg className="w-full h-full overflow-visible" viewBox="0 0 500 180">
-              <line x1="0" y1="30" x2="500" y2="30" stroke="var(--pc-border)" strokeWidth="1" />
-              <line x1="0" y1="75" x2="500" y2="75" stroke="var(--pc-border)" strokeWidth="1" />
-              <line x1="0" y1="120" x2="500" y2="120" stroke="var(--pc-border)" strokeWidth="1" />
+              {/* Gridlines, each labelled so the bars can be read as numbers */}
+              {[0, 0.5, 1].map((frac) => {
+                const y = PLOT_BOTTOM - frac * PLOT_HEIGHT;
+                return (
+                  <g key={frac}>
+                    <line x1="28" y1={y} x2="500" y2={y} stroke="var(--pc-border)" strokeWidth="1" />
+                    <text x="24" y={y + 3} fontSize="9" fill="var(--pc-text-muted)" textAnchor="end">
+                      {Math.round(maxArrivals * frac)}
+                    </text>
+                  </g>
+                );
+              })}
 
               {scaledPredictions.map((pt, i) => {
                 const x = 30 + i * barStep;
-                const histHeight = pt.historicalArrivals * 1.2;
-                const predHeight = pt.predictedArrivals * 1.2;
+                const histY = arrivalY(pt.historicalArrivals);
+                const predY = arrivalY(pt.predictedArrivals);
 
                 return (
                   <g key={pt.timeSlot}>
-                    {/* Historical bar */}
+                    {/* Historical bar — was painted --pc-page, invisible on a white card */}
                     <rect
                       x={x}
-                      y={150 - histHeight}
+                      y={histY}
                       width="16"
-                      height={histHeight}
+                      height={Math.max(0, PLOT_BOTTOM - histY)}
                       rx="4"
-                      fill="var(--pc-page)"
+                      fill="var(--pc-border-strong)"
                     />
 
-                    {/* Predicted bar with gradient / glow */}
+                    {/* Predicted bar */}
                     <rect
                       x={x + 18}
-                      y={150 - predHeight}
+                      y={predY}
                       width="16"
-                      height={predHeight}
+                      height={Math.max(0, PLOT_BOTTOM - predY)}
                       rx="4"
-                      fill="#2E37A4"
+                      fill="var(--pc-primary)"
                     />
+
+                    {/* Predicted value, above its bar */}
+                    <text
+                      x={x + 26}
+                      y={predY - 5}
+                      fontSize="9"
+                      fontWeight="bold"
+                      fill="var(--pc-primary)"
+                      textAnchor="middle"
+                    >
+                      {pt.predictedArrivals}
+                    </text>
 
                     {/* Time label */}
                     <text x={x + 16} y="170" fontSize="10" fill="var(--pc-text-muted)" textAnchor="middle">
@@ -243,51 +304,63 @@ export const AIPredictionsView: React.FC<AIPredictionsViewProps> = ({
           {/* SVG Wait Time Forecast Line & Confidence Interval Area */}
           <div className="h-56 w-full pt-4">
             <svg className="w-full h-full overflow-visible" viewBox="0 0 500 180">
-              {/* SLA Target Line */}
-              <line x1="0" y1="80" x2="500" y2="80" stroke="#f43f5e" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.8" />
-              <text x="490" y="75" fontSize="9" fill="#f43f5e" fontWeight="bold" textAnchor="end">SLA MAX (20m)</text>
+              {/* Gridlines with minute labels */}
+              {[0, 0.5, 1].map((frac) => {
+                const y = PLOT_BOTTOM - frac * PLOT_HEIGHT;
+                return (
+                  <g key={frac}>
+                    <line x1="28" y1={y} x2="500" y2={y} stroke="var(--pc-border)" strokeWidth="1" />
+                    <text x="24" y={y + 3} fontSize="9" fill="var(--pc-text-muted)" textAnchor="end">
+                      {Math.round(maxWait * frac)}m
+                    </text>
+                  </g>
+                );
+              })}
 
-              {/* Confidence Band Area */}
-              <path
-                d="M 30,130 Q 150,90 250,30 T 450,110 L 450,150 Q 350,90 250,70 T 30,150 Z"
-                fill="#2E37A4"
-                opacity="0.12"
+              {/* SLA target, positioned on the same scale as the series */}
+              <line
+                x1="28" y1={waitY(20)} x2="500" y2={waitY(20)}
+                stroke="var(--pc-danger)" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.9"
               />
+              <text x="498" y={waitY(20) - 5} fontSize="9" fill="var(--pc-danger-text)" fontWeight="bold" textAnchor="end">
+                SLA MAX (20m)
+              </text>
 
-              {/* Predicted Line */}
-              <path
-                d="M 30,140 Q 150,100 250,48 T 450,130"
-                fill="none"
-                stroke="#2E37A4"
-                strokeWidth="3.5"
-                filter="drop-shadow(0 0 6px rgba(46,55,164,0.7))"
-              />
+              {/* Confidence band, from the forecast's own bounds */}
+              {bandPath && <path d={bandPath} fill="var(--pc-primary)" opacity="0.14" />}
+
+              {/* Predicted line, following the points it is drawn with */}
+              <path d={linePath} fill="none" stroke="var(--pc-primary)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
 
               {/* Data points */}
               {scaledPredictions.map((pt, i) => {
-                const x = 30 + i * barStep;
-                const y = 160 - pt.predictedWaitMin * 3.5;
+                const x = pointX(i);
+                const y = waitY(pt.predictedWaitMin);
                 const isOverSLA = pt.predictedWaitMin > 20;
 
                 return (
                   <g key={pt.timeSlot}>
                     <circle
-                      cx={x + 16}
+                      cx={x}
                       cy={y}
                       r="5"
-                      fill={isOverSLA ? '#f43f5e' : '#2E37A4'}
-                      stroke="#ffffff"
+                      fill={isOverSLA ? 'var(--pc-danger)' : 'var(--pc-primary)'}
+                      stroke="var(--pc-surface)"
                       strokeWidth="2"
                     />
+                    {/* Was painted #ffffff on a white card, so every value was invisible */}
                     <text
-                      x={x + 16}
-                      y={y - 10}
+                      x={x}
+                      y={y - 11}
                       fontSize="9"
                       fontWeight="bold"
-                      fill={isOverSLA ? '#fca5a5' : '#ffffff'}
+                      fill={isOverSLA ? 'var(--pc-danger-text)' : 'var(--pc-text)'}
                       textAnchor="middle"
                     >
                       {pt.predictedWaitMin}m
+                    </text>
+                    <text x={x} y="170" fontSize="10" fill="var(--pc-text-muted)" textAnchor="middle">
+                      {pt.timeSlot}
                     </text>
                   </g>
                 );

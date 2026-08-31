@@ -178,17 +178,36 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
             {zones.map((zone) => {
               const isSelected = selectedZone.id === zone.id;
               
-              const adjustedDensity = Math.min(100, Math.max(10, 
-                forecastMinuteOffset === 0 ? zone.densityPct :
-                zone.id === 'z-waiting' ? zone.densityPct + (forecastMinuteOffset === 30 ? 6 : 4) :
-                zone.densityPct
-              ));
+              // Crowd density read by this zone's sensors, projected forward.
+              //
+              // Only the waiting lounge used to move when the forecast timeline
+              // was stepped; every other zone showed the same figure at "Now"
+              // and at "+60 min", which made the timeline look broken. Each
+              // zone now drifts by its own load — a zone that is already busy
+              // fills faster than a quiet one, and nothing exceeds 100%.
+              const driftPerStep = (zone.densityPct / 100) * (zone.id === 'z-waiting' ? 8 : 5);
+              const steps = forecastMinuteOffset / 15;
+              const adjustedDensity = Math.round(
+                Math.min(100, Math.max(0, zone.densityPct + driftPerStep * steps)),
+              );
 
               const heatColors = {
-                Critical: 'bg-rose-500/25 border-rose-500/60 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.25)]',
-                Congested: 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.2)]',
-                Moderate: 'bg-[#2E37A4]/20 border-[#2E37A4]/50 text-[var(--pc-primary)] shadow-[0_0_15px_rgba(46,55,164,0.2)]',
-                Optimal: 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300',
+                Critical: 'bg-[#FEE4E2] border-[#F2B8B5] shadow-[0_0_15px_rgba(244,63,94,0.18)]',
+                Congested: 'bg-[#FEF3E7] border-[#F5C08A] shadow-[0_0_15px_rgba(245,158,11,0.16)]',
+                Moderate: 'bg-[var(--pc-tint-lilac)] border-[#C7C9F0] shadow-[0_0_15px_rgba(46,55,164,0.16)]',
+                Optimal: 'bg-[#E7F6EC] border-[#A6DCBB]',
+              };
+
+              // The density chip used to paint --pc-text (near-black navy) behind
+              // white text. Once the app went light, the bridge remapped that
+              // text to navy too and every zone card carried a solid black blob
+              // where its percentage should be. Each state now gets a legible
+              // light chip instead.
+              const chipTone = {
+                Critical: 'bg-[#FEE4E2] text-[var(--pc-danger-text)] border-[#F2B8B5]',
+                Congested: 'bg-[#FDEBD2] text-[#B54708] border-[#F5C08A]',
+                Moderate: 'bg-white text-[var(--pc-primary)] border-[#C7C9F0]',
+                Optimal: 'bg-[#DCF0E4] text-[var(--pc-success-text)] border-[#A6DCBB]',
               };
 
               return (
@@ -197,7 +216,7 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
                   onClick={() => setSelectedZone(zone)}
                   className={`absolute rounded-2xl border transition-all cursor-pointer p-2.5 flex flex-col justify-between backdrop-blur-md ${
                     heatColors[zone.status]
-                  } ${isSelected ? 'ring-2 ring-white shadow-2xl scale-[1.02]' : 'hover:border-white/60'}`}
+                  } ${isSelected ? 'ring-2 ring-[var(--pc-primary)] shadow-2xl scale-[1.02]' : 'hover:border-[var(--pc-border-strong)]'}`}
                   style={{
                     left: `${zone.x}%`,
                     top: `${zone.y}%`,
@@ -205,14 +224,14 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
                     height: `${zone.height}%`,
                   }}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-[11px] truncate text-white">{zone.name}</span>
-                    <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[var(--pc-text)] text-white">
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="font-bold text-[11px] truncate text-[var(--pc-text)]">{zone.name}</span>
+                    <span className={`shrink-0 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-md border ${chipTone[zone.status]}`}>
                       {adjustedDensity}%
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between text-[9px] text-white/70">
+                  <div className="flex items-center justify-between text-[9px] text-[var(--pc-text-muted)] font-medium">
                     <span>{zone.currentOccupancy} pers</span>
                     <span>{zone.sensorType}</span>
                   </div>
@@ -247,12 +266,12 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
             {/* Tooltip on Sensor hover */}
             {hoveredNode && (
               <div
-                className="absolute z-30 p-2.5 glass-panel-elevated bg-[#12122b]/95 border border-white/20 rounded-xl text-[10px] shadow-2xl pointer-events-none text-white backdrop-blur-xl"
+                className="absolute z-30 p-2.5 rounded-xl border border-[var(--pc-border)] bg-[var(--pc-surface)] text-[10px] shadow-[var(--pc-shadow)] pointer-events-none text-[var(--pc-text)]"
                 style={{ left: `${hoveredNode.x + 2}%`, top: `${hoveredNode.y + 2}%` }}
               >
-                <div className="font-bold text-white">{hoveredNode.id} ({hoveredNode.type})</div>
-                <div className="text-white/60">{hoveredNode.activeReadings} spatial points detected</div>
-                <div className="text-emerald-400">99.8% vector accuracy</div>
+                <div className="font-bold text-[var(--pc-text)]">{hoveredNode.id} ({hoveredNode.type})</div>
+                <div className="text-[var(--pc-text-muted)]">{hoveredNode.activeReadings} spatial points detected</div>
+                <div className="text-[var(--pc-success-text)] font-medium">99.8% vector accuracy</div>
               </div>
             )}
 
