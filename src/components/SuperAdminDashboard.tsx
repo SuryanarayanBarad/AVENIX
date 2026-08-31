@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { ShieldAlert, Users, Camera, Activity, FileText, Upload, UserRound, Check, X, Search, Plus, Stethoscope, Pencil, Trash2, ChevronDown, AlertCircle } from 'lucide-react';
-import { User, ManagedDoctor } from '../types';
+import { ManagedDoctor } from '../types';
+import { UsersRolesView } from './command/UsersRolesView';
+
 import { superAdminApi } from '../services/superAdminApi';
 
 const panelEase = [0.22, 1, 0.36, 1] as const;
@@ -230,7 +232,6 @@ const inputClass = 'w-full pc-input transition-colors';
 
 export const SuperAdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
-  const [users, setUsers] = useState<User[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'audit' | 'doctors'>('overview');
   const [loading, setLoading] = useState(true);
@@ -266,9 +267,6 @@ export const SuperAdminDashboard: React.FC = () => {
       if (activeTab === 'overview') {
         const data = await superAdminApi.getDashboardStats();
         setStats(data);
-      } else if (activeTab === 'users') {
-        const data = await superAdminApi.getUsers();
-        setUsers(data);
       } else if (activeTab === 'audit') {
         const data = await superAdminApi.getAuditLogs();
         setLogs(data);
@@ -286,15 +284,6 @@ export const SuperAdminDashboard: React.FC = () => {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
-    if (!window.confirm(`Are you sure you want to change this user's role to ${newRole}?`)) return;
-    try {
-      await superAdminApi.updateUserRole(userId, newRole);
-      loadData();
-    } catch (err: any) {
-      alert(err.message || 'Failed to update role');
-    }
-  };
 
   /** Creates a specialization and folds it into local state — used by the picker too. */
   const createSpecialization = async (name: string) => {
@@ -519,53 +508,12 @@ export const SuperAdminDashboard: React.FC = () => {
         </div>
 
       ) : activeTab === 'users' ? (
-        <div className="bg-white/5 border border-[var(--pc-border)] rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[560px]">
-            <thead>
-              <tr className="bg-white/5 text-white/70 text-sm">
-                <th className="p-4 font-medium">Name</th>
-                <th className="p-4 font-medium">Email</th>
-                <th className="p-4 font-medium">Role</th>
-                <th className="p-4 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/10">
-              {users.map(u => (
-                <tr key={u.id} className="text-white">
-                  <td className="p-4">{u.name}</td>
-                  <td className="p-4 text-white/70">{u.email}</td>
-                  <td className="p-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${u.role === 'SUPER_ADMIN' ? 'bg-[#FEF3E7] text-[#B54708]' :
-                        u.role === 'ADMIN' ? 'bg-[var(--pc-tint-lilac)]/20 text-[var(--pc-primary)]' :
-                          'bg-white/10 text-white/70'
-                      }`}>
-                      {u.role}
-                    </span>
-                  </td>
-                  <td className="p-4 text-right">
-                    {u.role === 'SUPER_ADMIN' ? (
-                      <span className="text-white/50 text-sm italic">Immutable</span>
-                    ) : (
-                      <select
-                        className="bg-[var(--pc-page)] border border-[var(--pc-border)] text-white text-sm rounded-lg px-2 py-1 outline-none"
-                        value={u.role}
-                        onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                      >
-                        <option value="VISITOR">Visitor</option>
-                        <option value="STAFF">Staff</option>
-                        <option value="DOCTOR">Doctor</option>
-                        <option value="MANAGER">Manager</option>
-                        <option value="ADMIN">Admin</option>
-                      </select>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
-        </div>
+        // One implementation, two entry points. This screen used to carry its
+        // own copy of the user table, which had already drifted from the
+        // Command Center's: different role colours, and no search or role
+        // filter at all. Rendering the shared component means a fix to either
+        // route reaches both.
+        <UsersRolesView />
 
       ) : activeTab === 'doctors' ? (
         <div className="flex flex-col gap-4 overflow-y-auto">
