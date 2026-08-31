@@ -1090,9 +1090,16 @@ let ai: GoogleGenAI | null = null;
  * rather than assumed. Flash over Pro on purpose: the copilot summarises a
  * small factual snapshot, which is exactly what Flash is fast and cheap at.
  */
-const COPILOT_MODEL = 'gemini-3.7-flash';
-/** Used only when the primary is momentarily overloaded (503 UNAVAILABLE). */
-const COPILOT_FALLBACK_MODEL = 'gemini-3.6-flash';
+// Verified against this API key rather than assumed:
+//   gemini-3.7-flash  rejects thinkingLevel MINIMAL outright (400
+//     INVALID_ARGUMENT) and was additionally returning 503 high-demand. Because
+//     a 400 is not retryable, EVERY copilot reply failed with "the assistant
+//     could not be reached".
+//   gemini-3.6-flash  accepts MINIMAL and answered in ~3.0s.
+//   gemini-3.5-flash  accepts MINIMAL and answered in ~5.4s.
+const COPILOT_MODEL = 'gemini-3.6-flash';
+/** Used when the primary is overloaded (503) or out of daily quota (429). */
+const COPILOT_FALLBACK_MODEL = 'gemini-3.5-flash';
 
 if (apiKey) {
   ai = new GoogleGenAI({
@@ -1174,13 +1181,32 @@ async function buildCopilotSnapshot() {
     .map((t: any) => (aheadByToken.get(t.id) ?? 0) * 1.7);
 
   // Per service, only where somebody is actually queueing.
+  //
+  // This used to carry just two counts, so when asked "why is General
+  // Consultation the longest queue?" the model could only answer that the
+  // snapshot did not say — technically honest, useless in practice. The longest
+  // wait and whether anyone is actually serving that line are what make the
+  // question answerable.
   const byService = services
     .map((svc: any) => {
-      const queued = tokens.filter((t: any) => t.serviceId === svc.id && t.status === 'Waiting').length;
-      const serving = tokens.filter((t: any) => t.serviceId === svc.id && t.status === 'Serving').length;
-      return { service: svc.name, counter: svc.defaultCounterName ?? null, waiting: queued, serving };
+      const mine = tokens.filter((t: any) => t.serviceId === svc.id);
+      const queued = mine.filter((t: any) => t.status === 'Waiting');
+      const serving = mine.filter((t: any) => t.status === 'Serving').length;
+      const svcWaits = queued.map((t: any) => (aheadByToken.get(t.id) ?? 0) * 1.7);
+      return {
+        service: svc.name,
+        counter: svc.defaultCounterName ?? null,
+        waiting: queued.length,
+        serving,
+        longestWaitMin: svcWaits.length ? Math.round(Math.max(...svcWaits)) : 0,
+        // A queue with nobody serving it is the single most common reason one
+        // line runs longer than the rest.
+        beingServed: serving > 0,
+        typicalWaitMin: svc.estimatedWaitMinutes ?? null,
+      };
     })
-    .filter((row: any) => row.waiting > 0 || row.serving > 0);
+    .filter((row: any) => row.waiting > 0 || row.serving > 0)
+    .sort((a: any, b: any) => b.waiting - a.waiting);
 
   const apptByStatus: Record<string, number> = {};
   for (const a of appointments) apptByStatus[a.status] = (apptByStatus[a.status] || 0) + 1;
@@ -1195,6 +1221,17 @@ async function buildCopilotSnapshot() {
       byService,
     },
     appointmentsToday: { total: appointments.length, ...apptByStatus },
+    // How today's booked load is spread, so "why is this doctor behind?" and
+    // "who should take the overflow?" have something factual to stand on.
+    appointmentsByDoctor: doctors
+      .map((d) => ({
+        doctor: d.name,
+        department: d.department?.name ?? null,
+        booked: appointments.filter((a) => a.doctorId === d.id).length,
+      }))
+      .filter((r) => r.booked > 0)
+      .sort((a, b) => b.booked - a.booked)
+      .slice(0, 8),
     // Capped: the roster is context, not the subject. A long list is tokens
     // spent on names the question did not mention.
     doctorCount: doctors.length,
@@ -1266,41 +1303,61 @@ app.post('/api/copilot/chat', apiRoute(async (req, res) => {
       ...history,
       { role: 'user', parts: [{ text: `SNAPSHOT:\n${JSON.stringify(snapshot)}\n\nQUESTION: ${prompt}` }] },
     ];
-    const config = {
+    const baseConfig = {
       systemInstruction: COPILOT_SYSTEM_INSTRUCTION,
       // Low temperature: this reports on operational data, where a confident
       // invention is worse than a dull fact.
       temperature: 0.2,
       // Thinking tokens come out of the same budget as the answer, so a tight
-      // cap cut replies off mid-sentence — "The hospital queue is very quiet"
-      // with no full stop. Summarising a small factual snapshot needs very
-      // little deliberation, and measured against this key: no thinking config
-      // 3236ms, thinkingLevel low 2880ms, minimal 1495ms. Note that
-      // thinkingBudget — the Gemini 2.x control — is rejected outright by these
-      // models, which is what made every reply fail for a moment.
-      thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+      // cap cut replies off mid-sentence. Summarising a small factual snapshot
+      // needs very little deliberation, so MINIMAL is both the fastest and the
+      // cheapest setting — where the model supports it.
       maxOutputTokens: 320,
     };
+    const thinking = { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } };
 
-    let response;
+    /**
+     * Ladder of attempts, tried in order until one answers.
+     *
+     * Previously a single model was called with a single config and only 503 /
+     * 429 were retried. When gemini-3.7-flash began rejecting thinkingLevel
+     * MINIMAL with a 400, that error fell straight through and every reply
+     * became "the assistant could not be reached" — a model-capability change
+     * took the whole feature down. Dropping the unsupported knob, then changing
+     * model, keeps the copilot answering through both kinds of upstream change.
+     */
+    const attempts: { model: string; config: any }[] = [
+      { model: COPILOT_MODEL, config: { ...baseConfig, ...thinking } },
+      { model: COPILOT_MODEL, config: baseConfig },
+      { model: COPILOT_FALLBACK_MODEL, config: { ...baseConfig, ...thinking } },
+      { model: COPILOT_FALLBACK_MODEL, config: baseConfig },
+    ];
+
+    let response: any = null;
     let modelUsed = COPILOT_MODEL;
-    try {
-      response = await ai.models.generateContent({ model: COPILOT_MODEL, contents, config });
-    } catch (primaryError: any) {
-      // Two upstream conditions are worth a second attempt, and both are about
-      // the model rather than the question:
-      //   503 UNAVAILABLE     — that model is momentarily busy
-      //   429 RESOURCE_EXHAUSTED — the free tier allows only 20 requests per
-      //     day PER MODEL, so a different model has its own untouched budget
-      // Either way the previous generation answers the same question from the
-      // same snapshot, which beats showing the user a failure.
-      const message = primaryError?.message ?? String(primaryError);
-      const retryable = /503|UNAVAILABLE|high demand|overloaded|429|RESOURCE_EXHAUSTED|quota/i.test(message);
-      if (!retryable) throw primaryError;
-      console.warn(`Copilot: ${COPILOT_MODEL} busy, retrying on ${COPILOT_FALLBACK_MODEL}`);
-      response = await ai.models.generateContent({ model: COPILOT_FALLBACK_MODEL, contents, config });
-      modelUsed = COPILOT_FALLBACK_MODEL;
+    let lastError: any = null;
+
+    for (const attempt of attempts) {
+      try {
+        response = await ai.models.generateContent({
+          model: attempt.model,
+          contents,
+          config: attempt.config,
+        });
+        modelUsed = attempt.model;
+        break;
+      } catch (err: any) {
+        lastError = err;
+        const message = err?.message ?? String(err);
+        // A malformed question is the caller's problem and will fail identically
+        // on every model, so it is not worth walking the rest of the ladder.
+        const worthRetrying = /503|UNAVAILABLE|high demand|overloaded|429|RESOURCE_EXHAUSTED|quota|thinking|INVALID_ARGUMENT|not supported/i.test(message);
+        if (!worthRetrying) throw err;
+        console.warn(`Copilot: ${attempt.model} declined (${message.slice(0, 120)}); trying next option`);
+      }
     }
+
+    if (!response) throw lastError ?? new Error('No copilot model could answer.');
 
     res.json({
       reply: response.text?.trim() || 'I could not produce an answer for that.',
@@ -4554,10 +4611,35 @@ app.get('/api/doctor/appointments', apiRoute(async (req, res) => {
     where.date = date;
   }
 
-  const appointments = await prisma.appointment.findMany({
+  const rows = await prisma.appointment.findMany({
     where,
     orderBy: [{ date: 'asc' }, { time: 'asc' }],
+    include: { doctor: { include: { department: true } } },
   });
+
+  // Projected, not returned raw. Handing back the Prisma row meant the doctor's
+  // screen showed the stored 24-hour time while every other screen showed a
+  // 12-hour one, and leaked the patient's full phone number into the browser.
+  const appointments = rows.map((apt) => ({
+    id: apt.id,
+    code: apt.code,
+    facilityId: apt.facilityId,
+    doctorId: apt.doctorId,
+    patientName: apt.patientName,
+    phoneMasked: maskPhone(apt.phone),
+    date: apt.date,
+    time: formatTime(apt.time),
+    rawTime: apt.time,
+    department: apt.doctor.department.name,
+    reasonForVisit: apt.reasonForVisit,
+    status: apt.status,
+    statusReason: apt.statusReason ?? null,
+    awaitingApproval: apt.status === 'Pending',
+    inQueue: isQueueEligible(apt.status),
+    version: apt.version,
+    createdAt: apt.createdAt,
+    updatedAt: apt.updatedAt,
+  }));
 
   res.json({ appointments });
 }));
