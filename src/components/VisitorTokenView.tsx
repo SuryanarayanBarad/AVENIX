@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { Token } from '../types';
 import type { PublicQueueToken } from './VisitorFlow';
-import { visitorApi } from '../services/queueApi';
+import { visitorApi, getStoredTokenKey } from '../services/queueApi';
 import { TokenManageModal } from './TokenManageModal';
 import { useLiveUpdates } from '../hooks/useLiveUpdates';
 import { ApproachingModal } from './ApproachingModal';
@@ -36,6 +36,8 @@ interface VisitorTokenViewProps {
    * go through the audited admin routes instead.
    */
   viewerRole?: string | null;
+  /** Told when the holder edits the token, so the board above can repaint. */
+  onUpdateToken?: (token: Token | PublicQueueToken) => void;
 }
 
 export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
@@ -45,7 +47,12 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
   onGetNewToken,
 }) => {
   const shouldReduceMotion = useReducedMotion();
-  
+
+  // The key the create call handed back, or the one this browser saved for
+  // this token. Either proves ownership; neither is guaranteed to be the field.
+  const accessKey = ('accessKey' in token ? token.accessKey : undefined)
+    ?? getStoredTokenKey(token.id);
+
   // Live API state
   const [queueData, setQueueData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -78,9 +85,9 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
 
   const fetchQueuePosition = async (silent = false) => {
     const authHeader = window.localStorage.getItem('auth_token');
-    if (!token.accessKey && !authHeader) {
-      // Tokens from Kiosk or Admin views might not have access keys (they are mock tokens)
-      // Just skip fetching live data and use the token's static data
+    if (!accessKey && !authHeader) {
+      // Nothing here can prove who this is, so there is no live data to ask
+      // for. Fall back to the static details the token already carries.
       setIsLoading(false);
       return;
     }
@@ -89,7 +96,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
       if (!silent) setIsLoading(true);
       if (silent) setIsRefreshing(true);
       
-      const data = await visitorApi.getQueuePosition(token.id, token.accessKey);
+      const data = await visitorApi.getQueuePosition(token.id, accessKey);
       setQueueData(data);
       
       // Auto-trigger approaching modal if status is approaching and hasn't been shown
@@ -112,12 +119,12 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
       fetchQueuePosition(true);
     }, 10000); // poll every 10s as a safety net behind the live stream
     return () => clearInterval(intervalId);
-  }, [token.id, token.accessKey]);
+  }, [token.id, accessKey]);
 
   // Anyone moving this queue — staff calling the next person, an admin
   // reordering, another visitor cancelling — repaints this screen at once.
   useLiveUpdates(() => fetchQueuePosition(true), {
-    watch: token.accessKey ? { tokenId: token.id, accessKey: token.accessKey } : null,
+    watch: accessKey ? { tokenId: token.id, accessKey } : null,
   });
 
   const handleComplete = async () => {
@@ -150,7 +157,7 @@ export const VisitorTokenView: React.FC<VisitorTokenViewProps> = ({
   
   // Only an active token the visitor can prove ownership of is manageable.
   const canManageToken = !wasCancelled
-    && !!(token.accessKey || window.localStorage.getItem('auth_token'))
+    && !!(accessKey || window.localStorage.getItem('auth_token'))
     && ['waiting', 'approaching'].includes(String(currentStatus).toLowerCase());
 
   const isServing = currentStatus.toLowerCase() === 'serving';

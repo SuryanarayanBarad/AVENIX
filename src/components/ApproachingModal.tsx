@@ -10,9 +10,15 @@ import {
   X
 } from 'lucide-react';
 import { Token } from '../types';
+import type { PublicQueueToken } from './VisitorFlow';
 
 interface ApproachingModalProps {
-  token: Token;
+  /**
+   * Either shape of token reaches this modal — a staff-board `Token` or the
+   * visitor's own `PublicQueueToken`. They name the same two facts differently,
+   * so both spellings are read rather than assuming the staff one.
+   */
+  token: Token | PublicQueueToken;
   onConfirmOnWay: () => void;
   onRequestMoreTime: () => void;
   onClose: () => void;
@@ -80,7 +86,7 @@ export const ApproachingModal: React.FC<ApproachingModalProps> = ({
               {token.code}
             </div>
             <p className="text-xs font-semibold text-white/80 mt-1">
-              Please proceed toward <span className="text-[#2E37A4] font-bold">{token.counterId}</span>.
+              Please proceed toward <span className="text-[#2E37A4] font-bold">{'counterName' in token ? (token.counterName ?? token.counterId) : token.counterId}</span>.
             </p>
           </div>
 
@@ -99,7 +105,7 @@ export const ApproachingModal: React.FC<ApproachingModalProps> = ({
                 <Stethoscope className="w-4 h-4 text-[#2E37A4]" />
                 <span>Service Dept.</span>
               </div>
-              <span className="font-bold text-white">{token.service}</span>
+              <span className="font-bold text-white">{'serviceName' in token ? token.serviceName : token.service}</span>
             </div>
 
             <div className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.05] border border-white/[0.10]">

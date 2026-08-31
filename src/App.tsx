@@ -25,6 +25,7 @@ import { doctorApi } from './services/doctorApi';
 import { useLiveUpdates } from './hooks/useLiveUpdates';
 import { defaultTabForRole } from '../lib/permissions';
 import { cameraService } from './services/cameraService';
+import type { StaffAppointment } from './components/AppointmentsView';
 import {
   AppView,
   AdminTab,
@@ -180,13 +181,16 @@ export default function App() {
   // so the Appointments tab showed demo rows while genuine bookings — which sit
   // Pending until somebody approves them, and so never reach the live queue —
   // were invisible to every staff role.
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  // Typed as the API's real projection, not the mock `Appointment` shape. The
+  // cast that used to sit here hid a field-name drift that crashed the
+  // Appointments tab, so consumers are now checked against the response.
+  const [appointments, setAppointments] = useState<StaffAppointment[]>([]);
   const [fairnessWeights, setFairnessWeights] = useState<FairnessWeight[]>(mockFairnessWeights);
   const [decisionLogs, setDecisionLogs] = useState<DecisionLogEntry[]>(mockDecisionLogs);
   const [alerts, setAlerts] = useState<AlertItem[]>(mockAlerts);
 
   // Selected token for detail view in patient-tracker carousel
-  const [selectedTrackerToken, setSelectedTrackerToken] = useState<Token | null>(null);
+  const [selectedTrackerToken, setSelectedTrackerToken] = useState<Token | PublicQueueToken | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -319,7 +323,7 @@ export default function App() {
     let cancelled = false;
     const run = () => {
       adminApi.getAppointments()
-        .then((data) => { if (!cancelled) setAppointments(data.appointments as any); })
+        .then((data) => { if (!cancelled) setAppointments(data.appointments as StaffAppointment[]); })
         .catch(() => { /* the tab shows its own empty state */ });
     };
     loadAppointments.current = run;
@@ -328,8 +332,11 @@ export default function App() {
   }, [user]);
 
   // Handler for updating token status
-  const handleUpdateToken = (updatedToken: Token) => {
-    setTokens(prev => prev.map(t => t.id === updatedToken.id ? updatedToken : t));
+  // The holder's own token and the staff board row are different shapes for the
+  // same queue entry, so the change is merged onto the existing row rather than
+  // replacing it — replacing would drop the board-only fields.
+  const handleUpdateToken = (updatedToken: Token | PublicQueueToken) => {
+    setTokens(prev => prev.map(t => (t.id === updatedToken.id ? { ...t, ...updatedToken } as Token : t)));
   };
 
   // Handler for adding token
@@ -337,14 +344,20 @@ export default function App() {
     setTokens(prev => [newToken, ...prev]);
   };
 
-  // Handler for updating appointment
-  const handleUpdateAppointment = (updatedApt: Appointment) => {
-    setAppointments(prev => prev.map(a => a.id === updatedApt.id ? updatedApt : a));
+  /**
+   * An appointment changed somewhere in the shell.
+   *
+   * These used to splice a hand-built row into local state, which is how a
+   * rescheduled appointment ended up carrying an invented status and wait time
+   * that no longer matched the database. The server owns this list, so the only
+   * correct response to a change is to read it back.
+   */
+  const handleUpdateAppointment = (_updatedApt?: unknown) => {
+    loadAppointments.current?.();
   };
 
-  // Handler for adding appointment
-  const handleAddAppointment = (newApt: Appointment) => {
-    setAppointments(prev => [newApt, ...prev]);
+  const handleAddAppointment = (_newApt?: unknown) => {
+    loadAppointments.current?.();
   };
 
   // Handler for adjusting fairness weight

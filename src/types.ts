@@ -180,12 +180,19 @@ export interface DoctorAppointment {
   facilityId: string;
   doctorId: string;
   patientName: string;
-  phone: string;
+  /** Masked server-side; the doctor's browser never receives the full number. */
+  phoneMasked: string | null;
   date: string;
+  /** Display time, e.g. "9:00 AM". `rawTime` is the 24-hour slot key. */
   time: string;
+  rawTime: string;
+  department: string;
   reasonForVisit: string;
   status: 'Pending' | 'Approved' | 'Denied' | 'Scheduled' | 'CheckedIn' | 'Waiting' | 'InConsultation' | 'Completed' | 'Delayed' | 'Cancelled' | 'Missed';
   notes?: string;
+  statusReason?: string | null;
+  awaitingApproval?: boolean;
+  inQueue?: boolean;
   /** Optimistic-concurrency token; send it back when changing status. */
   version?: number;
   createdAt: string;

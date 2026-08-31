@@ -17,6 +17,17 @@ const getStoredKey = (prefix: string, id: string) => {
   }
 };
 
+/**
+ * The stored access key for a token, if this browser holds one.
+ *
+ * Screens need this to decide whether the viewer can prove ownership. Reading
+ * `token.accessKey` instead only works for the one response that returns it —
+ * the create call — so a token opened from a link, the kiosk or the tracker
+ * looked unowned and the holder was refused access to their own queue entry.
+ */
+export const getStoredTokenKey = (tokenId: string): string | undefined =>
+  getStoredKey(TOKEN_KEY_PREFIX, tokenId) || undefined;
+
 const storeKey = (prefix: string, id: string, accessKey?: string) => {
   if (!accessKey) return;
   try {

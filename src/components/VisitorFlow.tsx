@@ -31,6 +31,14 @@ export interface PublicQueueToken {
   counterName?: string | null;
   isOwn?: boolean;
   issuedAt?: string;
+  /**
+   * Returned once, by the create call only. Every other read of a token omits
+   * it — the key lives in localStorage from then on. Declaring it optional is
+   * what stops a screen assuming the field is always present and locking the
+   * holder out of their own token.
+   */
+  accessKey?: string;
+  counterId?: string | null;
 }
 
 export interface VisitorServiceOption {

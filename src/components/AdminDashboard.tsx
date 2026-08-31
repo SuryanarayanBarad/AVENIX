@@ -13,7 +13,7 @@ import { LiveQueueView } from './LiveQueueView';
 import { CrowdIntelligenceView } from './CrowdIntelligenceView';
 import { AIPredictionsView } from './AIPredictionsView';
 import { CounterOptimizationView } from './CounterOptimizationView';
-import { AppointmentsView } from './AppointmentsView';
+import { AppointmentsView, type StaffAppointment } from './AppointmentsView';
 import { DoctorScheduleView } from './DoctorScheduleView';
 import { FairnessLogicView } from './FairnessLogicView';
 import { AnalyticsView } from './AnalyticsView';
@@ -49,14 +49,15 @@ interface AdminDashboardProps {
   sensors: SensorNode[];
   predictions: PredictionPoint[];
   tokens: Token[];
-  appointments: Appointment[];
+  appointments: StaffAppointment[];
   fairnessWeights: FairnessWeight[];
   decisionLogs: DecisionLogEntry[];
   alerts: AlertItem[];
   onUpdateToken: (token: Token) => void;
   onAddToken: (token: Token) => void;
-  onUpdateAppointment: (appointment: Appointment) => void;
-  onAddAppointment: (appointment: Appointment) => void;
+  /** Signals the appointment list changed; the shell re-reads it. */
+  onUpdateAppointment: (appointment?: unknown) => void;
+  onAddAppointment: (appointment?: unknown) => void;
   onUpdateFairnessWeight: (id: string, multiplier: number) => void;
   onApplyCounterOptimization: (updatedCounters: Counter[]) => void;
   onNavigateToKiosk: () => void;
@@ -154,11 +155,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           tab: 'live-queue' as const,
         })),
       ...appointments
-        .filter((appointment) => matches(appointment.patientName, appointment.tokenCode, appointment.doctor, appointment.service, appointment.status))
+        .filter((appointment) => matches(appointment.patientName, appointment.code, appointment.doctor, appointment.department, appointment.status))
         .map((appointment) => ({
           id: `appointment-${appointment.id}`,
           category: 'Appointment' as const,
-          title: `${appointment.patientName} · ${appointment.tokenCode}`,
+          title: `${appointment.patientName} · ${appointment.code}`,
           detail: `${appointment.doctor} · ${appointment.time}`,
           tab: 'appointments' as const,
         })),
@@ -225,13 +226,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     try {
       if (action === 'appointment.reschedule.approved') {
         const result = await adminApi.rescheduleAppointment(payload.appointmentId, payload);
-        onUpdateAppointment({
-          ...appointments.find(a => a.id === payload.appointmentId)!,
-          time: payload.newTime,
-          doctor: payload.newDoctor,
-          status: 'Scheduled',
-          estWaitMin: 0,
-        });
+        // The server decides the new time, doctor and status. Guessing them
+        // here is what let the board show a reschedule that never happened, so
+        // the list is re-read from the response instead.
+        onUpdateAppointment();
         return result;
       }
       return null;
@@ -460,26 +458,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               )}
 
               {currentTab === 'appointments' && (
-                <AppointmentsView
-                  appointments={appointments}
-                  onUpdateAppointment={onUpdateAppointment}
-                  onAddAppointment={onAddAppointment}
-                  onOpenCopilot={handleOpenCopilotWithPrompt}
-                />
+                <AppointmentsView onOpenCopilot={handleOpenCopilotWithPrompt} />
               )}
 
               {currentTab === 'doctor-schedule' && (
                 <DoctorScheduleView
                   appointments={appointments.map((a) => ({
                     id: a.id,
-                    tokenCode: a.tokenCode,
+                    tokenCode: a.code,
                     patientName: a.patientName,
                     time: a.time,
                     date: a.date,
                     doctor: a.doctor,
                     status: a.status,
                     service: a.service,
-                    estWaitMin: a.estWaitMin,
+                    // The schedule board shows booked times, not queue waits.
+                    estWaitMin: 0,
                   }))}
                   onAppointmentUpdated={onUpdateAppointment}
                   onAdminAction={handleAdminAction}
