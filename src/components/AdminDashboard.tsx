@@ -547,7 +547,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {/* Doctor — both views are scoped to the signed-in doctor by the API */}
               {currentTab === 'ai-health' && (
                 <HealthNavigatorView
-                  onBookAppointment={() => onNavigateToKiosk()}
+                  onBookAppointment={onNavigateToVisitorTracker}
+                  onJoinQueue={onNavigateToKiosk}
                 />
               )}
 
