@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CrowdForecastPanel } from './command/CrowdForecastPanel';
 import { 
   Radar, 
   Activity, 
@@ -103,18 +104,20 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
           </div>
         </div>
 
+        {/* Was a hardcoded "+12.4% velocity" labelled as an AI output. The real
+            figure comes from the live queue and now has its own panel below. */}
         <div className="p-5 rounded-3xl glass-panel-elevated">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-white/60">AI Inflow Velocity</span>
+            <span className="text-xs font-semibold text-white/60">Queue Pressure</span>
             <div className="w-8 h-8 rounded-2xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center border border-emerald-500/30">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl font-light text-emerald-400 font-display mt-2">
-            +12.4% <span className="text-xs font-normal text-white/50">velocity</span>
+          <div className="text-sm font-medium text-[var(--pc-text)] font-display mt-2">
+            Measured live
           </div>
           <p className="text-[11px] text-white/60 mt-1">
-            Surge velocity peaking toward 12:00 PM triage rush
+            Arrival and throughput rates are in the crowd forecast below.
           </p>
         </div>
 
@@ -135,6 +138,10 @@ export const CrowdIntelligenceView: React.FC<CrowdIntelligenceViewProps> = ({
         </div>
 
       </div>
+
+      {/* Real, measured forecast. The floorplan below is simulated sensor data
+          and is labelled as such; this is not. */}
+      <CrowdForecastPanel operator />
 
       {/* Floorplan & Zone Densities Section */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

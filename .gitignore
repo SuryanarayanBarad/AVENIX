@@ -20,6 +20,10 @@ serviceAccount*.json
 # User uploads (served from Supabase Storage in production)
 uploads/
 
+# Patient-uploaded medical reports on the local-disk fallback. Never served
+# statically and never committed — this is the most sensitive data the app holds.
+private-uploads/
+
 # Local noise
 .DS_Store
 *.log

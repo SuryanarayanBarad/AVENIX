@@ -53,8 +53,17 @@ import {
   hasPermission,
 } from './lib/permissions.js';
 import { publishEvent, subscribeToEvents } from './lib/eventBus.js';
-import { startOfServiceDay, serviceDayKey, displayVisitorName } from './lib/serviceDay.js';
+import { startOfServiceDay, serviceDayKey, displayVisitorName, DEFAULT_QUEUE_TIMEZONE } from './lib/serviceDay.js';
 import { consume } from './lib/rateLimit.js';
+import {
+  saveReport, readReport, deleteReport, signedReportUrl, extractText,
+  reportStorageBackend, ensureReportStorage, ReportValidationError,
+} from './lib/reportStorage.js';
+import { rankDoctors, matchDepartment, type RankableDoctor } from './lib/doctorRanking.js';
+import {
+  forecastCrowd, recommendationsFor, minutesOfDay,
+  type ScheduledArrival,
+} from './lib/crowdForecast.js';
 import {
   getCachedFacility, getCachedService, getCachedServices, invalidateReferenceCache,
   getCachedUser, setCachedUser, invalidateUser,
@@ -1818,7 +1827,8 @@ async function expireStaleTokens(): Promise<number> {
 
     await prisma.token.updateMany({
       where: { id: { in: stale.map((t) => t.id) } },
-      data: { status: 'Cancelled' },
+      // Stamped so throughput is measurable; see Token.completedAt.
+      data: { status: 'Cancelled', completedAt: new Date() },
     });
 
     // No audit row: audit_logs.actor_id carries a foreign key to a real user,
@@ -2942,7 +2952,7 @@ app.post('/api/visitor/tokens/:id/complete', apiRoute(async (req, res) => {
   // Find the next in line and finish this token together — one round trip each,
   // issued in parallel rather than in sequence.
   const [finished, next] = await Promise.all([
-    prisma.token.update({ where: { id: token.id }, data: { status: 'Completed' } }),
+    prisma.token.update({ where: { id: token.id }, data: { status: 'Completed', completedAt: new Date() } }),
     wasBeingServed
       ? prisma.token.findFirst({
           where: {
@@ -3003,7 +3013,7 @@ app.delete('/api/visitor/tokens/:id', apiRoute(async (req, res) => {
 
   const cancelled = await prisma.token.update({
     where: { id: token.id },
-    data: { status: 'Cancelled' },
+    data: { status: 'Cancelled', completedAt: new Date() },
   });
 
   await recordAudit({ id: token.userId ?? 'visitor', role: 'visitor' }, 'cancel_token', 'token', token.id);
@@ -3314,6 +3324,657 @@ app.post('/api/visitor/appointments/:id/reschedule-request', apiRoute(async (req
 }));
 
 // ---------------------------------------------------------------------------
+// AI health navigation  —  visitor-owned, never facility-wide
+// ---------------------------------------------------------------------------
+//
+// Every route here resolves the owner from the verified session and filters by
+// it. There is deliberately no route that lists reports across users, and no
+// parameter that widens a query beyond the caller: the safest way to guarantee
+// one patient cannot read another's records is for the capability not to exist.
+
+/**
+ * What the model is allowed to be.
+ *
+ * The hard rule is the second paragraph. A system that tells somebody their
+ * chest pain is indigestion has done real harm, and a hackathon demo is not a
+ * reason to build one. It routes people to the right desk and says plainly that
+ * is all it is doing.
+ */
+const NAVIGATOR_INSTRUCTION = `You are QueueMind's healthcare navigation assistant for a hospital reception.
+
+Your ONLY job is to suggest which hospital DEPARTMENT a person should visit, chosen from the catalogue given to you. You are a triage signpost, not a clinician.
+
+You must NEVER: give a diagnosis, name a disease as if confirmed, suggest medication or dosage, interpret results as definitive, or tell anyone they are fine. If information is thin, say the department is uncertain and recommend a general consultation.
+
+If the information suggests a possible emergency — chest pain, difficulty breathing, stroke signs, severe bleeding, loss of consciousness, suspected poisoning — set "urgent" to true and name Emergency, whatever else is present.
+
+Reply with ONLY a JSON object, no prose and no markdown fence:
+{
+  "department": "<exact name from the catalogue>",
+  "reason": "<one or two sentences, plain language, describing what in the information points to this department. Describe findings, never conclude a diagnosis.>",
+  "confidence": "low" | "medium" | "high",
+  "urgent": true | false,
+  "suggestedQuestions": ["<up to 3 things staff may ask>"]
+}`;
+
+/** Trimmed so a long report cannot crowd out the instruction or the catalogue. */
+const MAX_REPORT_CHARS_TO_MODEL = 6000;
+
+/**
+ * Ask the model to place a patient, and resolve the answer against reality.
+ *
+ * Returns `failed` rather than throwing when the model is unreachable: the
+ * screen still has a queue, doctors and a booking flow to offer, and taking all
+ * of it away because an API call failed would be the wrong trade.
+ */
+async function runHealthNavigation(input: {
+  symptoms?: string | null;
+  reportText?: string | null;
+  departments: { id: string; name: string; description: string | null }[];
+}): Promise<{
+  department: string | null;
+  reason: string | null;
+  confidence: string | null;
+  urgent: boolean;
+  suggestedQuestions: string[];
+  modelUsed: string | null;
+  failed: boolean;
+  failureReason?: string;
+}> {
+  const empty = {
+    department: null, reason: null, confidence: null, urgent: false,
+    suggestedQuestions: [] as string[], modelUsed: null, failed: true,
+  };
+
+  if (!ai) return { ...empty, failureReason: 'The AI assistant is not configured on this server.' };
+  if (input.departments.length === 0) {
+    return { ...empty, failureReason: 'This facility has no departments configured yet.' };
+  }
+
+  const catalogue = input.departments
+    .map((d) => `- ${d.name}${d.description ? `: ${d.description}` : ''}`)
+    .join('\n');
+
+  const parts = [
+    `DEPARTMENT CATALOGUE (choose exactly one):\n${catalogue}`,
+    input.symptoms?.trim() ? `WHAT THE PERSON DESCRIBES:\n${input.symptoms.trim()}` : null,
+    input.reportText?.trim()
+      ? `TEXT EXTRACTED FROM THEIR UPLOADED REPORT:\n${input.reportText.trim().slice(0, MAX_REPORT_CHARS_TO_MODEL)}`
+      : null,
+  ].filter(Boolean).join('\n\n');
+
+  const baseConfig = {
+    systemInstruction: NAVIGATOR_INSTRUCTION,
+    // Near-zero: this is a routing decision over a fixed catalogue, and a
+    // creative answer here is simply a wrong one.
+    temperature: 0.1,
+    maxOutputTokens: 500,
+  };
+  const thinking = { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } };
+  const contents = [{ role: 'user', parts: [{ text: parts }] }];
+
+  // Same ladder as the copilot: drop the unsupported knob, then change model.
+  const attempts = [
+    { model: COPILOT_MODEL, config: { ...baseConfig, ...thinking } },
+    { model: COPILOT_MODEL, config: baseConfig },
+    { model: COPILOT_FALLBACK_MODEL, config: { ...baseConfig, ...thinking } },
+    { model: COPILOT_FALLBACK_MODEL, config: baseConfig },
+  ];
+
+  let raw: string | null = null;
+  let modelUsed: string | null = null;
+  let lastError = '';
+  for (const attempt of attempts) {
+    try {
+      const response: any = await ai.models.generateContent({
+        model: attempt.model, contents, config: attempt.config,
+      });
+      raw = (response.text ?? '').trim();
+      modelUsed = attempt.model;
+      break;
+    } catch (err: any) {
+      lastError = err?.message ?? String(err);
+      const worthRetrying = /503|UNAVAILABLE|high demand|overloaded|429|RESOURCE_EXHAUSTED|quota|thinking|INVALID_ARGUMENT|not supported/i.test(lastError);
+      if (!worthRetrying) break;
+    }
+  }
+
+  if (!raw) {
+    return { ...empty, failureReason: lastError || 'The AI assistant could not be reached.' };
+  }
+
+  // The model is asked for bare JSON but sometimes fences it anyway.
+  const jsonText = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+  let parsed: any;
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch {
+    return { ...empty, modelUsed, failureReason: 'The assistant returned an answer that could not be read.' };
+  }
+
+  return {
+    department: typeof parsed.department === 'string' ? parsed.department : null,
+    reason: typeof parsed.reason === 'string' ? parsed.reason : null,
+    confidence: ['low', 'medium', 'high'].includes(parsed.confidence) ? parsed.confidence : 'low',
+    urgent: parsed.urgent === true,
+    suggestedQuestions: Array.isArray(parsed.suggestedQuestions)
+      ? parsed.suggestedQuestions.filter((q: any) => typeof q === 'string').slice(0, 3)
+      : [],
+    modelUsed,
+    failed: false,
+  };
+}
+
+/**
+ * Doctors in a department, ordered by who can actually see this patient soonest.
+ *
+ * Everything the ranking uses is measured here rather than assumed: today's
+ * published availability, the number of people already queued to each doctor,
+ * and how many appointment slots they have left. A department suggestion that
+ * led to a doctor who is on leave would be worse than no suggestion at all.
+ */
+async function rankedDoctorsForDepartment(facilityId: string, departmentId: string) {
+  const today = serviceDayKey();
+
+  const doctors = await prisma.doctor.findMany({
+    where: { facilityId, departmentId, isActive: true },
+    include: {
+      department: { select: { id: true, name: true } },
+      availability: { where: { date: today }, take: 1 },
+    },
+  });
+  if (doctors.length === 0) return [];
+
+  const doctorIds = doctors.map((d) => d.id);
+
+  // One grouped query each rather than two per doctor.
+  const [queued, booked] = await Promise.all([
+    prisma.appointment.groupBy({
+      by: ['doctorId'],
+      where: {
+        doctorId: { in: doctorIds }, date: today, deletedAt: null,
+        status: { in: QUEUE_ELIGIBLE_STATUSES as any },
+      },
+      _count: { _all: true },
+    }),
+    prisma.appointment.groupBy({
+      by: ['doctorId'],
+      where: {
+        doctorId: { in: doctorIds }, date: today, deletedAt: null,
+        status: { notIn: ['Cancelled', 'Denied', 'Missed'] as any },
+      },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const queueByDoctor = new Map(queued.map((r) => [r.doctorId, r._count._all]));
+  const bookedByDoctor = new Map(booked.map((r) => [r.doctorId, r._count._all]));
+  const totalSlots = standardSlots().length;
+
+  const rankable: RankableDoctor[] = doctors.map((d) => ({
+    id: d.id,
+    name: d.name,
+    departmentId: d.departmentId,
+    departmentName: d.department.name,
+    qualification: d.qualification,
+    experienceYears: d.experienceYears,
+    consultationFee: d.consultationFee,
+    isActive: d.isActive,
+    status: (d.availability[0]?.status as any) ?? null,
+    delayMinutes: d.availability[0]?.delayMinutes ?? null,
+    queueDepth: queueByDoctor.get(d.id) ?? 0,
+    freeSlotsToday: Math.max(0, totalSlots - (bookedByDoctor.get(d.id) ?? 0)),
+  }));
+
+  return rankDoctors(rankable, { departmentId, limit: 5 }).map((d) => ({
+    id: d.id,
+    name: `Dr. ${d.name}`,
+    department: d.departmentName,
+    qualification: d.qualification ?? null,
+    experienceYears: d.experienceYears ?? 0,
+    consultationFee: d.consultationFee ?? 0,
+    status: d.status ?? 'Unknown',
+    scheduleKnown: d.scheduleKnown,
+    queueDepth: d.queueDepth,
+    freeSlotsToday: d.freeSlotsToday,
+    estimatedWaitMinutes: d.estimatedWaitMinutes,
+    /** Why this doctor is ranked here, shown to the patient. */
+    reasons: d.reasons,
+  }));
+}
+
+/** The fixed wording shown wherever an AI suggestion appears. */
+const AI_DISCLAIMER =
+  'AI-assisted navigation, not a medical diagnosis. A qualified doctor must review your case.';
+
+/** One report as its owner sees it. `objectPath` is never sent to a browser. */
+function reportView(r: any) {
+  return {
+    id: r.id,
+    title: r.title,
+    kind: r.kind,
+    mimeType: r.mimeType,
+    sizeBytes: r.sizeBytes,
+    reportDate: r.reportDate,
+    uploadedAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
+    hasText: !!r.extractedText,
+    extractionNote: r.extractionNote,
+  };
+}
+
+/** Load a report and prove the caller owns it. 404 either way: a different */
+/** answer for "exists but is not yours" would confirm it exists. */
+async function ownedReportOrThrow(reportId: string, userId: string) {
+  const report = await prisma.medicalReport.findFirst({
+    where: { id: reportId, userId, deletedAt: null },
+  });
+  if (!report) {
+    throw new ApiError(404, 'REPORT_NOT_FOUND', 'That report was not found.');
+  }
+  return report;
+}
+
+/** POST /api/visitor/reports — upload one of your own documents. */
+app.post('/api/visitor/reports', apiRoute(async (req, res) => {
+  const user = await requireAuthUser(req, res);
+  if (!user) return;
+  if (!enforceRateLimit(req, res, 'report-upload', 20, 60_000)) return;
+
+  const body = bodyAsObject(req);
+  const title = requiredString(body.title, 'Title', 120);
+  const kind = optionalString(body.kind, 'Kind', 40) ?? 'Other';
+  const reportDate = optionalString(body.reportDate, 'Report date', 10) ?? null;
+  const dataUrl = requiredString(body.file, 'File', 12_000_000);
+
+  let stored;
+  try {
+    stored = await saveReport(dataUrl, user.id);
+  } catch (err: any) {
+    if (err instanceof ReportValidationError) {
+      throw new ApiError(400, 'INVALID_REPORT', err.message, { field: 'file' });
+    }
+    throw err;
+  }
+
+  // Extraction happens once, at upload, so every later navigation reuses it
+  // instead of re-downloading and re-parsing the same file.
+  const bytes = await readReport(stored.objectPath);
+  const { text, note } = bytes
+    ? extractText(bytes, stored.mime)
+    : { text: null, note: 'The stored file could not be read back.' };
+
+  const facility = await getCachedFacility();
+  const report = await prisma.medicalReport.create({
+    data: {
+      userId: user.id,
+      facilityId: facility?.id ?? null,
+      title, kind, reportDate,
+      objectPath: stored.objectPath,
+      mimeType: stored.mime,
+      sizeBytes: stored.sizeBytes,
+      extractedText: text,
+      extractionNote: note,
+    },
+  });
+
+  res.json({ report: reportView(report) });
+}));
+
+/** GET /api/visitor/reports — your own reports, newest first. */
+app.get('/api/visitor/reports', apiRoute(async (req, res) => {
+  const user = await requireAuthUser(req, res);
+  if (!user) return;
+
+  const reports = await prisma.medicalReport.findMany({
+    where: { userId: user.id, deletedAt: null },
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+  });
+  res.json({ reports: reports.map(reportView), storage: reportStorageBackend() });
+}));
+
+/**
+ * GET /api/visitor/reports/:id/file — open your own report.
+ *
+ * On Supabase this redirects to a URL that expires in two minutes. On local
+ * disk the bytes are streamed through this route, because the report directory
+ * is deliberately not served statically.
+ */
+app.get('/api/visitor/reports/:id/file', apiRoute(async (req, res) => {
+  const user = await requireAuthUser(req, res);
+  if (!user) return;
+
+  const report = await ownedReportOrThrow(String(req.params.id), user.id);
+
+  const signed = await signedReportUrl(report.objectPath);
+  if (signed) {
+    res.redirect(signed);
+    return;
+  }
+
+  const bytes = await readReport(report.objectPath);
+  if (!bytes) throw new ApiError(404, 'REPORT_NOT_FOUND', 'That file could not be read.');
+  res.setHeader('Content-Type', report.mimeType);
+  res.setHeader('Content-Disposition', `inline; filename="report-${report.id}"`);
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.send(bytes);
+}));
+
+/** DELETE /api/visitor/reports/:id — remove your own report and its file. */
+app.delete('/api/visitor/reports/:id', apiRoute(async (req, res) => {
+  const user = await requireAuthUser(req, res);
+  if (!user) return;
+
+  const report = await ownedReportOrThrow(String(req.params.id), user.id);
+  await prisma.medicalReport.update({
+    where: { id: report.id },
+    data: { deletedAt: new Date() },
+  });
+  // The row is kept for the audit trail; the file itself is not, because
+  // holding somebody's medical document after they deleted it is not a thing
+  // to do by accident.
+  await deleteReport(report.objectPath);
+
+  res.json({ deleted: true, id: report.id });
+}));
+
+/**
+ * POST /api/visitor/ai/navigate — the core flow.
+ *
+ * Symptoms and/or one of the caller's own reports go in; a department, a
+ * reason, and the doctors who can actually see them come out.
+ */
+app.post('/api/visitor/ai/navigate', apiRoute(async (req, res) => {
+  const user = await requireAuthUser(req, res);
+  if (!user) return;
+  if (!enforceRateLimit(req, res, 'ai-navigate', 20, 60_000)) return;
+
+  const body = bodyAsObject(req);
+  const symptoms = optionalString(body.symptoms, 'Symptoms', 2000) ?? null;
+  const reportId = optionalString(body.reportId, 'Report', 64) ?? null;
+
+  if (!symptoms && !reportId) {
+    throw new ApiError(400, 'VALIDATION_ERROR',
+      'Describe how you are feeling, or choose one of your uploaded reports.');
+  }
+
+  // Ownership is proved before a single byte reaches the model.
+  const report = reportId ? await ownedReportOrThrow(reportId, user.id) : null;
+
+  const facility = await getCachedFacilityOrThrow();
+  const departments = await prisma.department.findMany({
+    where: { facilityId: facility.id },
+    select: { id: true, name: true, description: true },
+    orderBy: { name: 'asc' },
+  });
+
+  const result = await runHealthNavigation({
+    symptoms,
+    reportText: report?.extractedText ?? null,
+    departments,
+  });
+
+  const matched = matchDepartment(result.department, departments);
+
+  const navigation = await prisma.aiNavigation.create({
+    data: {
+      userId: user.id,
+      reportId: report?.id ?? null,
+      symptoms,
+      departmentId: matched?.id ?? null,
+      suggestedDepartment: result.department,
+      reasoning: result.reason,
+      confidence: result.confidence,
+      modelUsed: result.modelUsed,
+      failed: result.failed,
+    },
+  });
+
+  const doctors = matched ? await rankedDoctorsForDepartment(facility.id, matched.id) : [];
+
+  res.json({
+    navigationId: navigation.id,
+    department: matched ? { id: matched.id, name: matched.name } : null,
+    suggestedDepartment: result.department,
+    /** True when the model named something this facility does not have. */
+    unmatched: !!result.department && !matched,
+    reason: result.reason,
+    confidence: result.confidence,
+    urgent: result.urgent,
+    suggestedQuestions: result.suggestedQuestions,
+    doctors,
+    failed: result.failed,
+    failureReason: (result as any).failureReason ?? null,
+    /** Named so the UI can attribute the output honestly. */
+    model: result.modelUsed,
+    disclaimer: AI_DISCLAIMER,
+    reportUsed: report ? { id: report.id, title: report.title, hadText: !!report.extractedText } : null,
+    reportTextUnavailable: !!report && !report.extractedText,
+    reportExtractionNote: report?.extractionNote ?? null,
+  });
+}));
+
+/** GET /api/visitor/ai/navigations — your own past suggestions. */
+app.get('/api/visitor/ai/navigations', apiRoute(async (req, res) => {
+  const user = await requireAuthUser(req, res);
+  if (!user) return;
+
+  const rows = await prisma.aiNavigation.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: 'desc' },
+    take: 25,
+    include: { department: { select: { id: true, name: true } }, report: { select: { id: true, title: true } } },
+  });
+
+  res.json({
+    navigations: rows.map((n) => ({
+      id: n.id,
+      createdAt: n.createdAt.toISOString(),
+      symptoms: n.symptoms,
+      department: n.department ? { id: n.department.id, name: n.department.name } : null,
+      suggestedDepartment: n.suggestedDepartment,
+      reasoning: n.reasoning,
+      confidence: n.confidence,
+      model: n.modelUsed,
+      failed: n.failed,
+      report: n.report ? { id: n.report.id, title: n.report.title } : null,
+    })),
+    disclaimer: AI_DISCLAIMER,
+  });
+}));
+
+// ---------------------------------------------------------------------------
+// Crowd forecasting
+// ---------------------------------------------------------------------------
+
+/**
+ * Gather the observations the forecast needs.
+ *
+ * Two honest approximations, stated rather than hidden:
+ *
+ *  - Completion time is `updatedAt` on a closed token. There is no dedicated
+ *    completedAt column, and adding one would only start collecting data today;
+ *    for a token whose last write WAS its completion this is exact, and it is
+ *    the best available for the rest.
+ *  - There is no Counter model in this schema, so capacity is counted in
+ *    services: a service with somebody being served is an open counter, one
+ *    with a counter name and nobody being served is an idle one. That is a real
+ *    measurement of real rows, not an invented counter list.
+ */
+async function gatherCrowdObservations(facilityId: string) {
+  const now = new Date();
+  const windowStart = new Date(now.getTime() - 60 * 60_000);
+  const today = serviceDayKey();
+
+  const [waiting, arrivals, completions, services, appointments] = await Promise.all([
+    prisma.token.count({
+      where: { facilityId, deletedAt: null, status: { in: ['Waiting', 'Approaching'] } },
+    }),
+    prisma.token.findMany({
+      where: { facilityId, deletedAt: null, issuedAt: { gte: windowStart } },
+      select: { issuedAt: true, serviceId: true },
+    }),
+    // Completed ONLY, deliberately. A cancelled or auto-expired token also
+    // leaves the queue, but it was never served, and counting it as throughput
+    // would report capacity the facility does not have — worst of all after the
+    // nightly sweep closes out abandoned tokens in a batch. Excluding them makes
+    // the forecast slightly conservative, which is the safe direction for
+    // something that raises staffing alarms.
+    prisma.token.findMany({
+      where: {
+        facilityId, deletedAt: null,
+        status: 'Completed',
+        completedAt: { gte: windowStart },
+      },
+      select: { completedAt: true, serviceId: true },
+    }),
+    prisma.service.findMany({
+      where: { facilityId },
+      select: { id: true, name: true, defaultCounterName: true },
+    }),
+    prisma.appointment.findMany({
+      where: {
+        facilityId, date: today, deletedAt: null,
+        status: { in: QUEUE_ELIGIBLE_STATUSES as any },
+      },
+      select: { time: true },
+    }),
+  ]);
+
+  const serving = await prisma.token.groupBy({
+    by: ['serviceId'],
+    where: { facilityId, deletedAt: null, status: 'Serving' },
+    _count: { _all: true },
+  });
+  const servingByService = new Set(serving.map((r) => r.serviceId));
+
+  const perServiceWaiting = await prisma.token.groupBy({
+    by: ['serviceId'],
+    where: { facilityId, deletedAt: null, status: { in: ['Waiting', 'Approaching'] } },
+    _count: { _all: true },
+  });
+  const waitingByService = new Map(perServiceWaiting.map((r) => [r.serviceId, r._count._all]));
+
+  const byLoad = services
+    .map((svc) => ({ ...svc, waiting: waitingByService.get(svc.id) ?? 0 }))
+    .sort((a, b) => b.waiting - a.waiting);
+
+  const openCounters = services.filter((svc) => servingByService.has(svc.id)).length;
+  const idleCounters = services.filter(
+    (svc) => !!svc.defaultCounterName && !servingByService.has(svc.id),
+  ).length;
+
+  // The facility's clock position, so booked appointments land in the right
+  // forecast window. UTC would be wrong by hours.
+  const local = new Intl.DateTimeFormat('en-GB', {
+    timeZone: DEFAULT_QUEUE_TIMEZONE, hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(now);
+  const nowMinutesOfDay = (minutesOfDay(local) ?? 0);
+
+  const scheduled: ScheduledArrival[] = appointments.map((a) => ({ time: a.time, serviceId: null }));
+
+  return {
+    now,
+    currentQueue: waiting,
+    arrivals: arrivals.map((a) => ({ issuedAt: a.issuedAt, serviceId: a.serviceId })),
+    completions: completions
+      .filter((c): c is { completedAt: Date; serviceId: string } => c.completedAt !== null)
+      .map((c) => ({ completedAt: c.completedAt, serviceId: c.serviceId })),
+    scheduled,
+    nowMinutesOfDay,
+    services: byLoad,
+    openCounters,
+    idleCounters,
+  };
+}
+
+/**
+ * GET /api/crowd/forecast — how busy it is about to get.
+ *
+ * Readable by anyone signed in, because a patient deciding whether to come now
+ * or in an hour is exactly who this helps. Operational recommendations —
+ * which counter to open, which staff to move — are attached only for callers
+ * holding analytics:read: they are instructions to staff, not information for
+ * the public.
+ */
+app.get('/api/crowd/forecast', apiRoute(async (req, res) => {
+  const user = await requireAuthUser(req, res);
+  if (!user) return;
+
+  const facility = await getCachedFacilityOrThrow();
+  const obs = await gatherCrowdObservations(facility.id);
+  const forecast = forecastCrowd(obs);
+
+  const isOperator = hasPermission(user.role, 'analytics:read');
+  if (isOperator) {
+    forecast.recommendations = recommendationsFor(forecast, {
+      openCounters: obs.openCounters,
+      idleCounters: obs.idleCounters,
+      busiestService: obs.services[0]?.name ?? null,
+      quietService: obs.services.length > 1 ? obs.services[obs.services.length - 1]?.name ?? null : null,
+    });
+  }
+
+  res.json({
+    forecast,
+    /**
+     * Named so the UI can be truthful about provenance. This is arithmetic over
+     * observed rows — a queueing model, not a language model — and labelling it
+     * "AI" would be the kind of overclaim this codebase avoids elsewhere.
+     */
+    method: 'queueing-model',
+    methodLabel: 'Live queue model — measured arrivals and throughput',
+    generatedAt: obs.now.toISOString(),
+    ...(isOperator
+      ? {
+          capacity: { openCounters: obs.openCounters, idleCounters: obs.idleCounters },
+          departmentLoad: obs.services.map((svc) => ({ service: svc.name, waiting: svc.waiting })),
+        }
+      : {}),
+  });
+}));
+
+/**
+ * GET /api/admin/crowd — the operations view.
+ *
+ * The same forecast plus everything a supervisor needs to act on it. Gated on
+ * analytics:read, so STAFF (who run the floor but do not read facility
+ * analytics) are refused here and use the live queue instead.
+ */
+app.get('/api/admin/crowd', apiRoute(async (req, res) => {
+  const user = await requireAuthUser(req, res);
+  if (!user) return;
+  if (!hasPermission(user.role, 'analytics:read')) {
+    res.status(403).json({ error: 'AUTHORIZATION_DENIED', message: 'You cannot view crowd analytics.' });
+    return;
+  }
+
+  const facility = await getCachedFacilityOrThrow();
+  const obs = await gatherCrowdObservations(facility.id);
+  const forecast = forecastCrowd(obs);
+  forecast.recommendations = recommendationsFor(forecast, {
+    openCounters: obs.openCounters,
+    idleCounters: obs.idleCounters,
+    busiestService: obs.services[0]?.name ?? null,
+    quietService: obs.services.length > 1 ? obs.services[obs.services.length - 1]?.name ?? null : null,
+  });
+
+  res.json({
+    forecast,
+    method: 'queueing-model',
+    methodLabel: 'Live queue model — measured arrivals and throughput',
+    generatedAt: obs.now.toISOString(),
+    capacity: { openCounters: obs.openCounters, idleCounters: obs.idleCounters },
+    departmentLoad: obs.services.map((svc) => ({
+      service: svc.name,
+      counter: svc.defaultCounterName,
+      waiting: svc.waiting,
+    })),
+  });
+}));
+
+// ---------------------------------------------------------------------------
 // Admin API  —  routes match src/services/queueApi.ts exactly
 // ---------------------------------------------------------------------------
 
@@ -3572,7 +4233,7 @@ app.delete('/api/admin/tokens/:id', apiRoute(async (req, res) => {
 
   await prisma.token.update({
     where: { id: token.id },
-    data: { status: 'Cancelled', deletedAt: new Date() },
+    data: { status: 'Cancelled', deletedAt: new Date(), completedAt: new Date() },
   });
 
   // The Super Admin's queue-activity feed reads these rows: an admin cannot
@@ -4504,7 +5165,7 @@ app.delete('/api/super-admin/users/:id', apiRoute(async (req, res) => {
       // Do not leave them standing in the queue under a deleted account.
       await tx.token.update({
         where: { id: activeToken.id },
-        data: { status: 'Cancelled', deletedAt: new Date() },
+        data: { status: 'Cancelled', deletedAt: new Date(), completedAt: new Date() },
       });
     }
     if (target.doctor) {

@@ -135,6 +135,8 @@ model User {
 
   auditLogs    AuditLog[]
   tokens       Token[]
+  medicalReports MedicalReport[]
+  aiNavigations  AiNavigation[]
   appointments Appointment[] // Appointments booked by this user as the patient
   doctor       Doctor?       // One-to-one: a DOCTOR user is linked to a Doctor profile
 
@@ -163,6 +165,7 @@ model Facility {
   appointments Appointment[]
   cameras      Camera[]
   users        User[]
+  medicalReports MedicalReport[]
 
   @@map("facilities")
 }
@@ -170,12 +173,20 @@ model Facility {
 model Department {
   id         String   @id @default(uuid())
   name       String
+  /**
+   * What this department treats, in plain language. Sent to the model as the
+   * catalogue it must choose from, so a recommendation can only ever name a
+   * department this facility actually has. Curated by a SUPER_ADMIN; null just
+   * means the model sees the name alone.
+   */
+  description String?  @map("description")
   facilityId String   @map("facility_id")
   facility   Facility @relation(fields: [facilityId], references: [id])
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   doctors Doctor[]
+  aiNavigations AiNavigation[]
 
   @@unique([facilityId, name])
   @@map("departments")
@@ -247,6 +258,15 @@ model Token {
   visitorName   String?     @map("visitor_name")
   phone         String?
   issuedAt      DateTime    @default(now()) @map("issued_at")
+  /**
+   * When this token left the queue, served or otherwise closed out.
+   *
+   * Added because throughput could not be measured at all without it: the row
+   * carried no completion time, so "how fast is this queue moving" had no
+   * answer, and any forecast built on it would have been guesswork wearing a
+   * number. Null for a token still waiting.
+   */
+  completedAt   DateTime?   @map("completed_at")
   status        QueueStatus @default(Waiting)
   counterName   String?     @map("counter_name")
   accessKeyHash String      @map("access_key_hash")
@@ -398,6 +418,84 @@ model AuditLog {
 // ---------------------------------------------------------------------------
 // Camera & Sensor Monitoring
 // ---------------------------------------------------------------------------
+
+/// ---------------------------------------------------------------------------
+/// AI health navigation
+/// ---------------------------------------------------------------------------
+
+/// A document a visitor uploaded about themselves.
+///
+/// Scoped to one account and never listed facility-wide: every read is filtered
+/// by `userId` taken from the verified session, so one patient cannot reach
+/// another's records. The file itself is stored privately — `objectPath` is a
+/// storage key, not a public URL, and is exchanged for a short-lived signed URL
+/// only after ownership is checked.
+model MedicalReport {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id])
+  facilityId  String?   @map("facility_id")
+  facility    Facility? @relation(fields: [facilityId], references: [id])
+
+  /// Patient-supplied label, e.g. "Blood test 12 Aug".
+  title       String
+  /// Free-text category: "Lab report", "Scan", "Prescription", "Other".
+  kind        String    @default("Other")
+  /// Storage key inside the private bucket. NOT a public URL.
+  objectPath  String    @map("object_path")
+  mimeType    String    @map("mime_type")
+  sizeBytes   Int       @map("size_bytes")
+
+  /// Text pulled out of the document, when the format allows it. This — never
+  /// the file itself — is what is sent to the model.
+  extractedText String? @map("extracted_text")
+  /// Why extraction produced nothing, so the UI can say so honestly.
+  extractionNote String? @map("extraction_note")
+
+  /// The date the patient says the report is from, which is rarely the upload date.
+  reportDate  String?   @map("report_date")
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  navigations AiNavigation[]
+
+  @@index([userId, deletedAt])
+  @@map("medical_reports")
+}
+
+/// One AI-assisted navigation result, kept so the patient can see what was
+/// suggested before and so a suggestion is auditable rather than ephemeral.
+model AiNavigation {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  user         User     @relation(fields: [userId], references: [id])
+
+  reportId     String?  @map("report_id")
+  report       MedicalReport? @relation(fields: [reportId], references: [id])
+
+  /// What the patient typed, if anything.
+  symptoms     String?
+  /// The department the model chose, resolved against this facility's real list.
+  departmentId String?  @map("department_id")
+  department   Department? @relation(fields: [departmentId], references: [id])
+  /// The department name as returned, kept even when it matched nothing.
+  suggestedDepartment String? @map("suggested_department")
+  /// The model's stated reason, shown to the patient verbatim.
+  reasoning    String?
+  /// 'low' | 'medium' | 'high' — the model's own confidence, surfaced honestly.
+  confidence   String?
+  /// Which model answered, so the UI never claims an output it did not produce.
+  modelUsed    String?  @map("model_used")
+  /// True when the request could not reach a model and no suggestion was made.
+  failed       Boolean  @default(false)
+
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@map("ai_navigations")
+}
 
 model Camera {
   id         String       @id @default(uuid())

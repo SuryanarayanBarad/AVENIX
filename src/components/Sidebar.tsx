@@ -16,7 +16,8 @@ import {
   Stethoscope,
   UserCog,
   FileText,
-  UserRound
+  UserRound,
+  Sparkles
 } from 'lucide-react';
 import { AdminTab } from '../types';
 import { visibleTabs } from '../../lib/permissions';
@@ -53,6 +54,7 @@ interface TabMeta {
  */
 const TAB_SECTION: Record<AdminTab, string> = {
   'my-visit': 'Main',
+  'ai-health': 'Main',
   'overview': 'Main',
   'live-queue': 'Main',
   'requests': 'Main',
@@ -93,6 +95,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // shared capability matrix, never by this component.
   const tabMeta: Record<AdminTab, TabMeta> = {
     'my-visit': { label: 'My Visit', icon: Ticket },
+    'ai-health': {
+      label: 'AI Health Navigator',
+      icon: Sparkles,
+      badge: 'AI',
+      badgeColor: 'bg-[var(--pc-tint-lilac)] text-[var(--pc-primary)]',
+    },
     'overview': { label: 'Overview', icon: LayoutDashboard },
     'live-queue': {
       label: 'Live Queue',

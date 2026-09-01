@@ -41,6 +41,14 @@ jobs:
       - name: Design-system contrast checks
         run: npm run check:contrast
 
+      # These two are pure functions over fixed inputs — no database, no
+      # server — so they belong in CI where the database-backed ones cannot go.
+      - name: Crowd forecast maths
+        run: npm run check:forecast
+
+      - name: Doctor ranking
+        run: npm run check:doctors
+
       # check:shapes and check:auth are deliberately NOT run here: both write to
       # a database and refuse to run against anything but localhost. Wiring them
       # up needs a Postgres service container and a seeded facility, which is

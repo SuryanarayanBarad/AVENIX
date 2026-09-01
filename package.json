@@ -19,7 +19,10 @@
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:shapes": "tsx scripts/check-appointment-shapes.mts",
     "check:auth": "tsx scripts/check-auth-hardening.mts",
-    "check:tracker": "tsx scripts/check-tracker-visibility.mts"
+    "check:tracker": "tsx scripts/check-tracker-visibility.mts",
+    "check:forecast": "tsx scripts/check-crowd-forecast.mts",
+    "check:doctors": "tsx scripts/check-doctor-ranking.mts",
+    "check:ai": "tsx scripts/check-ai-navigation.mts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

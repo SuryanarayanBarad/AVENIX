@@ -14,6 +14,7 @@ export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'STAFF' | 'DOCTOR' | 'V
 
 export type CommandTab =
   | 'my-visit'
+  | 'ai-health'
   | 'overview'
   | 'live-queue'
   | 'requests'
@@ -48,7 +49,9 @@ export type Permission =
   | 'audit:read'
   | 'own:appointments'
   | 'own:queue'
-  | 'own:visit';
+  | 'own:visit'
+  /** Use AI health navigation on your OWN reports and symptoms. */
+  | 'own:health';
 
 /**
  * What each role may do. DOCTOR deliberately holds only `own:*` permissions —
@@ -63,6 +66,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'analytics:read',
     'cameras:read', 'cameras:manage',
     'users:manage', 'audit:read',
+    'own:health',
   ],
   ADMIN: [
     'queue:read', 'queue:manage', 'queue:edit',
@@ -71,6 +75,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'schedule:read', 'schedule:manage',
     'analytics:read',
     'cameras:read', 'cameras:manage',
+    'own:health',
   ],
   MANAGER: [
     'queue:read', 'queue:manage', 'queue:edit',
@@ -79,6 +84,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'schedule:read', 'schedule:manage',
     'analytics:read',
     'cameras:read', 'cameras:manage',
+    'own:health',
   ],
   // Staff run the floor: they move the queue along but do not reschedule
   // clinics, reconfigure cameras, or read facility analytics.
@@ -87,14 +93,16 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'appointments:read', 'appointments:desk-book',
     'doctors:read',
     'cameras:read',
+    'own:health',
   ],
-  DOCTOR: ['own:appointments', 'own:queue'],
-  VISITOR: ['own:visit'],
+  DOCTOR: ['own:appointments', 'own:queue', 'own:health'],
+  VISITOR: ['own:visit', 'own:health'],
 };
 
 /** Every tab names the permission that backs it, so UI and API agree. */
 export const TAB_PERMISSION: Record<CommandTab, Permission> = {
   'my-visit': 'own:visit',
+  'ai-health': 'own:health',
   'overview': 'queue:read',
   'live-queue': 'queue:read',
   'requests': 'own:appointments',
@@ -118,6 +126,7 @@ export const TAB_PERMISSION: Record<CommandTab, Permission> = {
  */
 export const TAB_ORDER: CommandTab[] = [
   'my-visit',
+  'ai-health',
   'overview',
   'live-queue',
   'requests',

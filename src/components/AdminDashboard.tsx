@@ -20,6 +20,7 @@ import { AnalyticsView } from './AnalyticsView';
 import { CameraMonitorView } from './CameraMonitorView';
 import { CopilotDrawer } from './CopilotDrawer';
 import { MyVisitView } from './command/MyVisitView';
+import { HealthNavigatorView } from './command/HealthNavigatorView';
 import { MyPatientsView } from './command/MyPatientsView';
 import { RequestsView } from './command/RequestsView';
 import { DoctorDirectoryView } from './command/DoctorDirectoryView';
@@ -506,6 +507,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               )}
 
               {/* Doctor — both views are scoped to the signed-in doctor by the API */}
+              {currentTab === 'ai-health' && (
+                <HealthNavigatorView
+                  onBookAppointment={() => onNavigateToKiosk()}
+                />
+              )}
+
               {currentTab === 'requests' && <RequestsView />}
               {currentTab === 'my-patients' && <MyPatientsView />}
 
