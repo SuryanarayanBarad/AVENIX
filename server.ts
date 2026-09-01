@@ -3191,37 +3191,76 @@ app.post('/api/visitor/appointments/:id/reschedule-request', apiRoute(async (req
  * Admin token grid — returns all facility tokens for the 3×3 admin dashboard.
  * JWT-protected: SUPER_ADMIN, ADMIN, MANAGER only.
  */
-app.get('/api/admin/tokens', apiRoute(async (req, res) => {
-  const admin = await requireAdmin(req, res);
-  if (!admin) return;
+/**
+ * ---------------------------------------------------------------------------
+ * The live queue board
+ * ---------------------------------------------------------------------------
+ * One builder, two audiences. Staff read it with names; a patient reads the
+ * same board with everybody else's name withheld. Keeping it in one function is
+ * what stops the two drifting into disagreeing about who is in the queue.
+ */
+type QueueWindow = 'today' | 'upcoming';
 
-  const facility = await getCachedFacility();
-  if (!facility) return res.json({ tokens: [] });
+/** How far ahead "upcoming" reaches. A confirmed booking further out than this
+ *  belongs in the appointments list, not on a live queue board. */
+const UPCOMING_WINDOW_DAYS = 7;
 
-  const search = typeof req.query.search === 'string' ? req.query.search : undefined;
+/**
+ * A name the viewer is allowed to see.
+ *
+ * The board carries real patient names, so it cannot be handed to a patient as
+ * it stands. Their own row keeps its name — they need to find themselves —
+ * and everybody else becomes their queue code, which is what a waiting-room
+ * display shows anyway.
+ */
+function boardName(realName: string, code: string, reveal: boolean): string {
+  return reveal ? realName : `Patient ${code}`;
+}
 
-  // 1. Walk-in tokens and today's appointments are independent — one round
-  //    trip for both instead of two.
+async function buildQueueBoard(opts: {
+  facilityId: string;
+  search?: string;
+  /**
+   * 'today' is the live queue. 'upcoming' also carries confirmed appointments
+   * for the next few days — without it, a doctor approving a booking for
+   * tomorrow made it disappear from every board until the day arrived, which
+   * read as the approval having failed.
+   */
+  window: QueueWindow;
+  /** False for a viewer without queue:read; their own rows still show. */
+  revealNames: boolean;
+  viewerUserId?: string | null;
+}) {
+  const { facilityId, search, window: queueWindow, revealNames, viewerUserId } = opts;
+
   const todayDate = serviceDayKey();
-  const appointmentWhereEarly: any = {
-    facilityId: facility.id,
-    date: todayDate,
+  const appointmentWhere: any = {
+    facilityId,
     deletedAt: null,
     status: { in: QUEUE_ELIGIBLE_STATUSES as any },
   };
+
+  if (queueWindow === 'upcoming') {
+    const horizon = new Date(`${todayDate}T00:00:00`);
+    horizon.setDate(horizon.getDate() + UPCOMING_WINDOW_DAYS);
+    appointmentWhere.date = { gte: todayDate, lte: horizon.toISOString().slice(0, 10) };
+  } else {
+    appointmentWhere.date = todayDate;
+  }
+
   if (search) {
-    appointmentWhereEarly.OR = [
+    appointmentWhere.OR = [
       { patientName: { contains: search, mode: 'insensitive' } },
       { code: { contains: search, mode: 'insensitive' } },
     ];
   }
 
   const [dbTokens, appointments] = await Promise.all([
-    TokenRepo.findAllActiveForFacility(facility.id, search),
+    TokenRepo.findAllActiveForFacility(facilityId, search),
     prisma.appointment.findMany({
-      where: appointmentWhereEarly,
+      where: appointmentWhere,
       include: { doctor: { include: { department: true } } },
-      orderBy: { time: 'asc' },
+      orderBy: [{ date: 'asc' }, { time: 'asc' }],
     }),
   ]);
 
@@ -3230,63 +3269,124 @@ app.get('/api/admin/tokens', apiRoute(async (req, res) => {
   // token is simply how many active tokens were issued before it.
   const aheadByToken = computeAheadCounts(dbTokens);
 
-  const walkInTokens = await Promise.all(
-    dbTokens.map(async (t) => {
-      const peopleAhead = aheadByToken.get(t.id) ?? 0;
-      const estWait = Math.max(t.service.estimatedWaitMinutes, Math.ceil(peopleAhead * 1.7));
-      return {
-        id: t.id,
-        kind: 'token' as const,
-        code: t.code,
-        service: t.service.name,
-        patientName: displayVisitorName(t.visitorName, t.code),
-        issueTime: t.issuedAt instanceof Date ? t.issuedAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : t.issuedAt,
-        estWaitMin: estWait,
-        peopleAhead,
-        counterId: t.counterName || t.service.defaultCounterName || 'Unassigned',
-        status: t.status.toLowerCase(),
-        priority: 'Normal',
-        demographic: 'Standard',
-        urgencyScore: 0,
-        fairnessAdjustment: 0,
-        checkInMethod: 'Kiosk',
-      };
-    }),
-  );
+  const walkInTokens = dbTokens.map((t) => {
+    const peopleAhead = aheadByToken.get(t.id) ?? 0;
+    const estWait = Math.max(t.service.estimatedWaitMinutes, Math.ceil(peopleAhead * 1.7));
+    const isYours = !!viewerUserId && t.userId === viewerUserId;
+    return {
+      id: t.id,
+      kind: 'token' as const,
+      code: t.code,
+      service: t.service.name,
+      patientName: boardName(displayVisitorName(t.visitorName, t.code), t.code, revealNames || isYours),
+      issueTime: t.issuedAt instanceof Date ? t.issuedAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : t.issuedAt,
+      estWaitMin: estWait,
+      peopleAhead,
+      counterId: t.counterName || t.service.defaultCounterName || 'Unassigned',
+      status: t.status.toLowerCase(),
+      priority: 'Normal',
+      demographic: 'Standard',
+      urgencyScore: 0,
+      fairnessAdjustment: 0,
+      checkInMethod: 'Kiosk',
+      isYours,
+      scheduledFor: null as string | null,
+    };
+  });
 
-  // 2. Only queue-eligible appointments appear on the board — a request still
-  //    awaiting approval, or one denied/cancelled, is not in the queue.
+  // Only queue-eligible appointments appear — a request still awaiting
+  // approval, or one denied/cancelled, is not in the queue.
+  const appointmentTokens = appointments.map((apt, index) => {
+    const isYours = !!viewerUserId && apt.userId === viewerUserId;
+    const isToday = apt.date === todayDate;
+    return {
+      id: apt.id,
+      // The two halves of this list carry different kinds of identifier. Without
+      // saying which, a client cannot know whether `id` addresses a token or an
+      // appointment — which is why opening an appointment row asked for a token
+      // that does not exist and was told, correctly, that it was not found.
+      kind: 'appointment' as const,
+      appointmentId: apt.id,
+      version: apt.version,
+      date: apt.date,
+      time: apt.time,
+      reasonForVisit: apt.reasonForVisit,
+      code: apt.code,
+      service: `Dr. ${apt.doctor.name} (${apt.doctor.department.name})`,
+      patientName: boardName(apt.patientName, apt.code, revealNames || isYours),
+      issueTime: formatTime(apt.time),
+      estWaitMin: isToday ? Math.max(0, index * 8) : 0,
+      peopleAhead: isToday ? index : 0,
+      counterId: `Dr. ${apt.doctor.name}`,
+      status: toQueueStatus(apt.status) ?? 'waiting',
+      appointmentStatus: apt.status,
+      priority: 'Priority',
+      demographic: 'Standard',
+      urgencyScore: 0,
+      fairnessAdjustment: 0,
+      checkInMethod: 'Appointment',
+      isYours,
+      /**
+       * Set only for a confirmed booking on a later day, so the board can say
+       * "Confirmed for Thu 3 Sep" instead of implying the patient is queueing
+       * right now.
+       */
+      scheduledFor: isToday ? null : apt.date,
+    };
+  });
 
-  const appointmentTokens = appointments.map((apt, index) => ({
-    id: apt.id,
-    // The two halves of this list carry different kinds of identifier. Without
-    // saying which, a client cannot know whether `id` addresses a token or an
-    // appointment — which is why opening an appointment row asked for a token
-    // that does not exist and was told, correctly, that it was not found.
-    kind: 'appointment' as const,
-    appointmentId: apt.id,
-    version: apt.version,
-    date: apt.date,
-    time: apt.time,
-    reasonForVisit: apt.reasonForVisit,
-    code: apt.code,
-    service: `Dr. ${apt.doctor.name} (${apt.doctor.department.name})`,
-    patientName: apt.patientName,
-    issueTime: formatTime(apt.time),
-    estWaitMin: Math.max(0, index * 8),
-    peopleAhead: index,
-    counterId: `Dr. ${apt.doctor.name}`,
-    status: toQueueStatus(apt.status) ?? 'waiting',
-    appointmentStatus: apt.status,
-    priority: 'Priority',
-    demographic: 'Standard',
-    urgencyScore: 0,
-    fairnessAdjustment: 0,
-    checkInMethod: 'Appointment',
-  }));
+  return [...walkInTokens, ...appointmentTokens];
+}
 
-  // Combine and return both
-  res.json({ tokens: [...walkInTokens, ...appointmentTokens] });
+app.get('/api/admin/tokens', apiRoute(async (req, res) => {
+  const admin = await requireAdmin(req, res);
+  if (!admin) return;
+
+  const facility = await getCachedFacility();
+  if (!facility) return res.json({ tokens: [] });
+
+  const tokens = await buildQueueBoard({
+    facilityId: facility.id,
+    search: typeof req.query.search === 'string' ? req.query.search : undefined,
+    // Staff asked for the live board by default; `?window=upcoming` widens it.
+    window: req.query.window === 'upcoming' ? 'upcoming' : 'today',
+    revealNames: true,
+    viewerUserId: admin.id,
+  });
+
+  res.json({ tokens });
+}));
+
+/**
+ * GET /api/queue/board — the same board, readable by anyone signed in.
+ *
+ * The Live Patient Tracker is offered to patients in the navigation but called
+ * /api/admin/tokens, which requires queue:read. A patient opening their own
+ * tracker was answered 403 and shown an empty board — the screen most aimed at
+ * them was the one screen they could not use.
+ *
+ * Names are withheld from a viewer without queue:read, except on their own
+ * rows, so the board is safe to show a patient without turning the waiting
+ * room into a patient list.
+ */
+app.get('/api/queue/board', apiRoute(async (req, res) => {
+  const user = await requireAuthUser(req, res);
+  if (!user) return;
+
+  const facility = await getCachedFacility();
+  if (!facility) return res.json({ tokens: [] });
+
+  const tokens = await buildQueueBoard({
+    facilityId: facility.id,
+    search: typeof req.query.search === 'string' ? req.query.search : undefined,
+    // The tracker is where a patient looks after a doctor confirms, so it
+    // defaults to including confirmed appointments still to come.
+    window: req.query.window === 'today' ? 'today' : 'upcoming',
+    revealNames: hasPermission(user.role, 'queue:read'),
+    viewerUserId: user.id,
+  });
+
+  res.json({ tokens });
 }));
 
 /**

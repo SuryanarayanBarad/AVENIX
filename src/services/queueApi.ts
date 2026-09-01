@@ -169,6 +169,23 @@ export const visitorApi = {
     return result;
   },
 
+  /**
+   * The live board, readable by whoever is signed in.
+   *
+   * Staff get the same rows as /api/admin/tokens; a patient gets the board with
+   * other people's names withheld. Use this anywhere the viewer might not be
+   * staff — /api/admin/tokens answers a patient with 403 and an empty screen.
+   *
+   * Includes confirmed appointments still to come, so a booking a doctor has
+   * just approved for a later day is visible rather than silently absent.
+   */
+  async getQueueBoard(search?: string, window: 'today' | 'upcoming' = 'upcoming'): Promise<any[]> {
+    const params = new URLSearchParams({ window });
+    if (search) params.set('search', search);
+    const result = await request<{ tokens: any[] }>(`/api/queue/board?${params}`, { headers: authHeaders() });
+    return result.tokens;
+  },
+
   async getDoctors(date: string): Promise<DoctorOption[]> {
     const result = await request<{ doctors: DoctorOption[] }>(`/api/visitor/doctors?date=${encodeURIComponent(date)}`);
     return result.doctors;
@@ -321,6 +338,7 @@ export const adminApi = {
     const result = await request<{ tokens: any[] }>(url, { headers: authHeaders() });
     return result.tokens;
   },
+
 
   async getDoctorSchedule(date: string): Promise<any> {
     return request(`/api/admin/doctor-schedule?date=${encodeURIComponent(date)}`, { headers: authHeaders() });

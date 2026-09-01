@@ -61,6 +61,7 @@ const PatientCard: React.FC<{
   const Icon = serviceIcon[token.service] || Activity;
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const scheduledFor: string | null = (token as any).scheduledFor ?? null;
   const progressPct = token.status === 'serving'
     ? 100
     : token.status === 'approaching'
@@ -111,7 +112,14 @@ const PatientCard: React.FC<{
 
       {/* Patient Info */}
       <div className="px-5 pb-3">
-        <div className="text-sm font-semibold text-white truncate">{token.patientName}</div>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-sm font-semibold text-white truncate">{token.patientName}</span>
+          {(token as any).isYours && (
+            <span className="shrink-0 rounded-full border border-[#2E37A4]/40 bg-[#2E37A4]/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+              You
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-3 mt-1.5 text-xs text-white/50">
           <span className="flex items-center gap-1">
             <Clock className="w-3 h-3" />
@@ -123,8 +131,8 @@ const PatientCard: React.FC<{
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="px-5 pb-3">
+      {/* Progress Bar — only meaningful for somebody actually in the queue */}
+      <div className={`px-5 pb-3 ${scheduledFor ? 'hidden' : ''}`}>
         <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-700"
@@ -143,6 +151,21 @@ const PatientCard: React.FC<{
       {/* Stats Footer */}
       <div className="mt-auto px-5 py-4 border-t border-white/[0.06] flex items-center justify-between text-xs">
         <div className="flex items-center gap-3">
+          {/* A booking confirmed for a later day is not queueing yet: it has no
+              position and no wait, so showing "~0 min / 0 ahead" would be
+              actively misleading. Show when it is actually for. */}
+          {(token as any).scheduledFor ? (
+            <span className="flex items-center gap-1.5 rounded-xl border border-[#2E37A4]/30 bg-[#2E37A4]/15 px-3 py-1.5 font-semibold text-white">
+              <CalendarCheck className="w-3.5 h-3.5 text-[#2E37A4]" />
+              <span>
+                Confirmed ·{' '}
+                {new Date(`${(token as any).scheduledFor}T12:00:00`).toLocaleDateString(undefined, {
+                  weekday: 'short', day: 'numeric', month: 'short',
+                })}
+              </span>
+            </span>
+          ) : (
+          <>
           {/* Wait Time Button */}
           <button
             onClick={handleRefreshWait}
@@ -160,6 +183,8 @@ const PatientCard: React.FC<{
             <Users className="w-3.5 h-3.5" />
             <span>{token.peopleAhead} ahead</span>
           </div>
+          </>
+          )}
         </div>
         <div className="text-white/40 font-mono text-[11px]">{token.counterId}</div>
       </div>
@@ -352,11 +377,17 @@ export const PatientTrackerCarousel: React.FC<PatientTrackerCarouselProps> = ({
     let mounted = true;
     const fetchTokens = async () => {
       try {
-        // A signed-in doctor reads /api/doctor/queue, which the server scopes to
-        // that doctor's own patients. Everyone else uses the admin queue.
+        // A signed-in doctor reads /api/doctor/queue, which the server scopes
+        // to that doctor's own patients. Everyone else reads the shared board.
+        //
+        // This used to call /api/admin/tokens for everyone else — including
+        // patients, who have no queue:read permission and were answered 403.
+        // The tracker offered to them in the navigation was the one screen they
+        // could not use. /api/queue/board serves both, withholding other
+        // people's names from a viewer who is not staff.
         const result = isDoctorUser
           ? await doctorApi.getQueue(searchQuery)
-          : await adminApi.getTokens(searchQuery);
+          : await visitorApi.getQueueBoard(searchQuery);
         if (mounted) {
           setLiveTokens(result as Token[]);
           setIsLoading(false);

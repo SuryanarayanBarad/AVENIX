@@ -18,7 +18,8 @@
     "deploy:migrate": "prisma migrate deploy",
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:shapes": "tsx scripts/check-appointment-shapes.mts",
-    "check:auth": "tsx scripts/check-auth-hardening.mts"
+    "check:auth": "tsx scripts/check-auth-hardening.mts",
+    "check:tracker": "tsx scripts/check-tracker-visibility.mts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

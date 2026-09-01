@@ -85,10 +85,11 @@ async function main() {
   // Ask the availability endpoint for a slot that is actually free, rather than
   // guessing one and tripping the slot-conflict guard.
   const avail = await api(`/api/visitor/doctors/${doctorRow.id}/availability?date=${date}`);
-  const slots: string[] = (avail.body?.slots ?? avail.body?.available ?? [])
-    .map((s: any) => (typeof s === 'string' ? s : s.time))
-    .filter(Boolean);
-  const time = slots[slots.length - 1] ?? '11:30 AM';
+  // The endpoint returns `availableTimes`; reading `slots` silently produced an
+  // empty list and fell back to a hardcoded time that happened to be free.
+  const slots: string[] = (avail.body?.availableTimes ?? []).filter(Boolean);
+  if (!slots.length) throw new Error('no free slot for the probe booking');
+  const time = slots[slots.length - 1];
   console.log(`     ${slots.length} free slot(s); using ${time}`);
   const booking = await api('/api/visitor/appointments', {
     method: 'POST',
