@@ -6,7 +6,6 @@ import {
   Zap, 
   RotateCcw
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { Counter } from '../types';
 
 interface CounterOptimizationViewProps {
@@ -22,67 +21,46 @@ export const CounterOptimizationView: React.FC<CounterOptimizationViewProps> = (
   const [isOptimized, setIsOptimized] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
 
-  const handleRunOptimization = async () => {
+  /**
+   * Project the planning model forward on the simulated counters.
+   *
+   * This used to POST /api/copilot/optimize and, when that failed, quietly fall
+   * through to a hardcoded transform over mock counter ids — so a 410 from the
+   * retired endpoint produced fabricated "optimised" figures and a burst of
+   * confetti, which is the exact opposite of what an operator needs. There is
+   * no network call now, because there is nothing real behind these counters:
+   * the sidebar labels this tab Simulated, and this is a projection, not an
+   * applied change.
+   *
+   * The real, audited control is ServiceCapacityPanel at the top of this view.
+   * It writes to the database and moves the wait every waiting patient sees.
+   */
+  const handleRunProjection = () => {
     setIsRunning(true);
-    
-    try {
-      // Call real backend optimization endpoint
-      const response = await fetch('/api/copilot/optimize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          counters,
-          targetWaitMin: 10,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.optimizedCounters) {
-          setIsRunning(false);
-          setIsOptimized(true);
-          confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: { y: 0.6 },
-          });
-          onApplyOptimization(data.optimizedCounters);
-          return;
-        }
-      }
-    } catch (err) {
-      console.warn('Using client fallback optimizer:', err);
-    }
-
-    // Fallback simulation
     setTimeout(() => {
       setIsRunning(false);
       setIsOptimized(true);
 
-      const optimized = counters.map((c) => {
-        if (c.id === 'c3') { // Pharmacy
+      const projected = counters.map((c) => {
+        if (c.id === 'c3') {
           return { ...c, queueCount: 14, avgWaitMin: 11, status: 'Optimal' as const, utilizationPct: 74, densityLevel: 'Moderate' as const };
         }
-        if (c.id === 'c5') { // Registration -> activated
+        if (c.id === 'c5') {
           return { ...c, status: 'Active' as const, queueCount: 12, avgWaitMin: 8, utilizationPct: 68, densityLevel: 'Moderate' as const, service: 'General Consultation' as any };
         }
-        if (c.id === 'c1') { // General
+        if (c.id === 'c1') {
           return { ...c, queueCount: 12, avgWaitMin: 9, status: 'Optimal' as const, utilizationPct: 62, densityLevel: 'Moderate' as const };
         }
-        if (c.id === 'c8') { // Backup -> opened
+        if (c.id === 'c8') {
           return { ...c, status: 'Active' as const, queueCount: 6, avgWaitMin: 6, utilizationPct: 48, densityLevel: 'Low' as const };
         }
         return c;
       });
 
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-      });
-
-      onApplyOptimization(optimized);
-    }, 1000);
+      // No confetti: nothing was applied, and celebrating a projection as
+      // though it were is how a simulated panel gets mistaken for a real one.
+      onApplyOptimization(projected);
+    }, 600);
   };
 
   const handleReset = () => {
@@ -123,19 +101,19 @@ export const CounterOptimizationView: React.FC<CounterOptimizationViewProps> = (
           )}
 
           <button
-            onClick={handleRunOptimization}
+            onClick={handleRunProjection}
             disabled={isRunning}
             className="pc-btn-primary flex items-center gap-2 px-5 py-2.5 text-[13px] font-semibold disabled:opacity-50 cursor-pointer"
           >
             {isRunning ? (
               <>
                 <Sparkles className="w-4 h-4 animate-spin" />
-                <span>Computing Optimal Allocation...</span>
+                <span>Projecting…</span>
               </>
             ) : (
               <>
                 <Zap className="w-4 h-4 text-amber-300" />
-                <span>{isOptimized ? 'Re-run AI Balancer' : 'RUN AI OPTIMIZATION'}</span>
+                <span>{isOptimized ? 'Re-run projection' : 'Run projection'}</span>
               </>
             )}
           </button>
