@@ -59,6 +59,34 @@ import {
 
 const screenEase = [0.22, 1, 0.36, 1] as const;
 
+/**
+ * Turn the server's OAuth failure code into something a person can act on.
+ *
+ * The codes are deliberately coarse — the precise Google message stays in the
+ * server log, because it can contain the client id and redirect URI, which do
+ * not belong in a URL fragment or on screen.
+ */
+function describeAuthError(code: string): string {
+  switch (code) {
+    case 'access_denied':
+      return 'Sign-in was cancelled.';
+    case 'oauth_client_rejected':
+      return 'Google rejected this app\u2019s credentials. An administrator needs to check the Google client ID and secret on the server.';
+    case 'oauth_redirect_mismatch':
+      return 'This site\u2019s address is not registered with Google. An administrator needs to add it to the OAuth client\u2019s authorised redirect URIs.';
+    case 'oauth_code_expired':
+      return 'That sign-in link had already been used or had expired. Please try again.';
+    case 'oauth_network':
+      return 'The server could not reach Google. Please try again in a moment.';
+    case 'missing_code':
+      return 'Google did not return a sign-in code. Please try again.';
+    case 'oauth_failed':
+      return 'Google sign-in could not be completed. Please try again, or sign in with your email and password.';
+    default:
+      return 'Sign-in could not be completed. Please try again.';
+  }
+}
+
 export default function App() {
   const [currentView, setCurrentView] = useState<AppView>('landing');
   const [currentAdminTab, setCurrentAdminTab] = useState<AdminTab>('overview');
@@ -67,6 +95,8 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  /** Why a sign-in attempt did not complete, shown in the auth dialog. */
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Live visitor flow state (API-backed)
@@ -91,7 +121,11 @@ export default function App() {
 
       if (hashToken && hashUserStr) {
         try {
-          const hashUser = JSON.parse(decodeURIComponent(hashUserStr));
+          // URLSearchParams has already percent-decoded this value. Decoding it
+          // a second time threw URIError on any name containing a literal '%',
+          // which landed in the catch below and silently dropped a completed
+          // sign-in.
+          const hashUser = JSON.parse(hashUserStr);
           window.localStorage.setItem('auth_token', hashToken);
           setUser(hashUser);
           
@@ -106,12 +140,18 @@ export default function App() {
           setIsAuthLoading(false);
           return;
         } catch (e) {
-          console.error("Failed to parse user from hash");
+          console.error('Failed to parse user from hash', e);
+          setAuthNotice('Sign-in did not complete. Please try again.');
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
         }
       } else if (hashError) {
-        // Clear hash but maybe we want to show it in UI? For now just clear it.
+        // Previously cleared without a word, so a failed Google sign-in looked
+        // identical to never having pressed the button: back at the sign-in
+        // page, nothing explained. The reason is now shown, and the sign-in
+        // dialog reopens so the next attempt is one click away.
+        setAuthNotice(describeAuthError(hashError));
+        setIsAuthModalOpen(true);
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
-        // Could pass to a global error state here if needed
       }
     }
 
@@ -430,7 +470,8 @@ export default function App() {
 
       <AuthModal 
         isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
+        notice={authNotice}
+        onClose={() => { setIsAuthModalOpen(false); setAuthNotice(null); }} 
         onLoginSuccess={(u) => {
           setUser(u);
           if (u.role === 'SUPER_ADMIN') setCurrentView('super-admin');

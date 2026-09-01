@@ -7,6 +7,12 @@ import { User } from '../types';
 
 interface AuthModalProps {
   isOpen: boolean;
+  /**
+   * Why a previous attempt failed, when there was one. Surfaced here because a
+   * Google sign-in that fails redirects back to a fresh page load, so the
+   * component that started it no longer exists to report anything.
+   */
+  notice?: string | null;
   onClose: () => void;
   onLoginSuccess: (user: User) => void;
 }
@@ -26,7 +32,7 @@ const modalEase = [0.22, 1, 0.36, 1] as const;
  * behind it here, and a control that does nothing is worse than one that is not
  * there.
  */
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
+export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, notice = null, onClose, onLoginSuccess }) => {
   const shouldReduceMotion = useReducedMotion();
   const [mode, setMode] = useState<'login' | 'register'>('login');
 
@@ -36,6 +42,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
   const [showPassword, setShowPassword] = useState(false);
 
   const [error, setError] = useState('');
+
+  // A failed Google sign-in comes back as a fresh page load, so the reason
+  // arrives as a prop rather than from anything this component did. Seeding the
+  // existing banner keeps one error surface instead of two.
+  useEffect(() => {
+    if (isOpen && notice) setError(notice);
+  }, [isOpen, notice]);
   const [loading, setLoading] = useState(false);
 
   /**

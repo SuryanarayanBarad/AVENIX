@@ -120,7 +120,39 @@ async function main() {
   ok('X-QueueMind-Role does not grant staff access', legacy.status === 401 || legacy.status === 403,
      `http=${legacy.status}`);
 
-  console.log('\n11. security headers are present');
+  console.log('\n11. a failed Google sign-in is reported, not swallowed');
+  // The symptom this covers: returning from Google to the sign-in page with no
+  // explanation, because the client cleared #auth_error without showing it and
+  // the server collapsed every cause into one opaque code.
+  const oauthCases: [string, string][] = [
+    ['error=access_denied', 'access_denied'],
+    ['code=', 'missing_code'],
+  ];
+  for (const [query, expected] of oauthCases) {
+    const r = await fetch(`${BASE}/auth/google/callback?${query}`, { redirect: 'manual' });
+    const loc = r.headers.get('location') ?? '';
+    ok(`?${query} redirects with #auth_error=${expected}`, loc.includes(`auth_error=${expected}`), loc);
+  }
+  const bad = await fetch(`${BASE}/auth/google/callback?code=definitely-not-a-real-code`, { redirect: 'manual' });
+  const badLoc = bad.headers.get('location') ?? '';
+  ok('a bad code produces a classified reason', /#auth_error=oauth_[a-z_]+/.test(badLoc), badLoc);
+  // Google's raw message can echo the client id and redirect URI; a URL
+  // fragment is the wrong place for either.
+  ok('no client id or secret leaks into the fragment',
+     !/client_id|client_secret|GOCSPX/i.test(badLoc), badLoc);
+
+  console.log('\n12. the user payload survives the hash round trip');
+  // URLSearchParams already percent-decodes, so decoding a second time threw
+  // URIError on any name containing '%' and silently dropped the sign-in.
+  for (const name of ['Surya Barad', '50% Recovery', 'A & B', 'S\u00fbrya']) {
+    const encoded = encodeURIComponent(JSON.stringify({ id: 'u1', name, role: 'VISITOR' }));
+    const parsed = new URLSearchParams(`auth_token=T&auth_user=${encoded}`).get('auth_user');
+    let round: string | null = null;
+    try { round = JSON.parse(parsed!).name; } catch { /* left null */ }
+    ok(`a name like "${name}" round-trips`, round === name, `got ${JSON.stringify(round)}`);
+  }
+
+  console.log('\n13. security headers are present');
   const head = await fetch(`${BASE}/api/health`);
   for (const h of ['x-content-type-options', 'x-frame-options', 'referrer-policy']) {
     ok(`${h} is set`, !!head.headers.get(h), head.headers.get(h) ?? 'missing');

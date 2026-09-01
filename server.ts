@@ -2182,11 +2182,33 @@ app.get(['/api/auth/google/callback', '/auth/google/callback'], async (req, res)
     res.redirect(`${appUrl}/#auth_token=${appToken}&auth_user=${userData}`);
 
   } catch (error: any) {
-    console.error('Google OAuth callback error:', error?.message || error);
+    const detail = error?.response?.data?.error_description
+      ?? error?.response?.data?.error
+      ?? error?.message
+      ?? String(error);
+    console.error('Google OAuth callback error:', detail);
+
+    /**
+     * Every failure used to collapse to `oauth_failed`, and the client cleared
+     * it without showing anything — so a misconfiguration looked exactly like
+     * "nothing happened": the user came back from Google to the sign-in page
+     * with no explanation, and nothing in the UI to act on.
+     *
+     * The reason is classified into a small, fixed set of codes. Google's raw
+     * message is NOT forwarded to the browser: it can echo the redirect URI and
+     * client id, and a URL fragment is a bad place for either. The specific
+     * message stays in the server log, where an operator can read it.
+     */
+    let reason = 'oauth_failed';
+    if (/invalid_client|unauthorized_client/i.test(detail)) reason = 'oauth_client_rejected';
+    else if (/redirect_uri_mismatch/i.test(detail)) reason = 'oauth_redirect_mismatch';
+    else if (/invalid_grant|expired|already redeemed/i.test(detail)) reason = 'oauth_code_expired';
+    else if (/ENOTFOUND|ETIMEDOUT|ECONNREFUSED|network/i.test(detail)) reason = 'oauth_network';
+
     const appUrl = (process.env.APP_URL && process.env.APP_URL !== 'MY_APP_URL')
       ? process.env.APP_URL.replace(/\/+$/, '')
       : `http://localhost:${PORT}`;
-    res.redirect(`${appUrl}/#auth_error=oauth_failed`);
+    res.redirect(`${appUrl}/#auth_error=${reason}`);
   }
 });
 
