@@ -60,6 +60,12 @@ async function main() {
   const docT = await login(docUser.email);
   const visT = await login(visitor.email);
 
+  // Leftovers from an interrupted earlier run occupy slots and skew the board.
+  // Clearing at the start as well as the end makes the check independent of
+  // whatever ran before it — it failed once in a sequence and passed alone,
+  // which is exactly the flake this removes.
+  await prisma.appointment.deleteMany({ where: { patientName: { startsWith: 'Trk ' } } });
+
   const { serviceDayKey } = await import('../lib/serviceDay.ts');
   const today = serviceDayKey();
   const later = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
@@ -76,9 +82,15 @@ async function main() {
       body: JSON.stringify({ doctorId: doctorRow!.id, date, time, patientName: name, phone: '9876500044', reasonForVisit: 'tracker check' }),
     });
     const code = booked.body?.appointment?.code ?? booked.body?.code;
+    // Without this, a refused booking produced an undefined code and every
+    // assertion below failed for a reason that had nothing to do with them.
+    if (!code) {
+      throw new Error(`booking failed on ${date} ${time}: http=${booked.status} ${booked.body?.message ?? ''}`);
+    }
 
     const list = await api('/api/doctor/appointments', { headers: auth(docT) });
     const row = (list.body?.appointments ?? []).find((a: any) => a.code === code);
+    if (!row) throw new Error(`the doctor cannot see ${code}, so it cannot be approved`);
     const appr = await api(`/api/doctor/appointments/${row.id}/status`, {
       method: 'POST', headers: auth(docT),
       body: JSON.stringify({ status: 'Approved', expectedVersion: row.version }),

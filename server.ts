@@ -124,10 +124,64 @@ app.use((req, res, next) => {
   if (process.env.NODE_ENV === 'production') {
     res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
   }
+
+  // Content-Security-Policy, in REPORT-ONLY mode: it blocks nothing and only
+  // reports what it would have blocked. Staged deliberately, because this app
+  // has three dependencies a naive policy silently breaks — Google Fonts is a
+  // cross-origin stylesheet, the liquid-glass material relies on inline styles,
+  // and COCO-SSD fetches its weights from storage.googleapis.com, so
+  // `connect-src 'self'` would kill the camera people-counter with no error a
+  // user could act on.
+  //
+  // Run it like this, watch /api/csp-report, then switch the header name to
+  // Content-Security-Policy once a normal session reports nothing.
+  res.setHeader(
+    'Content-Security-Policy-Report-Only',
+    [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+      "form-action 'self'",
+      // 'wasm-unsafe-eval' is for the TensorFlow.js WASM backend.
+      "script-src 'self' 'wasm-unsafe-eval'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      // data:/blob: cover base64 avatars and camera frames; https: covers
+      // Google profile photos.
+      "img-src 'self' data: blob: https:",
+      "media-src 'self' blob:",
+      "connect-src 'self' https://storage.googleapis.com",
+      "worker-src 'self' blob:",
+      'report-uri /api/csp-report',
+    ].join('; '),
+  );
   next();
 });
 
 app.use(express.json({ limit: '8mb' }));
+
+/**
+ * A ceiling over the whole API.
+ *
+ * Six endpoints carried their own tight limits and the other sixty-odd had
+ * none, so anything not on that list could be hit as fast as the network
+ * allowed. This is not a replacement for those — it sits above them, and is
+ * sized so that no real user ever meets it.
+ *
+ * Deliberately generous: a hospital shares one public address, several screens
+ * poll every ten seconds, and `trust proxy` means a whole waiting room can look
+ * like a single client. A limit tuned for one person would lock out a floor.
+ *
+ * The event stream is exempt: it is one long-lived connection per screen, and
+ * EventSource reconnects on its own, so counting reconnections would punish a
+ * flaky network by cutting off live updates entirely.
+ */
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/events')) return next();
+  if (!enforceRateLimit(req, res, 'api', 600, 60_000)) return;
+  next();
+});
 
 // Stored profile images are served from disk — the database only holds the path.
 app.use(
@@ -440,6 +494,12 @@ interface SessionClaims {
   role: string;
   /** Session generation; see User.tokenVersion. */
   tv: number;
+  /**
+   * Absent on a full session token. Present on a narrow, single-purpose one —
+   * currently only 'stream'. A scoped token must never satisfy a session check,
+   * or narrowing it would have bought nothing.
+   */
+  scope?: 'stream';
 }
 
 function signSession(user: { id: string; email: string; role: string; tokenVersion?: number }): string {
@@ -472,6 +532,10 @@ async function verifySession(rawToken: string | undefined): Promise<{ claims: Se
     return null;
   }
   if (!claims?.userId) return null;
+  // A stream ticket is not a session. Without this, the ticket handed to
+  // EventSource — which necessarily travels in a URL — would be accepted as
+  // full API credentials, which is the whole thing the ticket exists to avoid.
+  if (claims.scope) return null;
 
   let user: any = getCachedUser(claims.userId);
   if (user === undefined) {
@@ -502,6 +566,53 @@ async function verifiedClaims(rawToken: string | undefined): Promise<SessionClai
   const session = await verifySession(rawToken);
   if (!session) throw new ApiError(401, 'SESSION_INVALID', 'Your session is no longer valid. Sign in again.');
   return session.claims;
+}
+
+/**
+ * A token good only for reading the live event stream.
+ *
+ * EventSource cannot set request headers, so the credential has to go in the
+ * URL — and URLs reach server logs, proxy logs and Referer headers. Putting the
+ * full session token there meant a single log line was enough to act as the
+ * user. This one carries no API authority: /api/events is the only thing that
+ * accepts it.
+ *
+ * Long-lived on purpose. EventSource reconnects by re-requesting the same URL,
+ * so a short expiry would silently kill live updates mid-session; every screen
+ * that uses the stream also polls, so the worst case is a fall back to polling
+ * rather than a broken page. It still carries `tv`, so signing out revokes it
+ * along with everything else.
+ */
+function signStreamTicket(user: { id: string; email: string; role: string; tokenVersion?: number }): string {
+  return jwt.sign(
+    { userId: user.id, email: user.email, role: user.role, tv: user.tokenVersion ?? 0, scope: 'stream' },
+    JWT_SECRET,
+    { expiresIn: '12h' },
+  );
+}
+
+/** Verify a stream ticket. Returns null unless it is genuinely stream-scoped. */
+async function verifyStreamTicket(raw: string | undefined): Promise<{ claims: SessionClaims; user: any } | null> {
+  if (!raw) return null;
+  let claims: SessionClaims;
+  try {
+    claims = jwt.verify(raw, JWT_SECRET) as SessionClaims;
+  } catch {
+    return null;
+  }
+  if (claims?.scope !== 'stream' || !claims.userId) return null;
+
+  let user: any = getCachedUser(claims.userId);
+  if (user === undefined) {
+    user = await prisma.user.findFirst({
+      where: { id: claims.userId, deletedAt: null },
+      include: { doctor: { select: { id: true } } },
+    });
+    setCachedUser(claims.userId, user);
+  }
+  if (!user) return null;
+  if ((claims.tv ?? 0) !== (user.tokenVersion ?? 0)) return null;
+  return { claims, user };
 }
 
 /** Bearer token from the Authorization header, if present. */
@@ -1611,6 +1722,25 @@ app.post('/api/copilot/optimize', (req, res) => {
 });
 
 // Health check endpoint
+/**
+ * POST /api/csp-report — collector for the report-only policy above.
+ *
+ * Unauthenticated by necessity: the browser sends these itself. Rate-limited
+ * and logged only, never stored, so a hostile client can do nothing with it
+ * beyond filling a log line.
+ */
+app.post('/api/csp-report', express.json({ type: ['application/csp-report', 'application/json'], limit: '16kb' }), (req, res) => {
+  if (!enforceRateLimit(req, res, 'csp-report', 30, 60_000)) return;
+  const report = (req.body?.['csp-report'] ?? req.body) as any;
+  if (report?.['violated-directive']) {
+    console.warn(
+      `[csp] would have blocked ${report['blocked-uri'] ?? 'unknown'} ` +
+      `(${report['violated-directive']}) on ${report['document-uri'] ?? 'unknown'}`,
+    );
+  }
+  res.status(204).end();
+});
+
 app.get('/api/health', async (req, res) => {
   let dbStatus = 'unknown';
   try {
@@ -5422,30 +5552,41 @@ app.patch('/api/profile', apiRoute(async (req, res) => {
  * waiting for its next poll. Doctors only receive events for their own patients;
  * visitors may follow a single token they hold the access key for.
  */
+/**
+ * GET /api/events/ticket — a credential safe to put in a stream URL.
+ *
+ * Called with the session token in a header, the normal way, and returns a
+ * token that can do nothing but open /api/events.
+ */
+app.get('/api/events/ticket', apiRoute(async (req, res) => {
+  const user = await requireAuthUser(req, res);
+  if (!user) return;
+  res.json({ ticket: signStreamTicket(user as any) });
+}));
+
 app.get('/api/events', async (req, res) => {
   // Two ways in: a signed-in account, or a visitor watching one token.
   let role: string | null = null;
   let doctorId: string | null = null;
   let watchTokenId: string | null = null;
 
+  // A stream ticket may travel in the query string; a session token may not.
+  // `?token=` used to accept the full session JWT, which put API credentials
+  // into every URL this endpoint appeared in.
   const authHeader = req.header('authorization');
-  const queryToken = typeof req.query.token === 'string' ? req.query.token : undefined;
-  const bearer = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : queryToken;
+  const headerBearer = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
+  const ticket = typeof req.query.ticket === 'string' ? req.query.ticket : undefined;
 
-  if (bearer) {
-    try {
-      const payload = await verifiedClaims(bearer);
-      const user = await prisma.user.findFirst({
-        where: { id: payload.userId, deletedAt: null },
-        include: { doctor: { select: { id: true } } },
-      });
-      if (user) {
-        role = user.role;
-        doctorId = user.doctor?.id ?? null;
-      }
-    } catch {
-      // Fall through to the visitor path.
-    }
+  const authed = headerBearer
+    ? await verifySession(headerBearer)
+    : await verifyStreamTicket(ticket);
+
+  // No try/catch: verifySession and verifyStreamTicket return null rather than
+  // throwing, so an unusable credential simply falls through to the visitor
+  // path below instead of being swallowed by a catch.
+  if (authed?.user) {
+    role = authed.user.role;
+    doctorId = authed.user.doctor?.id ?? null;
   }
 
   if (!role) {

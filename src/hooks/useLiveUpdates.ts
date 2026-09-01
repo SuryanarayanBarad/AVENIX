@@ -32,19 +32,48 @@ export function useLiveUpdates(
     // Without either credential there is nothing to subscribe to.
     if (!authToken && !watch) return;
 
-    const params = new URLSearchParams();
-    if (authToken) params.set('token', authToken);
-    if (watch) {
-      params.set('tokenId', watch.tokenId);
-      params.set('accessKey', watch.accessKey);
-    }
-
     let source: EventSource | null = null;
-    try {
-      source = new EventSource(`/api/events?${params.toString()}`);
-    } catch {
-      return;
-    }
+    let cancelled = false;
+
+    /**
+     * EventSource cannot send headers, so whatever authenticates the stream has
+     * to sit in the URL. That used to be the session token itself, which put
+     * full API credentials into every log line that recorded the request. A
+     * signed-in viewer now exchanges it for a stream-only ticket first; the
+     * ticket opens this one endpoint and nothing else.
+     */
+    const connect = async () => {
+      const params = new URLSearchParams();
+
+      if (authToken) {
+        try {
+          const res = await fetch('/api/events/ticket', {
+            headers: { Authorization: `Bearer ${authToken}` },
+          });
+          if (!res.ok) return;
+          const { ticket } = await res.json();
+          if (!ticket) return;
+          params.set('ticket', ticket);
+        } catch {
+          // No ticket, no stream. Callers poll anyway, so this degrades to the
+          // slower path rather than breaking the screen.
+          return;
+        }
+      }
+
+      if (watch) {
+        params.set('tokenId', watch.tokenId);
+        params.set('accessKey', watch.accessKey);
+      }
+      if (cancelled || ![...params.keys()].length) return;
+
+      try {
+        source = new EventSource(`/api/events?${params.toString()}`);
+      } catch {
+        return;
+      }
+      attach(source);
+    };
 
     const forward = (event: MessageEvent) => {
       try {
@@ -54,14 +83,18 @@ export function useLiveUpdates(
       }
     };
 
-    for (const name of ['token.created', 'token.status', 'appointment.created', 'appointment.status', 'doctor.changed']) {
-      source.addEventListener(name, forward as EventListener);
+    function attach(es: EventSource) {
+      for (const name of ['token.created', 'token.status', 'appointment.created', 'appointment.status', 'doctor.changed']) {
+        es.addEventListener(name, forward as EventListener);
+      }
+      // EventSource reconnects on its own; nothing to do but stop the noise.
+      es.onerror = () => {};
     }
 
-    // EventSource reconnects on its own; nothing to do but stop the noise.
-    source.onerror = () => {};
+    void connect();
 
     return () => {
+      cancelled = true;
       source?.close();
     };
   }, [enabled, watchKey]);
