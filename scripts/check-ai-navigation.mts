@@ -181,12 +181,15 @@ async function main() {
      && /OCR|Describe your symptoms/i.test(imgUpload.body?.report?.extractionNote ?? ''),
      imgUpload.body?.report?.extractionNote);
 
-  console.log('\n9. plain text is read directly');
+  console.log('\n9. an unsupported type is refused, matching the bucket allowlist');
+  // The production bucket accepts PDF/JPEG/PNG/WebP only, so the app must too —
+  // accepting .txt here would validate a file storage then refuses.
   const txt = await api('/api/visitor/reports', {
     method: 'POST', headers: auth(aliceT),
     body: JSON.stringify({ title: 'Notes', file: textFile('Persistent cough and mild fever for five days.') }),
   });
-  ok('text uploads and extracts', txt.status === 200 && txt.body?.report?.hasText === true);
+  ok('a .txt upload is refused', txt.status === 400, `http=${txt.status}`);
+  ok('and says which types are allowed', /PDF|image/i.test(txt.body?.message ?? ''), txt.body?.message);
 
   console.log('\n10. crowd forecast is real and role-aware');
   const visForecast = await api('/api/crowd/forecast', { headers: auth(aliceT) });
@@ -214,9 +217,20 @@ async function main() {
   ok('anonymous is refused', (await api('/api/admin/crowd')).status === 401);
 
   console.log('\n12. cleanup');
+  // Delete through the API, not straight from the table: the endpoint also
+  // removes the stored file. Deleting rows alone left orphaned objects behind
+  // in the bucket — harmless individually, but this check runs often, and they
+  // were accumulating in real storage with nothing pointing at them.
+  const mine = await api('/api/visitor/reports', { headers: auth(aliceT) });
+  for (const r of mine.body?.reports ?? []) {
+    await api(`/api/visitor/reports/${r.id}`, { method: 'DELETE', headers: auth(aliceT) });
+  }
+  const leftover = await api('/api/visitor/reports', { headers: auth(aliceT) });
+  ok('every uploaded file was removed from storage', (leftover.body?.reports ?? []).length === 0);
+
   await prisma.aiNavigation.deleteMany({ where: { userId: { in: [alice.id, mallory.id] } } });
   await prisma.medicalReport.deleteMany({ where: { userId: { in: [alice.id, mallory.id] } } });
-  ok('probe data removed', true);
+  ok('probe rows removed', true);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   await prisma.$disconnect();

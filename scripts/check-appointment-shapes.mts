@@ -70,6 +70,11 @@ async function main() {
     update: { passwordHash: hash, role: 'DOCTOR' },
     create: { email: 'shape-doctor@probe.test', passwordHash: hash, name: 'Shape Doctor', role: 'DOCTOR' },
   });
+  // Release any doctor row this probe account is already linked to.
+  // Doctor.userId is unique, so a link left by an earlier run — possibly to a
+  // different doctor, since findFirst is not ordered — makes this update fail
+  // with P2002. Clearing first makes the check independent of what ran before.
+  await prisma.doctor.updateMany({ where: { userId: docUser.id }, data: { userId: null } });
   await prisma.doctor.update({ where: { id: doctorRow.id }, data: { userId: docUser.id } });
 
   const adminToken = await login(admin.email, password);

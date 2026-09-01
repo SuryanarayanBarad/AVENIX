@@ -4,6 +4,7 @@ import {
   Sparkles, Upload, FileText, Trash2, Stethoscope, AlertTriangle, Clock,
   Users, ArrowRight, ShieldCheck, Loader2, X, ExternalLink, History, Activity,
 } from 'lucide-react';
+import { HospitalMapView } from './HospitalMapView';
 import {
   healthApi, fileToDataUrl,
   type MedicalReportView, type NavigationResult,
@@ -308,10 +309,61 @@ export const HealthNavigatorView: React.FC<Props> = ({ onBookAppointment }) => {
                   </div>
                 )}
 
+                {/* What the AI actually did, in the order it did it.
+                    Every line is a fact from the response — the step is ticked
+                    only when it really happened, so an unreadable report or a
+                    department the model invented both show as an honest gap
+                    rather than a green tick. */}
+                {!result.failed && (
+                  <div className="border-b border-[var(--pc-border)] bg-[var(--pc-page)] px-5 py-3">
+                    <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--pc-text-subtle)]">
+                      How this suggestion was made
+                    </p>
+                    <ol className="space-y-1">
+                      {[
+                        result.reportUsed
+                          ? {
+                              done: !!result.reportUsed.hadText,
+                              label: result.reportUsed.hadText
+                                ? `Read the text of “${result.reportUsed.title}”`
+                                : `Could not read “${result.reportUsed.title}” — used your description only`,
+                            }
+                          : { done: true, label: 'Used the symptoms you described' },
+                        { done: true, label: `Analysed by Google Gemini (${result.model ?? 'model'})` },
+                        {
+                          done: !!result.department,
+                          label: result.department
+                            ? `Matched to ${result.department.name}, a real department here`
+                            : 'No department in this hospital matched the suggestion',
+                        },
+                        {
+                          done: result.doctors.length > 0,
+                          label: result.doctors.length > 0
+                            ? `Ranked ${result.doctors.length} doctor${result.doctors.length === 1 ? '' : 's'} by today's schedule and queue`
+                            : 'No doctor in that department is available today',
+                        },
+                      ].map((step, i) => (
+                        <li key={i} className="flex items-start gap-2 text-[11px] text-[var(--pc-text-muted)]">
+                          <span
+                            aria-hidden
+                            className={`mt-[3px] h-3 w-3 shrink-0 rounded-full border-2 ${
+                              step.done
+                                ? 'border-[var(--pc-success)] bg-[var(--pc-success)]'
+                                : 'border-[#F5C08A] bg-[#FEF3E7]'
+                            }`}
+                          />
+                          <span className={step.done ? '' : 'text-[#B54708]'}>{step.label}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+
                 {result.failed ? (
                   <div className="p-6 space-y-2">
-                    <p className="text-sm font-semibold text-[var(--pc-text)]">
-                      The navigator could not answer just now
+                    <p className="flex items-center gap-2 text-sm font-semibold text-[var(--pc-text)]">
+                      <AlertTriangle className="h-4 w-4 text-[#B54708]" />
+                      AI analysis temporarily unavailable
                     </p>
                     <p className="text-xs text-[var(--pc-text-muted)]">
                       {result.failureReason
@@ -392,11 +444,25 @@ export const HealthNavigatorView: React.FC<Props> = ({ onBookAppointment }) => {
                         <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--pc-text-subtle)]">
                           Doctors who can see you
                         </span>
-                        {result.doctors.map((d) => (
-                          <div key={d.id} className="rounded-2xl border border-[var(--pc-border)] p-4 hover:bg-[var(--pc-page)] transition-colors">
+                        {result.doctors.map((d, i) => (
+                          <div
+                            key={d.id}
+                            className={`rounded-2xl border p-4 transition-colors ${
+                              i === 0
+                                ? 'border-[#C7C9F0] bg-[var(--pc-tint-lilac)]'
+                                : 'border-[var(--pc-border)] hover:bg-[var(--pc-page)]'
+                            }`}
+                          >
                             <div className="flex items-start justify-between gap-3 flex-wrap">
                               <div className="min-w-0">
-                                <p className="font-semibold text-[var(--pc-text)]">{d.name}</p>
+                                <p className="flex items-center gap-2 font-semibold text-[var(--pc-text)]">
+                                  {d.name}
+                                  {i === 0 && (
+                                    <span className="rounded-full border border-[var(--pc-primary)]/30 bg-[var(--pc-surface)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[var(--pc-primary)]">
+                                      Best match
+                                    </span>
+                                  )}
+                                </p>
                                 <p className="text-[11px] text-[var(--pc-text-muted)]">
                                   {d.department}
                                   {d.qualification ? ` · ${d.qualification}` : ''}
@@ -419,6 +485,17 @@ export const HealthNavigatorView: React.FC<Props> = ({ onBookAppointment }) => {
                               </span>
                             </div>
                             <p className="mt-1.5 text-[10px] text-[var(--pc-text-subtle)]">{d.reasons.join(' · ')}</p>
+                            {i === 0 && (
+                              /* Spelled out rather than implied by position. The
+                                 ranking is deterministic and the inputs are real,
+                                 so the reason can be stated exactly. */
+                              <p className="mt-1 text-[10px] font-medium text-[var(--pc-primary)]">
+                                Recommended first: {d.scheduleKnown ? d.status.toLowerCase() : 'schedule unconfirmed'}
+                                {result.doctors.length > 1
+                                  ? `, and the shortest expected wait in ${d.department} (~${d.estimatedWaitMinutes} min).`
+                                  : ` in ${d.department}, with a ~${d.estimatedWaitMinutes} min expected wait.`}
+                              </p>
+                            )}
                             {onBookAppointment && (
                               <button
                                 onClick={() => onBookAppointment(d.department, d.id)}
@@ -542,6 +619,9 @@ export const HealthNavigatorView: React.FC<Props> = ({ onBookAppointment }) => {
               </div>
             ))}
           </div>
+
+          {/* Where to go, highlighted to whatever the navigator just suggested. */}
+          <HospitalMapView highlightService={result?.department?.name ?? null} />
 
           {/* Live queue outlook — arithmetic, and labelled as such */}
           {forecast && (

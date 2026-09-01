@@ -53,14 +53,21 @@ const ALLOWED: { mime: string; ext: string; test: (b: Buffer) => boolean }[] = [
   { mime: 'image/png', ext: '.png', test: (b) => b.length > 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 },
   { mime: 'image/jpeg', ext: '.jpg', test: (b) => b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
   { mime: 'image/webp', ext: '.webp', test: (b) => b.length > 12 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP' },
-  {
-    mime: 'text/plain',
-    ext: '.txt',
-    // Text has no magic number. Accept it only when the bytes really are text:
-    // no NULs, and decodable as UTF-8 without replacement characters.
-    test: (b) => !b.includes(0x00) && !b.toString('utf8').includes('�'),
-  },
 ];
+
+/**
+ * text/plain is deliberately absent.
+ *
+ * The production bucket is configured to accept application/pdf, image/jpeg,
+ * image/png and image/webp — which is the right list for medical documents.
+ * Accepting .txt here as well meant the app validated a file the bucket then
+ * refused, so the patient saw "mime type text/plain is not supported" from
+ * storage after a successful-looking upload. The two lists now agree.
+ *
+ * To allow .txt, add it to the bucket's allowed MIME types in Supabase AND to
+ * the list above; verifyBucketMimeAgreement() below warns at boot if they ever
+ * drift apart again.
+ */
 
 export interface ValidatedReport {
   buffer: Buffer;
@@ -86,7 +93,7 @@ export function validateReportDataUrl(dataUrl: string): ValidatedReport {
 
   const declared = match[1].toLowerCase();
   if (!ALLOWED.some((a) => a.mime === declared)) {
-    throw new ReportValidationError('Upload a PDF, an image (PNG/JPG/WebP), or a plain-text file.');
+    throw new ReportValidationError('Upload a PDF or an image (PNG, JPG or WebP).');
   }
 
   const buffer = Buffer.from(match[2].replace(/\s+/g, ''), 'base64');
@@ -97,7 +104,7 @@ export function validateReportDataUrl(dataUrl: string): ValidatedReport {
 
   const signature = ALLOWED.find((a) => a.test(buffer));
   if (!signature) {
-    throw new ReportValidationError('That file does not look like a PDF, image, or text file.');
+    throw new ReportValidationError('That file does not look like a PDF or an image.');
   }
   // A file whose contents disagree with its label is refused outright: it is
   // either corrupt or deliberately disguised, and neither is worth storing.
@@ -123,6 +130,24 @@ export function reportStorageBackend(): 'supabase' | 'local-disk' {
 }
 
 /**
+ * Refuse to write a medical document to ephemeral local disk in production.
+ *
+ * The disk fallback exists so the feature works before Supabase is configured.
+ * On Render that disk is wiped on every deploy, so falling back there would
+ * quietly accept a patient's report and lose it — and store it unencrypted on a
+ * shared host on the way. A deploy that fails loudly is recoverable; one that
+ * silently mishandles medical records is not.
+ */
+function assertProductionStorage(): void {
+  if (process.env.NODE_ENV === 'production' && !storageClient()) {
+    throw new ReportValidationError(
+      'Report storage is not configured on this server. Set SUPABASE_URL and '
+      + 'SUPABASE_SERVICE_ROLE_KEY so uploads go to the private bucket.',
+    );
+  }
+}
+
+/**
  * Store a validated document and return its object key.
  *
  * The key is namespaced by owner, which means a signed URL for one patient's
@@ -132,6 +157,7 @@ export async function saveReport(
   dataUrl: string,
   ownerId: string,
 ): Promise<{ objectPath: string; mime: string; sizeBytes: number }> {
+  assertProductionStorage();
   const { buffer, ext, mime } = validateReportDataUrl(dataUrl);
   const objectPath = `${ownerId}/${randomUUID()}${ext}`;
 
@@ -209,6 +235,7 @@ export async function deleteReport(objectPath?: string | null): Promise<void> {
  * string and inventing something to fill it.
  */
 export function extractText(buffer: Buffer, mime: string): { text: string | null; note: string | null } {
+  // Retained for reports stored before .txt was removed from the allowlist.
   if (mime === 'text/plain') {
     const text = buffer.toString('utf8').trim();
     return text
@@ -245,8 +272,68 @@ export function extractText(buffer: Buffer, mime: string): { text: string | null
   };
 }
 
-/** Create the private directory used by the local-disk fallback. */
+/**
+ * Prepare report storage at boot.
+ *
+ * On Supabase this checks the bucket is actually reachable, so a wrong name or
+ * a revoked key surfaces at startup rather than when a patient first uploads.
+ * It also verifies the bucket is NOT public: a public bucket would make every
+ * stored report readable by anyone holding the URL, which is the single worst
+ * misconfiguration available here.
+ */
 export async function ensureReportStorage(): Promise<void> {
-  if (storageClient()) return;
-  await fs.mkdir(REPORT_ROOT, { recursive: true }).catch(() => {});
+  const client = storageClient();
+
+  if (!client) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error(
+        '[fatal] Report storage is unconfigured in production. Set SUPABASE_URL and '
+        + 'SUPABASE_SERVICE_ROLE_KEY, or medical report uploads will be refused.',
+      );
+    } else {
+      console.log(`ℹ️  Report storage: local disk at ${REPORT_ROOT} (private, not served over HTTP)`);
+      await fs.mkdir(REPORT_ROOT, { recursive: true }).catch(() => {});
+    }
+    return;
+  }
+
+  const { data, error } = await client.storage.getBucket(REPORT_BUCKET);
+  if (error || !data) {
+    console.error(
+      `[fatal] Report bucket "${REPORT_BUCKET}" is not reachable: ${error?.message ?? 'not found'}. `
+      + 'Create it in Supabase → Storage with "Public bucket" OFF.',
+    );
+    return;
+  }
+  if (data.public) {
+    console.error(
+      `[SECURITY] Report bucket "${REPORT_BUCKET}" is PUBLIC. Every stored medical report is readable `
+      + 'by anyone with the URL. Turn "Public bucket" off in Supabase → Storage immediately.',
+    );
+    return;
+  }
+
+  /**
+   * The bucket carries its own MIME allowlist, and it is authoritative — a type
+   * this app accepts but the bucket refuses fails only at upload, after the
+   * patient has chosen the file and waited. Comparing the two at boot turns a
+   * confusing runtime error into a log line at deploy time.
+   */
+  const bucketMimes: string[] | null = (data as any).allowed_mime_types ?? null;
+  if (bucketMimes && bucketMimes.length > 0) {
+    const rejected = ALLOWED.map((a) => a.mime).filter((m) => !bucketMimes.includes(m));
+    if (rejected.length > 0) {
+      console.error(
+        `[config] Bucket "${REPORT_BUCKET}" does not allow ${rejected.join(', ')}, but this app accepts `
+        + 'them. Uploads of those types will be validated and then refused by storage. Either add them '
+        + 'to the bucket\'s allowed MIME types in Supabase, or remove them from ALLOWED in '
+        + 'lib/reportStorage.ts.',
+      );
+    }
+  }
+
+  console.log(
+    `🔒 Report storage: Supabase bucket "${REPORT_BUCKET}" (private, signed URLs only)`
+    + (bucketMimes ? ` · accepts ${bucketMimes.length} type(s)` : ''),
+  );
 }

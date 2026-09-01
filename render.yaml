@@ -55,6 +55,12 @@ services:
         sync: false
       - key: SUPABASE_STORAGE_BUCKET
         value: queue-images
+      # Patient-uploaded medical reports. This bucket MUST be private: the app
+      # never issues a public URL for a report, only a signed link valid for two
+      # minutes, and it refuses to write to local disk in production so a
+      # misconfiguration cannot silently put medical records on ephemeral disk.
+      - key: SUPABASE_REPORT_BUCKET
+        value: medical-reports
       # Optional
       - key: GEMINI_API_KEY
         sync: false
