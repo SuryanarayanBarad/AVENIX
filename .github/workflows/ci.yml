@@ -1,0 +1,47 @@
+# Nothing currently stands between a broken commit and production: Render
+# auto-deploys every push to main, and it runs the build itself — so the first
+# thing that notices a type error is the deployed site.
+#
+# This runs the same checks locally-available commands run, on every push and
+# pull request, so a mistake is caught in CI instead of by a user.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` needs a lockfile in sync with package.json, which is itself a
+      # useful thing to have verified on every push.
+      - name: Install
+        run: npm ci
+        env:
+          # The postinstall runs `prisma generate`, which only needs the schema,
+          # not a reachable database.
+          PRISMA_SKIP_POSTINSTALL_GENERATE: 'false'
+
+      - name: Typecheck (strict)
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+      - name: Design-system contrast checks
+        run: npm run check:contrast
+
+      # check:shapes and check:auth are deliberately NOT run here: both write to
+      # a database and refuse to run against anything but localhost. Wiring them
+      # up needs a Postgres service container and a seeded facility, which is
+      # worth doing but is a bigger change than this file.
