@@ -6850,7 +6850,22 @@ async function startServer() {
             // whenever it is set — so overriding DATABASE_URL alone left it
             // still using the very connection string that was failing.
             env: { ...process.env, DATABASE_URL: candidate.url, DIRECT_URL: candidate.url },
-            timeout: 120_000,
+            /**
+             * Deliberately short. This runs BEFORE app.listen(), so every
+             * second here is a second Render's health check is waiting for a
+             * port that does not exist yet — and with two candidates a 120s cap
+             * meant the server could take four minutes to start listening.
+             * Supabase's direct connection is frequently unreachable from a
+             * host that reaches the pooler fine, so that timeout was reachable
+             * in practice, not theoretical.
+             *
+             * Thirty seconds is far longer than the migrations here take (~1s
+             * observed) and short enough that both candidates plus the schema
+             * check finish well inside a health-check window. If it is not
+             * enough, the schema check below still decides whether it is safe
+             * to serve.
+             */
+            timeout: 30_000,
           },
         );
         console.log(
@@ -6861,10 +6876,15 @@ async function startServer() {
         migrated = true;
         break;
       } catch (err: any) {
-        console.error(
-          `⚠️  migrate deploy failed via ${candidate.label}: `
-          + String(err?.stderr || err?.message || err).slice(0, 300),
-        );
+        const detail = String(err?.stderr || err?.message || err);
+        console.error(`⚠️  migrate deploy failed via ${candidate.label}: ${detail.slice(0, 300)}`);
+        // A timeout means the host cannot reach that database at all, which is
+        // routine for Supabase's direct connection. Trying the next candidate
+        // is worth it; what is not worth it is spending another full timeout
+        // before the port opens, so a second timeout ends the attempt.
+        if (/timed out|ETIMEDOUT|timeout/i.test(detail) && candidate === candidates[candidates.length - 1]) {
+          console.error('⚠️  No reachable database for migrations; the schema check will decide.');
+        }
       }
     }
 
