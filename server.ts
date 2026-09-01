@@ -6472,6 +6472,53 @@ async function startServer() {
     process.exit(1);
   }
 
+  /**
+   * Verify the database actually has the schema this build expects.
+   *
+   * "Connected" is not the same as "usable". A raw SELECT 1 succeeds against a
+   * database that is missing a column the Prisma client selects on every query,
+   * and that is exactly what happened here: migrations stopped being applied in
+   * production, so /api/health reported healthy while every read of `users` or
+   * `departments` returned 500 — and the Google callback, which reads `users`,
+   * failed in a way that looked to the patient like nothing had happened.
+   *
+   * This runs one representative query per table the recent migrations touched.
+   * It does not attempt a repair: applying DDL at boot from an app process is
+   * how two instances race each other into a broken schema. It fails loudly and
+   * names the command to run.
+   */
+  const schemaProbes: { label: string; run: () => Promise<unknown> }[] = [
+    { label: 'users (token_version)', run: () => prisma.user.findFirst({ select: { id: true, tokenVersion: true } }) },
+    { label: 'departments (description)', run: () => prisma.department.findFirst({ select: { id: true, description: true } }) },
+    { label: 'tokens (completed_at)', run: () => prisma.token.findFirst({ select: { id: true, completedAt: true } }) },
+    { label: 'medical_reports', run: () => prisma.medicalReport.findFirst({ select: { id: true } }) },
+    { label: 'ai_navigations', run: () => prisma.aiNavigation.findFirst({ select: { id: true } }) },
+  ];
+
+  const brokenTables: string[] = [];
+  for (const probe of schemaProbes) {
+    try {
+      await probe.run();
+    } catch (err: any) {
+      brokenTables.push(probe.label);
+      console.error(`   ✗ ${probe.label}: ${String(err?.message ?? err).split('\n').find((l: string) => l.trim()) ?? 'query failed'}`);
+    }
+  }
+
+  if (brokenTables.length > 0) {
+    console.error('');
+    console.error('❌ [fatal] The database is missing schema this build requires:');
+    console.error(`   ${brokenTables.join(', ')}`);
+    console.error('   Pending migrations have not been applied. Run:');
+    console.error('     npx prisma migrate deploy');
+    console.error('   On Render, the start command must be:');
+    console.error('     npm run deploy:migrate && npm start');
+    console.error('   Refusing to start: serving with a schema mismatch returns 500 from');
+    console.error('   sign-in and every doctor lookup, while /api/health still reports healthy.');
+    process.exit(1);
+  }
+  console.log('✅ Schema verified (all migrations applied)');
+
   // Close out anything left queueing from an earlier day, then keep checking:
   // a long-running instance has to notice midnight passing, and a free-tier one
   // that sleeps overnight has to catch up the moment it wakes.
