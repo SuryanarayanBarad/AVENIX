@@ -15,10 +15,12 @@ interface CopilotDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   initialPrompt?: string;
-  counters: Counter[];
-  zones: FacilityZone[];
-  tokens: Token[];
-  onApplyCounterOptimization?: () => void;
+  /**
+   * The signed-in role, used only to word the empty state. What the copilot may
+   * see and say is decided server-side from the JWT — a role sent from here
+   * would be a request, not a fact.
+   */
+  role?: string | null;
 }
 
 const drawerEase = [0.22, 1, 0.36, 1] as const;
@@ -73,9 +75,7 @@ export const CopilotDrawer: React.FC<CopilotDrawerProps> = ({
   isOpen,
   onClose,
   initialPrompt,
-  counters,
-  zones,
-  tokens,
+  role = null,
 }) => {
   const [messages, setMessages] = useState<CopilotMessage[]>([
     {

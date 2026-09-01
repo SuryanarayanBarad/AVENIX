@@ -34,7 +34,6 @@ const DoctorScheduleView = React.lazy(() => import('./DoctorScheduleView').then(
 const FairnessLogicView = React.lazy(() => import('./FairnessLogicView').then((m) => ({ default: m.FairnessLogicView })));
 const AnalyticsView = React.lazy(() => import('./AnalyticsView').then((m) => ({ default: m.AnalyticsView })));
 const CameraMonitorView = React.lazy(() => import('./CameraMonitorView').then((m) => ({ default: m.CameraMonitorView })));
-const CopilotDrawer = React.lazy(() => import('./CopilotDrawer').then((m) => ({ default: m.CopilotDrawer })));
 const HealthNavigatorView = React.lazy(() => import('./command/HealthNavigatorView').then((m) => ({ default: m.HealthNavigatorView })));
 const MyPatientsView = React.lazy(() => import('./command/MyPatientsView').then((m) => ({ default: m.MyPatientsView })));
 const RequestsView = React.lazy(() => import('./command/RequestsView').then((m) => ({ default: m.RequestsView })));
@@ -95,6 +94,8 @@ interface AdminDashboardProps {
   onApplyCounterOptimization: (updatedCounters: Counter[]) => void;
   onNavigateToKiosk: () => void;
   onNavigateToVisitorTracker: () => void;
+  /** Opens the application-level copilot, optionally with a starting question. */
+  onOpenCopilot?: (prompt?: string) => void;
   /** Decides which tabs exist and which data each one loads. */
   user?: User | null;
 }
@@ -129,16 +130,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onApplyCounterOptimization,
   onNavigateToKiosk,
   onNavigateToVisitorTracker,
+  onOpenCopilot,
   user = null,
 }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isCompactViewport, setIsCompactViewport] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches,
   );
-  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
-  /** Latches on first open so the drawer's chunk is fetched only on demand. */
-  const [copilotEverOpened, setCopilotEverOpened] = useState(false);
-  const [copilotInitialPrompt, setCopilotInitialPrompt] = useState<string | undefined>(undefined);
+  // The copilot is mounted once at the application level and opened through
+  // onOpenCopilot, so every view shares one drawer and one conversation
+  // instead of the Command Center owning a private copy.
   const [recommendationApplied, setRecommendationApplied] = useState(false);
   const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -220,9 +221,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }, [appointments, counters, fairnessWeights, searchQuery, tokens]);
 
   const handleOpenCopilotWithPrompt = (prompt?: string) => {
-    setCopilotInitialPrompt(prompt);
-    setCopilotEverOpened(true);
-    setIsCopilotOpen(true);
+    onOpenCopilot?.(prompt);
   };
 
   const handleSearchResultSelect = (result: SearchResult) => {
@@ -567,46 +566,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </div>
 
       {/* Floating QueueMind Copilot Button on Bottom-Right */}
-      {/* A floating action button, not a banner. It was a full-width pill with
-          16px padding and the whole product name showing at all times, which is
-          a lot of screen for something that sits on top of the work. It rests as
-          a 48px glass disc — the size a thumb expects — and widens to name
-          itself when pointed at, so it is still discoverable. The label is on
-          the button either way, so a screen reader always has it. */}
-      <button
-        onClick={() => handleOpenCopilotWithPrompt()}
-        aria-label="Open QueueMind Copilot"
-        title="QueueMind Copilot"
-        className="liquid-glass pc-fab group fixed bottom-6 right-6 z-40 flex h-12 items-center gap-2 rounded-full px-3.5 font-semibold cursor-pointer"
-      >
-        <span className="relative flex h-5 w-5 shrink-0 items-center justify-center">
-          <Sparkles className="h-5 w-5 text-[var(--pc-primary)]" />
-          <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-[var(--pc-success)] ring-2 ring-white" />
-        </span>
-        <span
-          className="max-w-0 overflow-hidden whitespace-nowrap text-xs font-bold text-[var(--pc-primary)] opacity-0 transition-[max-width,opacity] duration-300 ease-out group-hover:max-w-[140px] group-hover:opacity-100 group-focus-visible:max-w-[140px] group-focus-visible:opacity-100 motion-reduce:transition-none"
-        >
-          Copilot
-        </span>
-      </button>
 
-      {/* Mounted only once the copilot has been opened at least once.
-          Rendering it unconditionally would fetch its chunk immediately and
-          undo the split; keeping it mounted afterwards preserves the close
-          animation and the conversation. */}
-      {copilotEverOpened && (
-      <React.Suspense fallback={null}>
-      <CopilotDrawer
-        isOpen={isCopilotOpen}
-        onClose={() => setIsCopilotOpen(false)}
-        initialPrompt={copilotInitialPrompt}
-        counters={counters}
-        zones={zones}
-        tokens={tokens}
-        onApplyCounterOptimization={handleApplyRecommendation}
-      />
-      </React.Suspense>
-      )}
+
+
 
     </div>
   );

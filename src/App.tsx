@@ -26,12 +26,23 @@ import { VisitorStart, WalkInTokenFlow } from './components/VisitorFlow';
 import { serviceDayKey } from '../lib/serviceDay';
 
 import type { PublicQueueToken } from './components/VisitorFlow';
+/**
+ * One copilot for the whole application.
+ *
+ * It used to live inside the Command Center, so it existed only for roles that
+ * could open that screen — a patient could never reach it at all. Mounted here
+ * it is available on every authenticated view, with one conversation rather
+ * than a separate state per screen. Lazy, and only after first open, so its
+ * chunk is not fetched for somebody who never asks anything.
+ */
+const CopilotDrawer = React.lazy(() => import('./components/CopilotDrawer').then((m) => ({ default: m.CopilotDrawer })));
 const AppointmentFlow = React.lazy(() => import('./components/AppointmentFlow').then((m) => ({ default: m.AppointmentFlow })));
 import type { PublicAppointment, DoctorOption } from './components/AppointmentFlow';
 import { visitorApi, adminApi } from './services/queueApi';
 import { doctorApi } from './services/doctorApi';
 import { useLiveUpdates } from './hooks/useLiveUpdates';
 import { defaultTabForRole } from '../lib/permissions';
+import { Sparkles } from 'lucide-react';
 import { cameraService } from './services/cameraService';
 import type { StaffAppointment } from './components/AppointmentsView';
 import {
@@ -97,6 +108,18 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   /** Why a sign-in attempt did not complete, shown in the auth dialog. */
   const [authNotice, setAuthNotice] = useState<string | null>(null);
+
+  // Application-level copilot state.
+  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  const [copilotPrompt, setCopilotPrompt] = useState<string | undefined>(undefined);
+  /** Latches on first open so the drawer's chunk is fetched only on demand. */
+  const [copilotEverOpened, setCopilotEverOpened] = useState(false);
+
+  const openCopilot = (prompt?: string) => {
+    setCopilotPrompt(prompt);
+    setCopilotEverOpened(true);
+    setIsCopilotOpen(true);
+  };
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Live visitor flow state (API-backed)
@@ -631,6 +654,7 @@ export default function App() {
                 onApplyCounterOptimization={handleApplyCounterOptimization}
                 onNavigateToKiosk={() => navigateToView('kiosk')}
                 onNavigateToVisitorTracker={() => navigateToView('visitor-appointment')}
+                onOpenCopilot={openCopilot}
                 user={user}
               />
             )}
@@ -647,6 +671,42 @@ export default function App() {
       </div>
 
       </React.Suspense>
+
+      {/*
+        The copilot, for everyone who is signed in. A patient gets a snapshot of
+        their own visit and the public board; staff get facility operations.
+        Which one is decided server-side from the session, so the button being
+        present here grants nothing on its own.
+      */}
+      {user && (
+        <>
+          <button
+            onClick={() => openCopilot()}
+            aria-label="Open QueueMind Copilot"
+            title="QueueMind Copilot"
+            className="liquid-glass pc-fab group fixed bottom-6 right-6 z-40 flex h-12 items-center gap-2 rounded-full px-3.5 font-semibold cursor-pointer"
+          >
+            <span className="relative flex h-5 w-5 shrink-0 items-center justify-center">
+              <Sparkles className="h-5 w-5 text-[var(--pc-primary)]" />
+              <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-[var(--pc-success)] ring-2 ring-white" />
+            </span>
+            <span className="max-w-0 overflow-hidden whitespace-nowrap text-xs font-bold text-[var(--pc-primary)] opacity-0 transition-[max-width,opacity] duration-300 ease-out group-hover:max-w-[140px] group-hover:opacity-100 group-focus-visible:max-w-[140px] group-focus-visible:opacity-100 motion-reduce:transition-none">
+              Copilot
+            </span>
+          </button>
+
+          {copilotEverOpened && (
+            <React.Suspense fallback={null}>
+              <CopilotDrawer
+                isOpen={isCopilotOpen}
+                onClose={() => setIsCopilotOpen(false)}
+                initialPrompt={copilotPrompt}
+                role={user.role}
+              />
+            </React.Suspense>
+          )}
+        </>
+      )}
     </div>
   );
 }

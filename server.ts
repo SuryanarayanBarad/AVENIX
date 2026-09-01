@@ -1459,8 +1459,33 @@ let ai: GoogleGenAI | null = null;
 //   gemini-3.6-flash  accepts MINIMAL and answered in ~3.0s.
 //   gemini-3.5-flash  accepts MINIMAL and answered in ~5.4s.
 const COPILOT_MODEL = 'gemini-3.6-flash';
-/** Used when the primary is overloaded (503) or out of daily quota (429). */
-const COPILOT_FALLBACK_MODEL = 'gemini-3.5-flash';
+
+/**
+ * Models to try, in order, all of them verified against this key.
+ *
+ * The free tier's allowance is per MODEL, not per project, so a chain of five
+ * is five separate daily budgets rather than one. That is the difference
+ * between a demo that answers and one that spends the afternoon saying it has
+ * run out — both previous models were exhausted by a single day of testing.
+ *
+ * The full flash models lead because they reason better about which department
+ * fits a symptom, which is the judgement that matters here. The lite models
+ * follow: measured on this key they answered in 790-843ms against 3-7s, so
+ * falling through to them costs accuracy at the margin and gains a great deal
+ * of speed and headroom. `-latest` sits last as an alias that keeps working
+ * when a pinned name is retired.
+ *
+ * The ladder skips the rest of a model's rungs on a 429, so an exhausted model
+ * costs one fast rejection rather than several.
+ */
+const COPILOT_MODEL_CHAIN = [
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-flash-lite-latest',
+] as const;
+
 
 if (apiKey) {
   ai = new GoogleGenAI({
@@ -1500,6 +1525,36 @@ Add a fourth line only if a second figure genuinely matters.
 
 Plain sentences. No headings, no bullet lists, no preamble. Under 70 words total.
 If the queue is quiet, say so plainly rather than manufacturing a problem.`;
+
+/**
+ * The same assistant, addressing a patient.
+ *
+ * A separate instruction rather than a flag on the operations one, because the
+ * two differ in what they must refuse. The operations copilot may discuss
+ * staffing; this one must not, and must not imply the patient can change
+ * anything. It is also the second line of defence, not the first — the visitor
+ * snapshot simply does not contain the data this text forbids discussing, so a
+ * prompt that talks its way past the instruction still has nothing to leak.
+ */
+const VISITOR_COPILOT_INSTRUCTION = `You are QueueMind Copilot, helping ONE patient find their way around a hospital.
+
+Answer ONLY from the SNAPSHOT provided with each question. It is the live state of this hospital and of this patient's own visit. Never invent wait times, queue positions, doctors, or departments.
+
+You are talking to a patient, not to staff. You must NEVER:
+- discuss other patients, staff names, rosters, or how the hospital is staffed
+- give medical advice, name a condition, or interpret symptoms or results
+- offer to change anything: you cannot open counters, move queues, alter schedules, or book on their behalf
+
+If asked to do an operational thing — optimise counters, reassign staff, change a queue — reply in one sentence that this is done by hospital administrators, then answer what you can about their own visit. Do not apologise at length.
+
+If asked a medical question, say plainly that you help with navigating the hospital and that a doctor is the person to ask, then point them at the right department if the snapshot supports one.
+
+Always reply in two or three short lines:
+1. The direct answer, with the number from the snapshot.
+2. One line of supporting detail.
+3. Optionally "Do this:" and a single concrete step they can actually take.
+
+Plain sentences. No headings, no lists. Under 60 words.`;
 
 /** How many recent turns to send. Older context is rarely worth its tokens. */
 const COPILOT_HISTORY_TURNS = 3;
@@ -1630,20 +1685,25 @@ app.post('/api/copilot/chat', apiRoute(async (req, res) => {
   // It was previously open to anyone who could reach the URL.
   const user = await requireAuthUser(req, res);
   if (!user) return;
-  if (!hasPermission(user.role, 'queue:read')) {
-    res.status(403).json({
-      error: 'AUTHORIZATION_DENIED',
-      message: 'The copilot reports on facility operations and is available to staff.',
-    });
-    return;
-  }
   if (!enforceRateLimit(req, res, 'copilot', 20, 60_000)) return;
 
   const body = bodyAsObject(req);
   const prompt = requiredString(body.prompt ?? body.message, 'Question', 500);
 
-  const snapshot = await buildCopilotSnapshot();
-  const suggestions = copilotSuggestions(snapshot);
+  /**
+   * The role decides what the model is shown, and that is the whole security
+   * boundary — not anything the client sends. A patient used to be refused
+   * outright; they can now ask about their own visit, against a snapshot that
+   * contains only their own queue entries, their own appointments, and the
+   * public board every kiosk already displays.
+   */
+  const isOperator = hasPermission(user.role, 'queue:read');
+  const snapshot = isOperator
+    ? await buildCopilotSnapshot()
+    : await buildVisitorSnapshot(user.id);
+  const suggestions = isOperator
+    ? copilotSuggestions(snapshot)
+    : visitorSuggestions(snapshot);
 
   if (!ai) {
     res.json({
@@ -1665,7 +1725,7 @@ app.post('/api/copilot/chat', apiRoute(async (req, res) => {
       { role: 'user', parts: [{ text: `SNAPSHOT:\n${JSON.stringify(snapshot)}\n\nQUESTION: ${prompt}` }] },
     ];
     const baseConfig = {
-      systemInstruction: COPILOT_SYSTEM_INSTRUCTION,
+      systemInstruction: isOperator ? COPILOT_SYSTEM_INSTRUCTION : VISITOR_COPILOT_INSTRUCTION,
       // Low temperature: this reports on operational data, where a confident
       // invention is worse than a dull fact.
       temperature: 0.2,
@@ -1687,12 +1747,12 @@ app.post('/api/copilot/chat', apiRoute(async (req, res) => {
      * took the whole feature down. Dropping the unsupported knob, then changing
      * model, keeps the copilot answering through both kinds of upstream change.
      */
-    const attempts: { model: string; config: any }[] = [
-      { model: COPILOT_MODEL, config: { ...baseConfig, ...thinking } },
-      { model: COPILOT_MODEL, config: baseConfig },
-      { model: COPILOT_FALLBACK_MODEL, config: { ...baseConfig, ...thinking } },
-      { model: COPILOT_FALLBACK_MODEL, config: baseConfig },
-    ];
+    // Two rungs per model: with the thinking control, then without, since some
+    // models reject it outright. Exhausted models are skipped after one 429.
+    const attempts: { model: string; config: any }[] = COPILOT_MODEL_CHAIN.flatMap((model) => [
+      { model, config: { ...baseConfig, ...thinking } },
+      { model, config: baseConfig },
+    ]);
 
     let response: any = null;
     let modelUsed = COPILOT_MODEL;
@@ -1750,12 +1810,108 @@ app.post('/api/copilot/chat', apiRoute(async (req, res) => {
   }
 }));
 
+/**
+ * What the copilot may know when a patient is asking.
+ *
+ * Deliberately NOT buildCopilotSnapshot(), which is facility-wide operational
+ * data: doctor rosters, per-service throughput, appointment counts by status.
+ * A patient asking "how long will I wait" needs their own position and the
+ * public board, and giving the model more than that would put other people's
+ * information one careless answer away from being repeated back.
+ */
+async function buildVisitorSnapshot(userId: string) {
+  const facility = await getCachedFacility();
+  if (!facility) return { error: 'No facility configured.' };
+
+  const [services, waitingRows, myTokens, myAppointments] = await Promise.all([
+    prisma.service.findMany({
+      where: { facilityId: facility.id },
+      select: { id: true, name: true, estimatedWaitMinutes: true, openCounters: true, defaultCounterName: true },
+    }),
+    prisma.token.groupBy({
+      by: ['serviceId'],
+      where: { facilityId: facility.id, deletedAt: null, status: { in: ['Waiting', 'Approaching'] } },
+      _count: { _all: true },
+    }),
+    prisma.token.findMany({
+      where: { userId, deletedAt: null, status: { in: ['Waiting', 'Approaching', 'Serving'] } },
+      include: { service: { select: { name: true } } },
+      take: 5,
+    }),
+    prisma.appointment.findMany({
+      where: { userId, deletedAt: null, status: { notIn: ['Cancelled', 'Denied', 'Missed'] as any } },
+      include: { doctor: { include: { department: true } } },
+      orderBy: [{ date: 'asc' }, { time: 'asc' }],
+      take: 5,
+    }),
+  ]);
+
+  const waitingBy = new Map(waitingRows.map((r) => [r.serviceId, r._count._all]));
+  const aheadByToken = computeAheadCounts(
+    await TokenRepo.findAllActiveForFacility(facility.id) as any,
+  );
+
+  return {
+    facility: facility.name,
+    serviceDay: serviceDayKey(),
+    viewer: 'patient',
+    // The public board, exactly as the kiosk shows it.
+    queues: services.map((svc) => ({
+      service: svc.name,
+      counter: svc.defaultCounterName,
+      waiting: waitingBy.get(svc.id) ?? 0,
+      estimatedWaitMinutes: serviceWaitMinutes(svc, waitingBy.get(svc.id) ?? 0),
+      desksOpen: Math.max(1, svc.openCounters ?? 1),
+    })),
+    yourQueue: myTokens.map((t) => ({
+      code: t.code,
+      service: t.service.name,
+      status: t.status,
+      peopleAhead: aheadByToken.get(t.id) ?? 0,
+    })),
+    yourAppointments: myAppointments.map((a) => ({
+      code: a.code,
+      date: a.date,
+      time: formatTime(a.time),
+      doctor: `Dr. ${a.doctor.name}`,
+      department: a.doctor.department.name,
+      status: toPatientStatus(a.status),
+    })),
+  };
+}
+
+/**
+ * Follow-up questions worth asking, for a patient.
+ *
+ * Chosen from what their snapshot actually contains, so the copilot never
+ * offers "what is my queue position" to somebody holding no token.
+ */
+function visitorSuggestions(snapshot: any): string[] {
+  const out: string[] = [];
+  if (snapshot?.yourQueue?.length) out.push('What is my current queue position?');
+  if (snapshot?.yourAppointments?.length) out.push('When is my next appointment?');
+
+  const open = (snapshot?.queues ?? []).filter((q: any) => q.waiting > 0);
+  if (open.length > 0) {
+    const quietest = [...open].sort((a: any, b: any) => a.estimatedWaitMinutes - b.estimatedWaitMinutes)[0];
+    out.push(`Which service has the shortest wait right now?`);
+    if (quietest) out.push(`How long is the wait at ${quietest.service}?`);
+  } else {
+    out.push('How busy is the hospital right now?');
+  }
+  out.push('Which department should I visit?');
+  return out.slice(0, 4);
+}
+
 /** Suggested questions for an empty conversation, from live state. */
 app.get('/api/copilot/suggestions', apiRoute(async (req, res) => {
   const user = await requireAuthUser(req, res);
   if (!user) return;
-  if (!hasPermission(user.role, 'queue:read')) {
-    res.status(403).json({ error: 'AUTHORIZATION_DENIED', message: 'Staff only.' });
+  const isOperator = hasPermission(user.role, 'queue:read');
+  if (!isOperator) {
+    // A patient gets their own starting questions rather than a refusal.
+    const snap = await buildVisitorSnapshot(user.id);
+    res.json({ suggestions: visitorSuggestions(snap), snapshot: snap, model: ai ? COPILOT_MODEL : null });
     return;
   }
   const snapshot = await buildCopilotSnapshot();
@@ -3511,13 +3667,13 @@ async function runHealthNavigation(input: {
   const thinking = { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } };
   const contents = [{ role: 'user', parts: [{ text: parts }] }];
 
-  // Same ladder as the copilot: drop the unsupported knob, then change model.
-  const attempts = [
-    { model: COPILOT_MODEL, config: { ...baseConfig, ...thinking } },
-    { model: COPILOT_MODEL, config: baseConfig },
-    { model: COPILOT_FALLBACK_MODEL, config: { ...baseConfig, ...thinking } },
-    { model: COPILOT_FALLBACK_MODEL, config: baseConfig },
-  ];
+  // Same chain as the copilot: five models, each with its own free daily
+  // allowance, two rungs each so a model that rejects the thinking control
+  // still gets a plain attempt.
+  const attempts = COPILOT_MODEL_CHAIN.flatMap((model) => [
+    { model: model as string, config: { ...baseConfig, ...thinking } },
+    { model: model as string, config: baseConfig },
+  ]);
 
   let raw: string | null = null;
   let modelUsed: string | null = null;
