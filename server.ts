@@ -98,6 +98,35 @@ app.set('trust proxy', 1);
 // Profile/doctor photos arrive as base64 data URLs on the JSON API, so the body
 // cap has to clear a 4 MB image plus base64 overhead. lib/imageStorage.ts is
 // what actually enforces the per-image size, type, and magic-byte checks.
+/**
+ * Baseline security headers for every response.
+ *
+ * These were previously set only on /uploads, so the application itself shipped
+ * with no clickjacking protection, no MIME-sniffing protection and no referrer
+ * policy. Written by hand rather than pulling in helmet: it is a handful of
+ * headers, and adding a dependency to a deployment that currently installs
+ * cleanly is a worse trade than eight lines here.
+ *
+ * No Content-Security-Policy yet — the liquid-glass material uses inline SVG
+ * filters and styles, and Google Fonts is a cross-origin stylesheet, so a
+ * policy strict enough to be worth having needs the app audited against it
+ * first. Shipping a permissive CSP would only look like protection.
+ */
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), payment=(), interest-cohort=()');
+  // Render terminates TLS upstream, so HSTS is only meaningful on the real
+  // HTTPS origin — and asserting it over plain HTTP locally would pin
+  // localhost to HTTPS in the developer's browser.
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+  }
+  next();
+});
+
 app.use(express.json({ limit: '8mb' }));
 
 // Stored profile images are served from disk — the database only holds the path.
@@ -246,6 +275,49 @@ function validatedPhone(value: unknown, required: boolean): string | undefined {
   return phone;
 }
 
+/**
+ * Minimum viable password strength.
+ *
+ * The old floor was six characters, which admits "abc123". NIST SP 800-63B puts
+ * the minimum at eight and asks for a check against commonly-used passwords
+ * rather than composition rules (forced symbols push people toward "P@ssw0rd!",
+ * which is both harder to remember and no harder to guess). This is that: a
+ * length floor, plus a refusal of the handful of passwords that appear at the
+ * top of every breach corpus.
+ *
+ * Existing accounts are unaffected — this gates registration, not sign-in, so
+ * nobody is locked out of an account they already have.
+ */
+const COMMON_PASSWORDS = new Set([
+  'password', 'password1', 'password123', '12345678', '123456789', '1234567890',
+  'qwerty123', 'qwertyuiop', 'iloveyou', 'admin123', 'welcome1', 'welcome123',
+  'letmein123', 'abc12345', 'passw0rd', 'p@ssw0rd', 'football', 'monkey123',
+  'queuemind', 'queuemind123', 'hospital123', 'changeme', 'secret123',
+]);
+
+function assertUsablePassword(password: string): void {
+  if (password.length < 8) {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'Password must be at least 8 characters.', { field: 'password' });
+  }
+  if (COMMON_PASSWORDS.has(password.toLowerCase())) {
+    throw new ApiError(
+      400,
+      'VALIDATION_ERROR',
+      'That password appears in public breach lists. Please choose a different one.',
+      { field: 'password' },
+    );
+  }
+  // A single repeated character is long but trivially guessable.
+  if (new Set(password).size < 4) {
+    throw new ApiError(
+      400,
+      'VALIDATION_ERROR',
+      'That password is too repetitive. Mix in a few more different characters.',
+      { field: 'password' },
+    );
+  }
+}
+
 function validatedDate(value: unknown): string {
   const date = requiredString(value, 'Appointment date', 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -330,7 +402,7 @@ async function callerRunsTheQueue(req: express.Request): Promise<boolean> {
   const authHeader = req.header('authorization');
   if (!authHeader?.startsWith('Bearer ')) return false;
   try {
-    const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as { userId: string };
+    const payload = await verifiedClaims(authHeader.slice(7));
     // getCachedUser is a cache probe, not a loader: it returns undefined on a
     // miss, which is the normal case. Read through to the database, exactly as
     // the other role checks do, or a cold cache silently denies every admin.
@@ -346,6 +418,96 @@ async function callerRunsTheQueue(req: express.Request): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Sessions
+ * ---------------------------------------------------------------------------
+ * Signing and verification both go through here so the two can never disagree
+ * about what a session token contains.
+ *
+ * Every token carries the account's `tokenVersion` at the moment it was signed.
+ * Verification compares that against the value in the database, so bumping the
+ * column invalidates every token already issued for that account. This is what
+ * makes signing out mean something on the server: previously logout only
+ * cleared the browser's copy, leaving the token itself valid for its remaining
+ * seven days.
+ */
+interface SessionClaims {
+  userId: string;
+  email: string;
+  role: string;
+  /** Session generation; see User.tokenVersion. */
+  tv: number;
+}
+
+function signSession(user: { id: string; email: string; role: string; tokenVersion?: number }): string {
+  const claims: SessionClaims = {
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+    tv: user.tokenVersion ?? 0,
+  };
+  return jwt.sign(claims, JWT_SECRET, { expiresIn: '7d' });
+}
+
+/**
+ * Verify a bearer token's signature AND that it has not been revoked.
+ *
+ * Returns null for anything untrustworthy — bad signature, expired, unknown or
+ * deleted account, or a token from a superseded session generation — so callers
+ * treat every failure the same way instead of each inventing its own handling.
+ *
+ * Reads through the same user cache the authorization helpers use, so the extra
+ * check costs a database round trip only on a cache miss.
+ */
+async function verifySession(rawToken: string | undefined): Promise<{ claims: SessionClaims; user: any } | null> {
+  if (!rawToken) return null;
+
+  let claims: SessionClaims;
+  try {
+    claims = jwt.verify(rawToken, JWT_SECRET) as SessionClaims;
+  } catch {
+    return null;
+  }
+  if (!claims?.userId) return null;
+
+  let user: any = getCachedUser(claims.userId);
+  if (user === undefined) {
+    user = await prisma.user.findFirst({
+      where: { id: claims.userId, deletedAt: null },
+      include: { doctor: { select: { id: true } } },
+    });
+    setCachedUser(claims.userId, user);
+  }
+  if (!user) return null;
+
+  // Tokens minted before this column existed carry no `tv`; treat them as
+  // generation 0 so an in-flight session survives the deploy that adds it.
+  if ((claims.tv ?? 0) !== (user.tokenVersion ?? 0)) return null;
+
+  return { claims, user };
+}
+
+/**
+ * Throwing variant of verifySession.
+ *
+ * `jwt.verify` throws on a bad token, and every call site in this file is built
+ * around that. Keeping the same contract means adding revocation does not
+ * change the control flow of a single one of them — a revoked token now fails
+ * exactly where an expired token already did.
+ */
+async function verifiedClaims(rawToken: string | undefined): Promise<SessionClaims> {
+  const session = await verifySession(rawToken);
+  if (!session) throw new ApiError(401, 'SESSION_INVALID', 'Your session is no longer valid. Sign in again.');
+  return session.claims;
+}
+
+/** Bearer token from the Authorization header, if present. */
+function bearerFromRequest(req: express.Request): string | undefined {
+  const header = req.header('authorization');
+  return header?.startsWith('Bearer ') ? header.slice(7) : undefined;
 }
 
 function maskPhone(phone: string | null | undefined): string | null {
@@ -387,7 +549,7 @@ async function requireAdmin(req: express.Request, res: express.Response): Promis
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.slice(7);
     try {
-      const payload = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
+      const payload = await verifiedClaims(token);
 
       let user: any = getCachedUser(payload.userId);
       if (user === undefined) {
@@ -428,7 +590,12 @@ async function requireAdmin(req: express.Request, res: express.Response): Promis
   // Path 2: Legacy X-QueueMind-Role header. This is a self-asserted role with
   // no verification, so it stays off unless ALLOW_LEGACY_ROLE_HEADER=true is set
   // explicitly (local demos only — never in production).
-  if (process.env.ALLOW_LEGACY_ROLE_HEADER !== 'true') {
+  // Hard-blocked in production, not merely defaulted off. This path trusts a
+  // self-asserted header, so a single mistaken environment variable in the
+  // hosting dashboard would hand staff and manager access to anyone who sends
+  // `X-QueueMind-Role: manager`. A local demo can still opt in; a deployed
+  // instance cannot, whatever the variable says.
+  if (process.env.NODE_ENV === 'production' || process.env.ALLOW_LEGACY_ROLE_HEADER !== 'true') {
     res.status(401).json({
       error: 'AUTHENTICATION_REQUIRED',
       message: 'Sign in with a staff, manager, or administrator account to view this resource.',
@@ -462,7 +629,7 @@ async function requireSuperAdmin(req: express.Request, res: express.Response): P
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.slice(7);
     try {
-      const payload = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
+      const payload = await verifiedClaims(token);
 
       let user: any = getCachedUser(payload.userId);
       if (user === undefined) {
@@ -517,7 +684,7 @@ async function requireDoctor(req: express.Request, res: express.Response): Promi
 
   const token = authHeader.slice(7);
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
+    const payload = await verifiedClaims(token);
 
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
@@ -607,7 +774,7 @@ async function requireAuthUser(req: express.Request, res: express.Response) {
   }
 
   try {
-    const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as { userId: string };
+    const payload = await verifiedClaims(authHeader.slice(7));
 
     // The signature is verified above; the ROLE still comes from the row, just
     // possibly a very recently cached copy. Every role write invalidates it.
@@ -770,7 +937,10 @@ async function toPublicToken(token: { id: string; code: string; serviceId: strin
   };
 }
 
-async function toVisitorAppointment(appointment: { id: string; code: string; doctorId: string; date: string; time: string; patientName: string; phone: string; status: string; reasonForVisit?: string }) {
+// `phone` is nullable: a desk booking may have no number at all. Declaring it
+// required meant the compiler could not see that, and maskPhone/formatTime were
+// being handed nulls the signature promised could never arrive.
+async function toVisitorAppointment(appointment: { id: string; code: string; doctorId: string; date: string; time: string; patientName: string; phone: string | null; status: string; reasonForVisit?: string | null }) {
   const doctor = await findDoctor(appointment.doctorId);
   return {
     id: appointment.id,
@@ -844,7 +1014,7 @@ function deriveDoctorStatus(records: { status: string }[]): DoctorStatus {
  * fine for a single row but ruinous inside a listing.
  */
 function toStaffAppointmentWith(
-  appointment: { id: string; code: string; doctorId: string; date: string; time: string; patientName: string; phone: string; status: string; statusReason?: string | null; reasonForVisit: string; existingDiagnosis: string | null; createdAt: Date | string; updatedAt: Date | string; version: number },
+  appointment: { id: string; code: string; doctorId: string; date: string; time: string; patientName: string; phone: string | null; status: string; statusReason?: string | null; reasonForVisit: string; existingDiagnosis: string | null; createdAt: Date | string; updatedAt: Date | string; version: number },
   doctor: { id: string; name: string; department: { name: string } },
 ) {
   return {
@@ -1037,7 +1207,7 @@ async function notifyDoctorOfReschedule(
   }
 }
 
-function notificationPublicView(notification: { id: string; type: string; title: string; message: string; previousTime: string; newTime: string; deliveryStatus: string; createdAt: Date | string; response: string | null }) {
+function notificationPublicView(notification: { id: string; type: string; title: string; message: string; previousTime: string | null; newTime: string | null; deliveryStatus: string; createdAt: Date | string; response: string | null }) {
   return {
     id: notification.id,
     type: notification.type,
@@ -1572,9 +1742,7 @@ app.post('/api/auth/register', apiRoute(async (req, res) => {
   const email = requiredString(body.email, 'Email');
   const password = requiredString(body.password, 'Password');
 
-  if (password.length < 6) {
-    throw new ApiError(400, 'VALIDATION_ERROR', 'Password must be at least 6 characters.', { field: 'password' });
-  }
+  assertUsablePassword(password);
 
   // Check if email already exists
   const existing = await UserRepo.findByEmail(email);
@@ -1607,11 +1775,7 @@ app.post('/api/auth/register', apiRoute(async (req, res) => {
   }
 
   // Sign JWT
-  const token = jwt.sign(
-    { userId: user.id, email: user.email, role: user.role },
-    JWT_SECRET,
-    { expiresIn: '7d' },
-  );
+  const token = signSession(user);
 
   res.json({ token, user: publicUserView(user) });
 }));
@@ -1639,11 +1803,7 @@ app.post('/api/auth/login', apiRoute(async (req, res) => {
   // the current cost — after the response, so the user never waits for it.
   void rehashPasswordIfStale(user.id, user.passwordHash, password);
 
-  const token = jwt.sign(
-    { userId: user.id, email: user.email, role: user.role },
-    JWT_SECRET,
-    { expiresIn: '7d' },
-  );
+  const token = signSession(user);
 
   res.json({ token, user: publicUserView(user) });
 }));
@@ -1700,11 +1860,7 @@ app.post('/api/auth/google', apiRoute(async (req, res) => {
     invalidateUser(user.id);
   }
 
-  const token = jwt.sign(
-    { userId: user.id, email: user.email, role: user.role },
-    JWT_SECRET,
-    { expiresIn: '7d' },
-  );
+  const token = signSession(user);
 
   res.json({ token, user: publicUserView(user) });
 }));
@@ -1828,11 +1984,7 @@ app.get(['/api/auth/google/callback', '/auth/google/callback'], async (req, res)
     }
 
     // Issue a QueueMind session JWT
-    const appToken = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '7d' },
-    );
+    const appToken = signSession(user);
 
     // Redirect back to frontend with token and user info in the URL hash
     // (hash fragment is never sent to the server, keeping the token client-side only)
@@ -1848,6 +2000,41 @@ app.get(['/api/auth/google/callback', '/auth/google/callback'], async (req, res)
   }
 });
 
+/**
+ * POST /api/auth/logout — end this account's sessions for real.
+ *
+ * Signing out used to be a browser-only act: the client deleted its copy of the
+ * token and the token itself stayed valid for the rest of its seven days. A
+ * copy captured beforehand — from a shared machine, a synced clipboard, a
+ * screenshot — kept working, and there was nothing an administrator could do
+ * about it. Bumping tokenVersion invalidates every token issued for the
+ * account, including this one.
+ *
+ * Deliberately tolerant: a caller signing out with an already-invalid token
+ * gets 200, because the outcome they asked for — not being signed in — is the
+ * outcome they have. Failing here would only strand a client that cannot
+ * recover anyway.
+ */
+app.post('/api/auth/logout', apiRoute(async (req, res) => {
+  const session = await verifySession(bearerFromRequest(req));
+  if (!session) {
+    res.json({ ok: true, revoked: false });
+    return;
+  }
+
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { tokenVersion: { increment: 1 } },
+  });
+  // The cache holds the old tokenVersion; leaving it would keep accepting the
+  // token it was just revoked for, until the entry expired on its own.
+  invalidateUser(session.user.id);
+
+  await recordAudit({ id: session.user.id, role: session.user.role }, 'logout', 'user', session.user.id);
+
+  res.json({ ok: true, revoked: true });
+}));
+
 app.get('/api/auth/me', apiRoute(async (req, res) => {
   const authHeader = req.header('authorization');
   if (!authHeader?.startsWith('Bearer ')) {
@@ -1857,7 +2044,7 @@ app.get('/api/auth/me', apiRoute(async (req, res) => {
   const token = authHeader.slice(7);
   let payload: { userId: string };
   try {
-    payload = jwt.verify(token, JWT_SECRET) as { userId: string };
+    payload = await verifiedClaims(token);
   } catch {
     throw new ApiError(401, 'AUTHENTICATION_REQUIRED', 'Invalid or expired token.');
   }
@@ -1939,7 +2126,8 @@ async function findOwnAppointmentAt(
   date: string,
   time: string,
   patientUserId: string | undefined,
-  phone: string,
+  /** Null for a desk booking; matching then falls back to the user id alone. */
+  phone: string | null,
 ) {
   const existing = await prisma.appointment.findFirst({
     where: { doctorId, date, time, deletedAt: null },
@@ -2197,7 +2385,7 @@ const AdminAppointmentService = {
     adminId: string,
   ) {
     // Phase 1 — validate all changes (no mutations)
-    const validChanges = [];
+    const validChanges: { apt: Awaited<ReturnType<typeof getAppointmentOrThrow>>; change: (typeof changes)[number] }[] = [];
     for (const change of changes) {
       const apt = await getAppointmentOrThrow(change.appointmentId);
       await assertBookableSlot(change.newDoctorId, change.newDate, change.newTime, apt.id);
@@ -2351,7 +2539,7 @@ app.post('/api/visitor/tokens', apiRoute(async (req, res) => {
   if (authHeader?.startsWith('Bearer ')) {
     const tokenStr = authHeader.slice(7);
     try {
-      const payload = jwt.verify(tokenStr, JWT_SECRET) as { userId: string };
+      const payload = await verifiedClaims(tokenStr);
       userId = payload.userId;
     } catch {
       // Ignore invalid auth for visitor endpoint
@@ -2378,7 +2566,7 @@ app.get('/api/visitor/my-token', apiRoute(async (req, res) => {
   }
   let userId: string;
   try {
-    const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as { userId: string };
+    const payload = await verifiedClaims(authHeader.slice(7));
     userId = payload.userId;
   } catch {
     throw new ApiError(401, 'AUTHENTICATION_REQUIRED', 'Invalid token.');
@@ -2473,7 +2661,7 @@ app.get('/api/visitor/tokens/:id', apiRoute(async (req, res) => {
   let userId: string | undefined;
   if (authHeader?.startsWith('Bearer ')) {
     try {
-      userId = (jwt.verify(authHeader.slice(7), JWT_SECRET) as { userId: string }).userId;
+      userId = (await verifiedClaims(authHeader.slice(7))).userId;
     } catch { }
   }
 
@@ -2513,7 +2701,7 @@ async function requireTokenOwner(
   const authHeader = req.header('authorization');
   if (authHeader?.startsWith('Bearer ')) {
     try {
-      const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as { userId: string };
+      const payload = await verifiedClaims(authHeader.slice(7));
       if (token.userId && payload.userId === token.userId) return;
 
       if (staffPermission) {
@@ -2713,7 +2901,7 @@ app.get('/api/visitor/tokens/:id/queue-position', apiRoute(async (req, res) => {
     const authHeader = req.header('authorization');
     if (authHeader?.startsWith('Bearer ')) {
       try {
-        jwt.verify(authHeader.slice(7), JWT_SECRET);
+        await verifiedClaims(authHeader.slice(7));
       } catch {
         throw new ApiError(401, 'UNAUTHORIZED', 'Invalid token.');
       }
@@ -2765,7 +2953,7 @@ app.get('/api/visitor/tokens/:id/queue-position', apiRoute(async (req, res) => {
   let userId: string | undefined;
   if (authHeader?.startsWith('Bearer ')) {
     try {
-      userId = (jwt.verify(authHeader.slice(7), JWT_SECRET) as { userId: string }).userId;
+      userId = (await verifiedClaims(authHeader.slice(7))).userId;
     } catch { }
   }
 
@@ -2900,7 +3088,7 @@ app.post('/api/visitor/appointments', apiRoute(async (req, res) => {
   const authHeader = req.header('authorization');
   if (authHeader?.startsWith('Bearer ')) {
     try {
-      const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as { userId: string };
+      const payload = await verifiedClaims(authHeader.slice(7));
       const account = await UserRepo.findById(payload.userId);
       if (account) {
         patientUserId = account.id;
@@ -4373,9 +4561,9 @@ app.post('/api/super-admin/doctors', apiRoute(async (req, res) => {
   if (!account && !password) {
     throw new ApiError(400, 'VALIDATION_ERROR', 'An initial password is required for a new doctor account.', { field: 'password' });
   }
-  if (password && password.length < 6) {
-    throw new ApiError(400, 'VALIDATION_ERROR', 'Password must be at least 6 characters.', { field: 'password' });
-  }
+  // A doctor account created here is a real staff login, so it is held to the
+  // same standard as self-registration rather than a weaker one.
+  if (password) assertUsablePassword(password);
 
   let photoUrl: string | undefined;
   if (body.photo) {
@@ -5146,7 +5334,7 @@ app.get('/api/events', async (req, res) => {
 
   if (bearer) {
     try {
-      const payload = jwt.verify(bearer, JWT_SECRET) as { userId: string };
+      const payload = await verifiedClaims(bearer);
       const user = await prisma.user.findFirst({
         where: { id: payload.userId, deletedAt: null },
         include: { doctor: { select: { id: true } } },

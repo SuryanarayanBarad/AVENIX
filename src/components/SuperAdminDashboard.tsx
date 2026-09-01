@@ -654,7 +654,7 @@ export const SuperAdminDashboard: React.FC = () => {
                     value={newDoc.password}
                     onChange={e => setNewDoc({ ...newDoc, password: e.target.value })}
                     required
-                    minLength={6}
+                    minLength={8}
                   />
                 </Field>
 
@@ -863,7 +863,7 @@ export const SuperAdminDashboard: React.FC = () => {
                         ) : (
                           <div className="text-sm">
                             <div>{doc.experienceYears ? `${doc.experienceYears} yrs` : '—'}</div>
-                            {doc.consultationFee > 0 && (
+                            {(doc.consultationFee ?? 0) > 0 && (
                               <div className="text-xs text-[var(--pc-text-muted)]">Fee {doc.consultationFee}</div>
                             )}
                           </div>

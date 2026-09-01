@@ -86,7 +86,7 @@ interface AppointmentFlowProps {
    * The signed-in visitor, when there is one. Their name and phone prefill the
    * form and a desk booking is allowed to omit the phone.
    */
-  user?: { id?: string; name?: string; email?: string; phone?: string; role?: string } | null;
+  user?: { id?: string; name?: string; email?: string; phone?: string | null; role?: string } | null;
 }
 
 import { visitorApi } from '../services/queueApi';

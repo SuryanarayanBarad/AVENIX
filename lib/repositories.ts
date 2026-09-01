@@ -639,7 +639,8 @@ export const NotificationRepo = {
     previousTime: string;
     newTime: string;
     deliveryStatus?: 'queued' | 'mock_dispatched' | 'dispatched' | 'failed';
-    recipientPhoneMasked: string;
+    /** Null for a desk booking with no number to mask. */
+    recipientPhoneMasked: string | null;
     dispatchedAt?: Date;
   }) {
     return prisma.notification.create({
