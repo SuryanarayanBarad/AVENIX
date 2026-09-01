@@ -73,8 +73,32 @@ export const authApi = {
     return parseResponse<{ user: User }>(res, 'Could not verify your session');
   },
 
-  logout() {
+  /**
+   * Sign out.
+   *
+   * Tells the server first so the token is revoked rather than merely
+   * forgotten, then clears local state. The local clear happens whatever the
+   * server says: if the request fails, the user still expects to be signed out
+   * on this device, and leaving the token in localStorage after they pressed
+   * "log out" would be the worse outcome.
+   */
+  async logout(): Promise<void> {
+    // Clear locally FIRST, synchronously. The revoke call is not awaited by the
+    // caller, so clearing afterwards could race a user who signs straight back
+    // in — the late removal would delete their new token instead of the old one.
+    const token = localStorage.getItem('auth_token');
     localStorage.removeItem('auth_token');
+    if (!token) return;
+
+    try {
+      await fetch(`${API_BASE}/logout`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      // Offline, or the server is asleep. The device is signed out either way;
+      // the token simply keeps its remaining lifetime until it expires.
+    }
   }
 };
 

@@ -137,7 +137,9 @@ export default function App() {
   }, []);
 
   const handleLogout = () => {
-    authApi.logout();
+    // Deliberately not awaited: the session is already cleared locally inside
+    // logout(), so the UI should not wait on a network round trip to reflect it.
+    void authApi.logout();
     cameraService.stop();
     setUser(null);
     setLiveToken(null);

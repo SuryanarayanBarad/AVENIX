@@ -122,6 +122,17 @@ model User {
   updatedAt    DateTime  @updatedAt @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")
 
+  /**
+   * Session generation. Every issued JWT carries the value current when it was
+   * signed; incrementing this invalidates all of them at once.
+   *
+   * Without it, signing out only deleted the browser's copy of the token — the
+   * token itself stayed valid server-side for its full seven days, so a copy
+   * captured beforehand kept working, and deleting an account did not end its
+   * sessions.
+   */
+  tokenVersion Int       @default(0) @map("token_version")
+
   auditLogs    AuditLog[]
   tokens       Token[]
   appointments Appointment[] // Appointments booked by this user as the patient
