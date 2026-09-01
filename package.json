@@ -22,7 +22,8 @@
     "check:tracker": "tsx scripts/check-tracker-visibility.mts",
     "check:forecast": "tsx scripts/check-crowd-forecast.mts",
     "check:doctors": "tsx scripts/check-doctor-ranking.mts",
-    "check:ai": "tsx scripts/check-ai-navigation.mts"
+    "check:ai": "tsx scripts/check-ai-navigation.mts",
+    "check:roles": "tsx scripts/check-role-ai.mts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

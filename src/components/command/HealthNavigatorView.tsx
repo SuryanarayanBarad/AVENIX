@@ -5,6 +5,7 @@ import {
   Users, ArrowRight, ShieldCheck, Loader2, X, ExternalLink, History, Activity,
 } from 'lucide-react';
 import { HospitalMapView } from './HospitalMapView';
+import { HospitalInsightsPanel } from './HospitalInsightsPanel';
 import {
   healthApi, fileToDataUrl,
   type MedicalReportView, type NavigationResult,
@@ -619,6 +620,11 @@ export const HealthNavigatorView: React.FC<Props> = ({ onBookAppointment }) => {
               </div>
             ))}
           </div>
+
+          {/* Step 5 — queue intelligence. Read-only results of the hospital's
+              operational AI, so a patient can see the effect of an optimisation
+              without being given any control over it. */}
+          <HospitalInsightsPanel />
 
           {/* Where to go, highlighted to whatever the navigator just suggested. */}
           <HospitalMapView highlightService={result?.department?.name ?? null} />
