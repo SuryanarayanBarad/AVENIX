@@ -1,5 +1,16 @@
-import * as tf from '@tensorflow/tfjs';
-import * as cocoSsd from '@tensorflow-models/coco-ssd';
+/**
+ * TensorFlow.js and COCO-SSD are imported dynamically, inside loadModel().
+ *
+ * Statically they are ~1.9 MB of JavaScript, and importing them at module load
+ * meant merely opening the Camera Monitor tab downloaded a machine-learning
+ * runtime before the page could render — even for somebody who only wanted to
+ * see the camera list. They are now fetched when detection actually starts.
+ *
+ * Types are imported with `import type`, which is erased at build time and
+ * pulls in no runtime code.
+ */
+import type * as tfNS from '@tensorflow/tfjs';
+import type * as cocoSsdNS from '@tensorflow-models/coco-ssd';
 
 export interface DetectionResult {
   peopleCount: number;
@@ -26,8 +37,8 @@ export interface CameraProvider {
  * Runs entirely client-side — no video data leaves the browser.
  */
 class PeopleDetectionService {
-  private model: cocoSsd.ObjectDetection | null = null;
-  private modelLoading: Promise<cocoSsd.ObjectDetection> | null = null;
+  private model: cocoSsdNS.ObjectDetection | null = null;
+  private modelLoading: Promise<cocoSsdNS.ObjectDetection> | null = null;
   private streams: Map<string, MediaStream> = new Map();
   private detectionLoops: Map<string, number> = new Map();
   private callbacks: Map<string, (result: DetectionResult) => void> = new Map();
@@ -37,13 +48,19 @@ class PeopleDetectionService {
    * Load the COCO-SSD model (lazy, cached).
    * First call downloads the model (~6MB); subsequent calls return cached.
    */
-  async loadModel(): Promise<cocoSsd.ObjectDetection> {
+  async loadModel(): Promise<cocoSsdNS.ObjectDetection> {
     if (this.model) return this.model;
 
     if (this.modelLoading) return this.modelLoading;
 
     this.modelLoading = (async () => {
       // Ensure TF.js backend is ready
+      // Both land in their own chunk, fetched on this first call only.
+      const [tf, cocoSsd] = await Promise.all([
+        import('@tensorflow/tfjs') as Promise<typeof tfNS>,
+        import('@tensorflow-models/coco-ssd') as Promise<typeof cocoSsdNS>,
+      ]);
+
       await tf.ready();
       console.log('[PeopleDetection] TF.js backend:', tf.getBackend());
 

@@ -3,22 +3,30 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Navbar } from './components/Navbar';
 import { LandingPage } from './components/LandingPage';
 import { AuthModal } from './components/AuthModal';
-import { ProfileModal } from './components/ProfileModal';
+const ProfileModal = React.lazy(() => import('./components/ProfileModal').then((m) => ({ default: m.ProfileModal })));
 import { authApi } from './services/authApi';
 import { wakeServer } from './services/apiClient';
 import { LiquidGlassDefs } from './components/LiquidGlassDefs';
 import { User } from './types';
-import { VisitorKiosk } from './components/VisitorKiosk';
-import { VisitorTokenView } from './components/VisitorTokenView';
-import { PatientTrackerCarousel } from './components/PatientTrackerCarousel';
-import { AdminDashboard } from './components/AdminDashboard';
-import { SuperAdminDashboard } from './components/SuperAdminDashboard';
-import { DoctorDashboard } from './components/DoctorDashboard';
+/**
+ * Top-level views load when their screen is first shown.
+ *
+ * A visitor arriving at the landing page was downloading the Command Center,
+ * the Super Admin console and the doctor dashboard before anything rendered —
+ * three consoles they may have no permission to open at all. Navbar,
+ * LandingPage and AuthModal stay eager because they are the first paint.
+ */
+const VisitorKiosk = React.lazy(() => import('./components/VisitorKiosk').then((m) => ({ default: m.VisitorKiosk })));
+const VisitorTokenView = React.lazy(() => import('./components/VisitorTokenView').then((m) => ({ default: m.VisitorTokenView })));
+const PatientTrackerCarousel = React.lazy(() => import('./components/PatientTrackerCarousel').then((m) => ({ default: m.PatientTrackerCarousel })));
+const AdminDashboard = React.lazy(() => import('./components/AdminDashboard').then((m) => ({ default: m.AdminDashboard })));
+const SuperAdminDashboard = React.lazy(() => import('./components/SuperAdminDashboard').then((m) => ({ default: m.SuperAdminDashboard })));
+const DoctorDashboard = React.lazy(() => import('./components/DoctorDashboard').then((m) => ({ default: m.DoctorDashboard })));
 import { VisitorStart, WalkInTokenFlow } from './components/VisitorFlow';
 import { serviceDayKey } from '../lib/serviceDay';
 
 import type { PublicQueueToken } from './components/VisitorFlow';
-import { AppointmentFlow } from './components/AppointmentFlow';
+const AppointmentFlow = React.lazy(() => import('./components/AppointmentFlow').then((m) => ({ default: m.AppointmentFlow })));
 import type { PublicAppointment, DoctorOption } from './components/AppointmentFlow';
 import { visitorApi, adminApi } from './services/queueApi';
 import { doctorApi } from './services/doctorApi';
@@ -402,6 +410,17 @@ export default function App() {
         onProfileClick={() => setIsProfileModalOpen(true)}
       />
 
+      {/* Everything below the header is code-split. The header paints first, so
+          navigation is usable while a view is still arriving. */}
+      <React.Suspense
+        fallback={
+          <div className="flex flex-1 items-center justify-center py-24" role="status" aria-live="polite">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--pc-border)] border-t-[var(--pc-primary)]" />
+            <span className="sr-only">Loading…</span>
+          </div>
+        }
+      >
+
       <ProfileModal
         isOpen={isProfileModalOpen}
         user={user}
@@ -586,6 +605,7 @@ export default function App() {
         </AnimatePresence>
       </div>
 
+      </React.Suspense>
     </div>
   );
 }

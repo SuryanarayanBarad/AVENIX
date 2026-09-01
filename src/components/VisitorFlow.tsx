@@ -47,6 +47,11 @@ export interface VisitorServiceOption {
   description?: string;
   estimatedWaitMinutes?: number;
   peopleWaiting?: number;
+  /**
+   * Which desk serves this queue. The endpoint has always returned it; the type
+   * simply never declared it, so consumers could not see it existed.
+   */
+  defaultCounterName?: string | null;
 }
 
 export interface WalkInTokenRequest {

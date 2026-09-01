@@ -10,22 +10,54 @@ import {
 import { Sidebar } from './Sidebar';
 import { AdminOverview } from './AdminOverview';
 import { LiveQueueView } from './LiveQueueView';
-import { CrowdIntelligenceView } from './CrowdIntelligenceView';
-import { AIPredictionsView } from './AIPredictionsView';
-import { CounterOptimizationView } from './CounterOptimizationView';
-import { AppointmentsView, type StaffAppointment } from './AppointmentsView';
-import { DoctorScheduleView } from './DoctorScheduleView';
-import { FairnessLogicView } from './FairnessLogicView';
-import { AnalyticsView } from './AnalyticsView';
-import { CameraMonitorView } from './CameraMonitorView';
-import { CopilotDrawer } from './CopilotDrawer';
 import { MyVisitView } from './command/MyVisitView';
-import { HealthNavigatorView } from './command/HealthNavigatorView';
-import { MyPatientsView } from './command/MyPatientsView';
-import { RequestsView } from './command/RequestsView';
-import { DoctorDirectoryView } from './command/DoctorDirectoryView';
-import { UsersRolesView } from './command/UsersRolesView';
-import { AuditLogView } from './command/AuditLogView';
+import type { StaffAppointment } from './AppointmentsView';
+
+/**
+ * Tab views are fetched when their tab is first opened, not at load.
+ *
+ * The Command Center imported all seventeen statically, so opening it pulled
+ * every one of them down before the first paint — including CameraMonitorView,
+ * which reaches TensorFlow.js and COCO-SSD through peopleDetector. A visitor
+ * who never opens Camera Monitor was still downloading a machine-learning
+ * runtime to look at their queue position.
+ *
+ * Sidebar, AdminOverview, LiveQueueView and MyVisitView stay eager: they are
+ * the landing tab for one role or another, so deferring them would only add a
+ * spinner to the screen everybody sees first.
+ */
+const CrowdIntelligenceView = React.lazy(() => import('./CrowdIntelligenceView').then((m) => ({ default: m.CrowdIntelligenceView })));
+const AIPredictionsView = React.lazy(() => import('./AIPredictionsView').then((m) => ({ default: m.AIPredictionsView })));
+const CounterOptimizationView = React.lazy(() => import('./CounterOptimizationView').then((m) => ({ default: m.CounterOptimizationView })));
+const AppointmentsView = React.lazy(() => import('./AppointmentsView').then((m) => ({ default: m.AppointmentsView })));
+const DoctorScheduleView = React.lazy(() => import('./DoctorScheduleView').then((m) => ({ default: m.DoctorScheduleView })));
+const FairnessLogicView = React.lazy(() => import('./FairnessLogicView').then((m) => ({ default: m.FairnessLogicView })));
+const AnalyticsView = React.lazy(() => import('./AnalyticsView').then((m) => ({ default: m.AnalyticsView })));
+const CameraMonitorView = React.lazy(() => import('./CameraMonitorView').then((m) => ({ default: m.CameraMonitorView })));
+const CopilotDrawer = React.lazy(() => import('./CopilotDrawer').then((m) => ({ default: m.CopilotDrawer })));
+const HealthNavigatorView = React.lazy(() => import('./command/HealthNavigatorView').then((m) => ({ default: m.HealthNavigatorView })));
+const MyPatientsView = React.lazy(() => import('./command/MyPatientsView').then((m) => ({ default: m.MyPatientsView })));
+const RequestsView = React.lazy(() => import('./command/RequestsView').then((m) => ({ default: m.RequestsView })));
+const DoctorDirectoryView = React.lazy(() => import('./command/DoctorDirectoryView').then((m) => ({ default: m.DoctorDirectoryView })));
+const UsersRolesView = React.lazy(() => import('./command/UsersRolesView').then((m) => ({ default: m.UsersRolesView })));
+const AuditLogView = React.lazy(() => import('./command/AuditLogView').then((m) => ({ default: m.AuditLogView })));
+
+/**
+ * Shown while a tab's code is in flight. Matches the card the view will occupy
+ * so the layout does not jump when it arrives.
+ */
+const TabFallback: React.FC = () => (
+  <div className="pc space-y-4" role="status" aria-live="polite">
+    <div className="h-8 w-64 animate-pulse rounded-xl bg-[var(--pc-page)]" />
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="h-24 animate-pulse rounded-2xl bg-[var(--pc-page)]" />
+      ))}
+    </div>
+    <div className="h-64 animate-pulse rounded-2xl bg-[var(--pc-page)]" />
+    <span className="sr-only">Loading…</span>
+  </div>
+);
 import { canAccessTab, defaultTabForRole } from '../../lib/permissions';
 import { adminApi } from '../services/queueApi';
 import {
@@ -104,6 +136,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches,
   );
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  /** Latches on first open so the drawer's chunk is fetched only on demand. */
+  const [copilotEverOpened, setCopilotEverOpened] = useState(false);
   const [copilotInitialPrompt, setCopilotInitialPrompt] = useState<string | undefined>(undefined);
   const [recommendationApplied, setRecommendationApplied] = useState(false);
   const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
@@ -187,6 +221,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleOpenCopilotWithPrompt = (prompt?: string) => {
     setCopilotInitialPrompt(prompt);
+    setCopilotEverOpened(true);
     setIsCopilotOpen(true);
   };
 
@@ -413,6 +448,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               exit={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -5 }}
               transition={{ duration: shouldReduceMotion ? 0 : 0.16, ease: panelEase }}
             >
+              {/* One boundary around the whole tab area: only one tab is
+                  mounted at a time, so a per-view boundary would be fifteen
+                  copies of the same thing. */}
+              <React.Suspense fallback={<TabFallback />}>
               {currentTab === 'overview' && (
                 <AdminOverview
                   counters={counters}
@@ -520,6 +559,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {currentTab === 'doctors' && <DoctorDirectoryView canManage={canManageDoctors} />}
               {currentTab === 'users' && <UsersRolesView />}
               {currentTab === 'audit' && <AuditLogView />}
+              </React.Suspense>
             </motion.section>
           </AnimatePresence>
         </main>
@@ -550,7 +590,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </span>
       </button>
 
-      {/* Copilot Chat Drawer */}
+      {/* Mounted only once the copilot has been opened at least once.
+          Rendering it unconditionally would fetch its chunk immediately and
+          undo the split; keeping it mounted afterwards preserves the close
+          animation and the conversation. */}
+      {copilotEverOpened && (
+      <React.Suspense fallback={null}>
       <CopilotDrawer
         isOpen={isCopilotOpen}
         onClose={() => setIsCopilotOpen(false)}
@@ -560,6 +605,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         tokens={tokens}
         onApplyCounterOptimization={handleApplyRecommendation}
       />
+      </React.Suspense>
+      )}
 
     </div>
   );

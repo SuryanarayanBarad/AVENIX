@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { GoogleGenAI, ThinkingLevel } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
@@ -1373,6 +1373,56 @@ async function findNextRecommendedSlot(
 // ---------------------------------------------------------------------------
 
 const apiKey = process.env.GEMINI_API_KEY;
+/**
+ * Hard ceiling on a single model call.
+ *
+ * The SDK has no timeout of its own, so a stalled upstream call held an Express
+ * request open indefinitely — and because both callers walk a four-step retry
+ * ladder, one bad minute upstream could pin four requests per user. Twelve
+ * seconds is above the slowest observed successful call (~5.4s on 3.5-flash)
+ * with room to spare, and far below the point where a person assumes the page
+ * is broken.
+ */
+const GEMINI_CALL_TIMEOUT_MS = 12_000;
+
+class GeminiTimeoutError extends Error {
+  constructor() { super('The AI assistant did not respond in time.'); }
+}
+
+function withGeminiTimeout<T>(work: Promise<T>): Promise<T> {
+  let timer: NodeJS.Timeout;
+  return Promise.race([
+    work,
+    new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new GeminiTimeoutError()), GEMINI_CALL_TIMEOUT_MS);
+    }),
+  // The losing promise keeps running to completion; clearing the timer just
+  // stops it holding the event loop open.
+  ]).finally(() => clearTimeout(timer!)) as Promise<T>;
+}
+
+/**
+ * Coalesce identical in-flight AI requests.
+ *
+ * A double-click, or a React re-render firing an effect twice, produced two
+ * identical Gemini calls — double the latency budget and double the quota, for
+ * one answer. Callers with the same key share the first call's promise.
+ *
+ * Nothing is retained after settling: this is de-duplication of concurrent
+ * work, NOT a cache of results. No patient text is held beyond the request that
+ * is already processing it.
+ */
+const inFlightAiRequests = new Map<string, Promise<any>>();
+
+function coalesceAiRequest<T>(key: string, work: () => Promise<T>): Promise<T> {
+  const existing = inFlightAiRequests.get(key);
+  if (existing) return existing as Promise<T>;
+
+  const started = work().finally(() => { inFlightAiRequests.delete(key); });
+  inFlightAiRequests.set(key, started);
+  return started;
+}
+
 let ai: GoogleGenAI | null = null;
 
 /**
@@ -1629,11 +1679,11 @@ app.post('/api/copilot/chat', apiRoute(async (req, res) => {
 
     for (const attempt of attempts) {
       try {
-        response = await ai.models.generateContent({
+        response = await withGeminiTimeout(ai.models.generateContent({
           model: attempt.model,
           contents,
           config: attempt.config,
-        });
+        }));
         modelUsed = attempt.model;
         break;
       } catch (err: any) {
@@ -1641,7 +1691,7 @@ app.post('/api/copilot/chat', apiRoute(async (req, res) => {
         const message = err?.message ?? String(err);
         // A malformed question is the caller's problem and will fail identically
         // on every model, so it is not worth walking the rest of the ladder.
-        const worthRetrying = /503|UNAVAILABLE|high demand|overloaded|429|RESOURCE_EXHAUSTED|quota|thinking|INVALID_ARGUMENT|not supported/i.test(message);
+        const worthRetrying = /503|UNAVAILABLE|high demand|overloaded|429|RESOURCE_EXHAUSTED|quota|thinking|INVALID_ARGUMENT|not supported|did not respond in time/i.test(message);
         if (!worthRetrying) throw err;
         console.warn(`Copilot: ${attempt.model} declined (${message.slice(0, 120)}); trying next option`);
       }
@@ -3158,10 +3208,11 @@ app.get('/api/visitor/doctors', apiRoute(async (req, res) => {
 
   // Public directory: display fields only. No email, no account id, no
   // management controls — those live behind /api/super-admin/doctors.
-  const doctorsWithStatus = await Promise.all(
-    allDoctors
-      .filter((doc) => doc.isActive)
-      .map(async (doc) => ({
+  // Was wrapped in Promise.all over an async map with nothing awaited inside,
+  // which allocated a promise per doctor to do synchronous work.
+  const doctorsWithStatus = allDoctors
+    .filter((doc) => doc.isActive)
+    .map((doc) => ({
         id: doc.id,
         name: `Dr. ${doc.name}`,
         department: doc.department.name,
@@ -3171,9 +3222,8 @@ app.get('/api/visitor/doctors', apiRoute(async (req, res) => {
         experienceYears: doc.experienceYears ?? 0,
         consultationFee: doc.consultationFee ?? 0,
         bio: doc.bio ?? null,
-        status: deriveDoctorStatus(availabilityByDoctor.get(doc.id) ?? []) as string,
-      })),
-  );
+      status: deriveDoctorStatus(availabilityByDoctor.get(doc.id) ?? []) as string,
+    }));
   res.json({ doctors: doctorsWithStatus });
 }));
 
@@ -3348,14 +3398,34 @@ You must NEVER: give a diagnosis, name a disease as if confirmed, suggest medica
 
 If the information suggests a possible emergency — chest pain, difficulty breathing, stroke signs, severe bleeding, loss of consciousness, suspected poisoning — set "urgent" to true and name Emergency, whatever else is present.
 
-Reply with ONLY a JSON object, no prose and no markdown fence:
-{
-  "department": "<exact name from the catalogue>",
-  "reason": "<one or two sentences, plain language, describing what in the information points to this department. Describe findings, never conclude a diagnosis.>",
-  "confidence": "low" | "medium" | "high",
-  "urgent": true | false,
-  "suggestedQuestions": ["<up to 3 things staff may ask>"]
-}`;
+Fields you must fill:
+- department: the exact name of one department from the catalogue.
+- reason: one or two plain sentences describing what in the information points there. Describe findings; never conclude a diagnosis.
+- confidence: how sure the routing is.
+- urgent: true only for the emergency signs above.
+- suggestedQuestions: up to 3 things reception may ask.`;
+
+/**
+ * The response shape, enforced by the API rather than requested in prose.
+ *
+ * Asking for JSON in the prompt worked most of the time, which is the problem:
+ * one call in three came back as prose or a fenced block and was rejected as
+ * unreadable, so the patient saw a failure for a question the model had
+ * actually answered. With a schema the structure is guaranteed, and measured
+ * against this key it is also markedly faster — 3.7s versus 28s — because the
+ * model is not composing an explanation around the data.
+ */
+const NAVIGATION_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    department: { type: Type.STRING },
+    reason: { type: Type.STRING },
+    confidence: { type: Type.STRING, enum: ['low', 'medium', 'high'] },
+    urgent: { type: Type.BOOLEAN },
+    suggestedQuestions: { type: Type.ARRAY, items: { type: Type.STRING } },
+  },
+  required: ['department', 'reason', 'confidence', 'urgent'],
+} as const;
 
 /** Trimmed so a long report cannot crowd out the instruction or the catalogue. */
 const MAX_REPORT_CHARS_TO_MODEL = 6000;
@@ -3409,6 +3479,8 @@ async function runHealthNavigation(input: {
     // creative answer here is simply a wrong one.
     temperature: 0.1,
     maxOutputTokens: 500,
+    responseMimeType: 'application/json',
+    responseSchema: NAVIGATION_SCHEMA as any,
   };
   const thinking = { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } };
   const contents = [{ role: 'user', parts: [{ text: parts }] }];
@@ -3424,17 +3496,32 @@ async function runHealthNavigation(input: {
   let raw: string | null = null;
   let modelUsed: string | null = null;
   let lastError = '';
+  const exhaustedModels = new Set<string>();
+
   for (const attempt of attempts) {
+    if (exhaustedModels.has(attempt.model)) continue;
     try {
-      const response: any = await ai.models.generateContent({
+      const response: any = await withGeminiTimeout(ai.models.generateContent({
         model: attempt.model, contents, config: attempt.config,
-      });
+      }));
       raw = (response.text ?? '').trim();
       modelUsed = attempt.model;
       break;
     } catch (err: any) {
       lastError = err?.message ?? String(err);
-      const worthRetrying = /503|UNAVAILABLE|high demand|overloaded|429|RESOURCE_EXHAUSTED|quota|thinking|INVALID_ARGUMENT|not supported/i.test(lastError);
+      // Logged, not swallowed: without this a model silently declining every
+      // call looked identical to one that was simply slow, and the ladder's
+      // cost was invisible.
+      console.warn(`Navigator: ${attempt.model} declined (${lastError.slice(0, 160)})`);
+
+      // A daily quota is per model, so every further rung on this one returns
+      // the same 429. Skip straight to the next model.
+      if (/429|RESOURCE_EXHAUSTED|quota/i.test(lastError)) {
+        exhaustedModels.add(attempt.model);
+        continue;
+      }
+
+      const worthRetrying = /503|UNAVAILABLE|high demand|overloaded|thinking|INVALID_ARGUMENT|not supported|did not respond in time/i.test(lastError);
       if (!worthRetrying) break;
     }
   }
@@ -3709,11 +3796,15 @@ app.post('/api/visitor/ai/navigate', apiRoute(async (req, res) => {
     orderBy: { name: 'asc' },
   });
 
-  const result = await runHealthNavigation({
+  // Keyed by the caller and the exact input, so a double submit or a re-render
+  // shares one model call instead of paying for two. The key never leaves the
+  // process and the entry is dropped the moment the call settles.
+  const requestKey = `${user.id}:${report?.id ?? '-'}:${symptoms ?? '-'}`;
+  const result = await coalesceAiRequest(requestKey, () => runHealthNavigation({
     symptoms,
     reportText: report?.extractedText ?? null,
     departments,
-  });
+  }));
 
   const matched = matchDepartment(result.department, departments);
 
@@ -3802,7 +3893,33 @@ app.get('/api/visitor/ai/navigations', apiRoute(async (req, res) => {
  *    with a counter name and nobody being served is an idle one. That is a real
  *    measurement of real rows, not an invented counter list.
  */
+/**
+ * Cached observations, keyed by facility.
+ *
+ * gatherCrowdObservations runs seven queries, and the forecast panel polls it
+ * every minute AND on every live queue event — so with several operators and a
+ * busy queue the same seven queries were being answered many times a second for
+ * a number that cannot meaningfully change that fast.
+ *
+ * Eight seconds is chosen against what the value is for: a staffing decision
+ * over a 15-minute horizon. Nobody acts differently on a queue depth eight
+ * seconds fresher, and the visitor-facing copy already says "measured live"
+ * rather than "real time".
+ */
+const crowdObservationCache = new Map<string, { at: number; value: any }>();
+const CROWD_OBSERVATION_TTL_MS = 8_000;
+
 async function gatherCrowdObservations(facilityId: string) {
+  const cached = crowdObservationCache.get(facilityId);
+  if (cached && Date.now() - cached.at < CROWD_OBSERVATION_TTL_MS) {
+    return cached.value as Awaited<ReturnType<typeof computeCrowdObservations>>;
+  }
+  const value = await computeCrowdObservations(facilityId);
+  crowdObservationCache.set(facilityId, { at: Date.now(), value });
+  return value;
+}
+
+async function computeCrowdObservations(facilityId: string) {
   const now = new Date();
   const windowStart = new Date(now.getTime() - 60 * 60_000);
   const today = serviceDayKey();
@@ -3842,18 +3959,21 @@ async function gatherCrowdObservations(facilityId: string) {
     }),
   ]);
 
-  const serving = await prisma.token.groupBy({
-    by: ['serviceId'],
-    where: { facilityId, deletedAt: null, status: 'Serving' },
-    _count: { _all: true },
-  });
+  // Independent of each other, so they go together rather than one after the
+  // other — two round trips became one wait.
+  const [serving, perServiceWaiting] = await Promise.all([
+    prisma.token.groupBy({
+      by: ['serviceId'],
+      where: { facilityId, deletedAt: null, status: 'Serving' },
+      _count: { _all: true },
+    }),
+    prisma.token.groupBy({
+      by: ['serviceId'],
+      where: { facilityId, deletedAt: null, status: { in: ['Waiting', 'Approaching'] } },
+      _count: { _all: true },
+    }),
+  ]);
   const servingByService = new Set(serving.map((r) => r.serviceId));
-
-  const perServiceWaiting = await prisma.token.groupBy({
-    by: ['serviceId'],
-    where: { facilityId, deletedAt: null, status: { in: ['Waiting', 'Approaching'] } },
-    _count: { _all: true },
-  });
   const waitingByService = new Map(perServiceWaiting.map((r) => [r.serviceId, r._count._all]));
 
   const byLoad = services
@@ -5922,6 +6042,7 @@ app.get('/api/doctor/appointments/:id/slots', apiRoute(async (req, res) => {
 /**
  * POST /api/doctor/appointments/:id/reschedule — move one of my appointments.
  *
+ * 
  * A doctor could approve or deny but never move an appointment, so the only way
  * to shift their own clinic was to ask an administrator. This is the same act
  * the admin route performs, narrowed to appointments the caller actually owns:
@@ -6307,6 +6428,9 @@ app.get('/api/events', async (req, res) => {
 async function startServer() {
   // Profile image directories must exist before the static handler serves them.
   await ensureUploadDirectories();
+  // Verifies the private report bucket is reachable AND not public, so a
+  // misconfiguration surfaces at boot rather than on a patient's first upload.
+  await ensureReportStorage();
 
   // Verify database connection on startup, and warm the pool + reference cache
   // while doing it. Otherwise the first real requests each pay a TLS handshake

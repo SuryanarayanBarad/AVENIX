@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { adminApi, visitorApi } from '../services/queueApi';
 import { doctorApi } from '../services/doctorApi';
+import { useDebounced } from '../hooks/useDebounced';
 import { DoctorAppointmentModal } from './DoctorAppointmentModal';
 import {
   Search,
@@ -342,6 +343,9 @@ export const PatientTrackerCarousel: React.FC<PatientTrackerCarouselProps> = ({
   user = null,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  // The input stays instant; only the query that reaches the server waits for
+  // typing to stop.
+  const debouncedSearch = useDebounced(searchQuery, 300);
   const [liveTokens, setLiveTokens] = useState<Token[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [segment, setSegment] = useState<TrackerSegment>('patients');
@@ -386,8 +390,8 @@ export const PatientTrackerCarousel: React.FC<PatientTrackerCarouselProps> = ({
         // could not use. /api/queue/board serves both, withholding other
         // people's names from a viewer who is not staff.
         const result = isDoctorUser
-          ? await doctorApi.getQueue(searchQuery)
-          : await visitorApi.getQueueBoard(searchQuery);
+          ? await doctorApi.getQueue(debouncedSearch)
+          : await visitorApi.getQueueBoard(debouncedSearch);
         if (mounted) {
           setLiveTokens(result as Token[]);
           setIsLoading(false);
@@ -409,7 +413,7 @@ export const PatientTrackerCarousel: React.FC<PatientTrackerCarouselProps> = ({
       mounted = false;
       clearInterval(interval);
     };
-  }, [searchQuery, segment, isDoctorUser, refreshNonce]);
+  }, [debouncedSearch, segment, isDoctorUser, refreshNonce]);
 
   // Doctor directory is fetched lazily the first time the Doctors tab is opened.
   useEffect(() => {
