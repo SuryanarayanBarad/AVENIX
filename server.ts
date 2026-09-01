@@ -6786,8 +6786,6 @@ async function startServer() {
     // several at once makes a transaction pooler refuse the burst, so the pool
     // is left to grow under real traffic instead.
     await prisma.$queryRaw`SELECT 1`;
-    const facility = await getCachedFacility();
-    if (facility) await getCachedServices(facility.id);
     console.log(`✅ Database connection verified (pool warmed in ${Date.now() - warmupStart}ms)`);
   } catch (err) {
     console.error('❌ Database connection failed:', err);
@@ -6911,37 +6909,108 @@ async function startServer() {
    * how two instances race each other into a broken schema. It fails loudly and
    * names the command to run.
    */
-  const schemaProbes: { label: string; run: () => Promise<unknown> }[] = [
-    { label: 'users (token_version)', run: () => prisma.user.findFirst({ select: { id: true, tokenVersion: true } }) },
-    { label: 'departments (description)', run: () => prisma.department.findFirst({ select: { id: true, description: true } }) },
-    { label: 'tokens (completed_at)', run: () => prisma.token.findFirst({ select: { id: true, completedAt: true } }) },
-    { label: 'medical_reports', run: () => prisma.medicalReport.findFirst({ select: { id: true } }) },
-    { label: 'ai_navigations', run: () => prisma.aiNavigation.findFirst({ select: { id: true } }) },
-  ];
+  /**
+   * Compare the migrations on disk with the ones the database has recorded.
+   *
+   * The previous version of this check listed five tables by hand, and that is
+   * exactly how it failed: services.open_counters was added afterwards, nothing
+   * probed it, so the server started happily and threw P2022 on the first query
+   * that selected the column. A hand-maintained list only ever protects against
+   * the migrations somebody remembered to add to it.
+   *
+   * Reading the directory instead means every future migration is covered on
+   * the day it is written, with nothing to remember.
+   */
+  /**
+   * Confirm the database has every migration this build ships with.
+   *
+   * Two ways to establish that, and the important property is that neither can
+   * report success without actually having checked. An earlier version of this
+   * swallowed the failure it was looking for and then printed "Schema verified"
+   * over the top of it, which is worse than having no check at all.
+   *
+   * Preferred: compare the migrations directory with _prisma_migrations, so
+   * every future migration is covered the day it is written. Resolved from the
+   * working directory, because the bundle lives in dist/ and the migrations do
+   * not travel with it.
+   *
+   * Fallback, when the directory is not on disk: query one column from each
+   * table a recent migration touched. Any P2022 here propagates — that IS the
+   * detection, not an inconvenience to be caught.
+   */
+  let pending: string[] = [];
+  let verifiedBy: 'migration-table' | 'column-probe' | null = null;
 
-  const brokenTables: string[] = [];
-  for (const probe of schemaProbes) {
-    try {
-      await probe.run();
-    } catch (err: any) {
-      brokenTables.push(probe.label);
-      console.error(`   ✗ ${probe.label}: ${String(err?.message ?? err).split('\n').find((l: string) => l.trim()) ?? 'query failed'}`);
+  try {
+    const { readdirSync, existsSync } = await import('node:fs');
+    const candidates = [
+      path.join(process.cwd(), 'prisma', 'migrations'),
+      path.join(__dirname, '..', 'prisma', 'migrations'),
+      path.join(__dirname, 'prisma', 'migrations'),
+    ];
+    const dir = candidates.find((d) => existsSync(d));
+
+    if (dir) {
+      const onDisk = readdirSync(dir, { withFileTypes: true })
+        .filter((e) => e.isDirectory())
+        .map((e) => e.name)
+        .sort();
+      const applied = await prisma.$queryRawUnsafe<{ migration_name: string }[]>(
+        'SELECT migration_name FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL',
+      );
+      const appliedNames = new Set(applied.map((r) => r.migration_name));
+      pending = onDisk.filter((name) => !appliedNames.has(name));
+      verifiedBy = 'migration-table';
+    } else {
+      // No directory to compare against. Ask the database directly; a missing
+      // column throws, and that throw must not be caught here.
+      await prisma.service.findFirst({ select: { id: true, openCounters: true } });
+      await prisma.user.findFirst({ select: { id: true, tokenVersion: true } });
+      await prisma.department.findFirst({ select: { id: true, description: true } });
+      await prisma.token.findFirst({ select: { id: true, completedAt: true } });
+      await prisma.medicalReport.findFirst({ select: { id: true } });
+      await prisma.aiNavigation.findFirst({ select: { id: true } });
+      verifiedBy = 'column-probe';
     }
-  }
-
-  if (brokenTables.length > 0) {
+  } catch (err: any) {
+    // Reaching here means the schema could not be shown to be usable. Treat
+    // that as unusable rather than as a passed check.
     console.error('');
-    console.error('❌ [fatal] The database is missing schema this build requires:');
-    console.error(`   ${brokenTables.join(', ')}`);
-    console.error('   Pending migrations have not been applied. Run:');
-    console.error('     npx prisma migrate deploy');
-    console.error('   On Render, the start command must be:');
-    console.error('     npm run deploy:migrate && npm start');
-    console.error('   Refusing to start: serving with a schema mismatch returns 500 from');
-    console.error('   sign-in and every doctor lookup, while /api/health still reports healthy.');
+    console.error('❌ [fatal] The database schema does not match this build:');
+    console.error(`   ${String(err?.message ?? err).split('\n').filter((l: string) => l.trim()).slice(0, 3).join(' ')}`);
+    console.error('   Apply pending migrations with the DIRECT connection (a pooler cannot run DDL):');
+    console.error('     DATABASE_URL="<direct 5432 url>" DIRECT_URL="<direct 5432 url>" npx prisma migrate deploy');
     process.exit(1);
   }
-  console.log('✅ Schema verified (all migrations applied)');
+
+  if (pending.length > 0) {
+    console.error('');
+    console.error('❌ [fatal] The database is missing migrations this build requires:');
+    for (const name of pending) console.error(`   • ${name}`);
+    console.error('   Apply them with the DIRECT connection (a pooler cannot run DDL):');
+    console.error('     DATABASE_URL="<direct 5432 url>" DIRECT_URL="<direct 5432 url>" npx prisma migrate deploy');
+    console.error('   Refusing to start: serving on a schema the code cannot query returns 500');
+    console.error('   from whichever feature touches the missing column, while /api/health');
+    console.error('   still reports healthy.');
+    process.exit(1);
+  }
+  console.log(`✅ Schema verified via ${verifiedBy} (all migrations applied)`);
+
+  /**
+   * Prime the reference cache now, not during the connection check.
+   *
+   * getCachedServices selects every Service column, so on a database missing a
+   * migration it threw P2022 during warm-up — before the migration step ran and
+   * before the check that exists to explain exactly this. The deploy died on a
+   * raw Prisma stack trace naming a column, when a line naming the unapplied
+   * migration was available a few steps later.
+   */
+  try {
+    const facility = await getCachedFacility();
+    if (facility) await getCachedServices(facility.id);
+  } catch (err) {
+    console.error('⚠️  Reference cache could not be primed:', String((err as any)?.message ?? err).slice(0, 200));
+  }
 
   // Close out anything left queueing from an earlier day, then keep checking:
   // a long-running instance has to notice midnight passing, and a free-tier one
