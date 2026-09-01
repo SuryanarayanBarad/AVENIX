@@ -630,6 +630,27 @@ function bearerFromRequest(req: express.Request): string | undefined {
   return header?.startsWith('Bearer ') ? header.slice(7) : undefined;
 }
 
+/**
+ * Estimated wait for a service, given how many people are queueing and how many
+ * desks are open.
+ *
+ * One definition, used by the public service list, the visitor insights and the
+ * copilot snapshot, so the number a patient reads in three places is the same
+ * number. Capacity divides the queue: two desks clear a line about twice as
+ * fast. It never returns less than a minute for a non-empty queue — telling
+ * somebody the wait is zero while people are ahead of them is worse than a
+ * rough estimate.
+ */
+function serviceWaitMinutes(
+  service: { estimatedWaitMinutes: number; openCounters?: number | null },
+  peopleWaiting: number,
+): number {
+  if (peopleWaiting <= 0) return 0;
+  const desks = Math.max(1, service.openCounters ?? 1);
+  const base = Math.max(service.estimatedWaitMinutes, Math.ceil(peopleWaiting * 1.7));
+  return Math.max(1, Math.round(base / desks));
+}
+
 function maskPhone(phone: string | null | undefined): string | null {
   // A desk booking may have no number at all. Returning null lets callers show
   // "no contact on file" rather than a row of meaningless dots.
@@ -1742,43 +1763,24 @@ app.get('/api/copilot/suggestions', apiRoute(async (req, res) => {
 }));
 
 // Run Counter AI Optimization Simulation API
-app.post('/api/copilot/optimize', (req, res) => {
-  const { counters } = req.body;
-
-  // Compute optimized state
-  const optimizedCounters = (counters || []).map((c: any) => {
-    if (c.id === 'c3') { // Pharmacy
-      return { ...c, queueCount: Math.max(8, c.queueCount - 15), avgWaitMin: 12, status: 'Optimal', utilizationPct: 78, densityLevel: 'Moderate' };
-    }
-    if (c.id === 'c5') { // Registration -> activated
-      return { ...c, status: 'Active', queueCount: 14, avgWaitMin: 9, utilizationPct: 72, densityLevel: 'Moderate' };
-    }
-    if (c.id === 'c1') { // General
-      return { ...c, queueCount: 12, avgWaitMin: 10, status: 'Optimal', utilizationPct: 68, densityLevel: 'Moderate' };
-    }
-    if (c.id === 'c8') { // Backup
-      return { ...c, status: 'Active', queueCount: 6, avgWaitMin: 7, utilizationPct: 50, densityLevel: 'Low' };
-    }
-    return c;
+app.post('/api/copilot/optimize', apiRoute(async (req, res) => {
+  /**
+   * Was an unauthenticated endpoint that returned a hardcoded transform over
+   * mock counter ids — anybody on the internet could call it, and what it
+   * returned corresponded to nothing in the database. It is kept only so an
+   * older client does not 404, and now refuses rather than pretending.
+   *
+   * The real lever is POST /api/admin/services/:id/counters.
+   */
+  const user = await requireAuthUser(req, res);
+  if (!user) return;
+  res.status(410).json({
+    error: 'ENDPOINT_RETIRED',
+    message: hasPermission(user.role, 'queue:manage')
+      ? 'Counter optimisation now runs through POST /api/admin/services/:id/counters, which changes real capacity.'
+      : 'Counter optimisation is available to authorised hospital administrators.',
   });
-
-  return res.json({
-    success: true,
-    message: 'AI Dynamic Load Balancer executed successfully.',
-    metrics: {
-      avgWaitBeforeMin: 18,
-      avgWaitAfterMin: 9,
-      improvementPct: 50,
-      fairnessBefore: 94,
-      fairnessAfter: 98,
-      overloadedCountersBefore: 2,
-      overloadedCountersAfter: 0,
-    },
-    counters: optimizedCounters,
-    optimizedCounters: optimizedCounters,
-    timestamp: new Date().toISOString(),
-  });
-});
+}));
 
 // Health check endpoint
 /**
@@ -2723,10 +2725,12 @@ app.get('/api/visitor/services', apiRoute(async (_req, res) => {
         description: s.description,
         // Same estimate the token card shows, so the kiosk tile and the issued
         // token never quote different waits.
-        estimatedWaitMinutes: peopleWaiting === 0
-          ? 0
-          : Math.max(s.estimatedWaitMinutes, Math.ceil(peopleWaiting * 1.7)),
+        // Divided by the desks actually serving this queue. Without this the
+        // admin's only real lever would change a stored number that nothing
+        // read, and the "wait dropped" story would be a fabrication.
+        estimatedWaitMinutes: serviceWaitMinutes(s, peopleWaiting),
         peopleWaiting,
+        openCounters: Math.max(1, (s as any).openCounters ?? 1),
         defaultCounterName: s.defaultCounterName,
       };
     }),
@@ -3894,6 +3898,169 @@ app.get('/api/visitor/ai/navigations', apiRoute(async (req, res) => {
       report: n.report ? { id: n.report.id, title: n.report.title } : null,
     })),
     disclaimer: AI_DISCLAIMER,
+  });
+}));
+
+// ---------------------------------------------------------------------------
+// Operational insight  —  what a patient may see, and what only staff may do
+// ---------------------------------------------------------------------------
+//
+// The split this file draws is between the CONTROL and the RESULT. Opening a
+// desk is an operational act and belongs to administrators. The fact that the
+// General Medicine queue is now twenty minutes rather than forty is something
+// the person standing in it has every right to know, and hiding it helps
+// nobody. So the results are readable by any signed-in account, and every
+// mutation below is gated.
+//
+// What is deliberately NOT in the visitor payload: any other patient, any named
+// staff member, counter utilisation, audit detail, or the raw arrival/service
+// rates an operator uses to make staffing decisions.
+
+/**
+ * GET /api/visitor/insights — hospital AI results, safe for a patient to read.
+ *
+ * Everything here is derived from current state: live queue depths, the desks
+ * actually open, and the same forecast the operations view uses. Nothing is
+ * precomputed or stored, so it cannot go stale against the thing it describes.
+ */
+app.get('/api/visitor/insights', apiRoute(async (req, res) => {
+  const user = await requireAuthUser(req, res);
+  if (!user) return;
+
+  const facility = await getCachedFacilityOrThrow();
+
+  const [services, waitingRows, obs] = await Promise.all([
+    prisma.service.findMany({
+      where: { facilityId: facility.id },
+      select: { id: true, name: true, estimatedWaitMinutes: true, openCounters: true, defaultCounterName: true },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.token.groupBy({
+      by: ['serviceId'],
+      where: { facilityId: facility.id, deletedAt: null, status: { in: ['Waiting', 'Approaching'] } },
+      _count: { _all: true },
+    }),
+    gatherCrowdObservations(facility.id),
+  ]);
+
+  const waitingBy = new Map(waitingRows.map((r) => [r.serviceId, r._count._all]));
+  const forecast = forecastCrowd(obs);
+
+  const queues = services.map((svc) => {
+    const waiting = waitingBy.get(svc.id) ?? 0;
+    return {
+      id: svc.id,
+      service: svc.name,
+      counter: svc.defaultCounterName,
+      waiting,
+      estimatedWaitMinutes: serviceWaitMinutes(svc, waiting),
+      /** How many desks are serving it — the visible result of an optimisation. */
+      openCounters: Math.max(1, svc.openCounters ?? 1),
+      crowdLevel: waiting === 0 ? 'clear' : waiting <= 5 ? 'light' : waiting <= 15 ? 'moderate' : 'busy',
+    };
+  });
+
+  const open = queues.filter((q) => q.waiting > 0);
+  const quietest = open.length > 0
+    ? [...open].sort((a, b) => a.estimatedWaitMinutes - b.estimatedWaitMinutes)[0]
+    : null;
+  const busiest = open.length > 0
+    ? [...open].sort((a, b) => b.estimatedWaitMinutes - a.estimatedWaitMinutes)[0]
+    : null;
+
+  res.json({
+    queues,
+    /** Named so the UI can point somebody somewhere useful, or say nothing. */
+    quietest: quietest ? { service: quietest.service, estimatedWaitMinutes: quietest.estimatedWaitMinutes } : null,
+    busiest: busiest ? { service: busiest.service, estimatedWaitMinutes: busiest.estimatedWaitMinutes } : null,
+    crowd: {
+      currentQueue: forecast.currentQueue,
+      currentWaitMinutes: forecast.currentWaitMinutes,
+      peakRisk: forecast.peakRisk,
+      basis: forecast.basis,
+      basisNote: forecast.basisNote,
+      // Horizons only; the arrival and service rates behind them are an
+      // operational detail a patient cannot act on.
+      horizons: forecast.horizons.map((h) => ({
+        minutes: h.minutes,
+        projectedQueue: h.projectedQueue,
+        projectedWaitMinutes: h.projectedWaitMinutes,
+        risk: h.risk,
+      })),
+    },
+    /**
+     * How the queue is ordered, in plain language. Patients ask why somebody
+     * went ahead of them, and "an appointment holder is called at their booked
+     * time" is a better answer than silence.
+     */
+    policy: [
+      'Walk-in tokens are called in the order they were issued.',
+      'A booked appointment is called at its scheduled time, which may be before an earlier walk-in.',
+      'Emergency cases are seen first, whatever else is waiting.',
+    ],
+    method: 'queueing-model',
+    methodLabel: 'Live queue model — measured arrivals and throughput',
+    generatedAt: new Date().toISOString(),
+  });
+}));
+
+/**
+ * POST /api/admin/services/:id/counters — open or close desks on a queue.
+ *
+ * The real operational lever, replacing a hardcoded transform over mock counter
+ * ids that ran on an unauthenticated endpoint and changed nothing anybody could
+ * observe. Requires queue:manage, is audited, and publishes so every screen
+ * showing that wait updates without a refresh.
+ */
+app.post('/api/admin/services/:id/counters', apiRoute(async (req, res) => {
+  const user = await requireAuthUser(req, res);
+  if (!user) return;
+  if (!hasPermission(user.role, 'queue:manage')) {
+    res.status(403).json({ error: 'AUTHORIZATION_DENIED', message: 'You cannot change counter allocation.' });
+    return;
+  }
+
+  const facility = await getCachedFacilityOrThrow();
+  const service = await prisma.service.findFirst({
+    where: { id: String(req.params.id), facilityId: facility.id },
+  });
+  if (!service) throw new ApiError(404, 'SERVICE_NOT_FOUND', 'That service was not found.');
+
+  const body = bodyAsObject(req);
+  const raw = Number(body.openCounters);
+  if (!Number.isInteger(raw) || raw < 1 || raw > 12) {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'Open counters must be a whole number between 1 and 12.',
+      { field: 'openCounters' });
+  }
+
+  const waiting = await prisma.token.count({
+    where: { facilityId: facility.id, serviceId: service.id, deletedAt: null, status: { in: ['Waiting', 'Approaching'] } },
+  });
+  // Measured before and after against the same queue, so the figures reported
+  // are the real effect of this change rather than two unrelated snapshots.
+  const before = serviceWaitMinutes(service, waiting);
+
+  const updated = await prisma.service.update({
+    where: { id: service.id },
+    data: { openCounters: raw },
+  });
+  invalidateReferenceCache();
+
+  const after = serviceWaitMinutes(updated, waiting);
+
+  await recordAudit(
+    { id: user.id, role: user.role },
+    'service_counters_changed',
+    'service',
+    service.id,
+    'success',
+  );
+
+  publishEvent({ type: 'token.status', tokenId: service.id, status: 'counters', facilityId: facility.id });
+
+  res.json({
+    service: { id: updated.id, name: updated.name, openCounters: updated.openCounters },
+    impact: { waiting, beforeWaitMinutes: before, afterWaitMinutes: after },
   });
 }));
 

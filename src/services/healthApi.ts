@@ -179,3 +179,55 @@ export const healthApi = {
     });
   },
 };
+
+export interface VisitorInsights {
+  queues: {
+    id: string;
+    service: string;
+    counter: string | null;
+    waiting: number;
+    estimatedWaitMinutes: number;
+    openCounters: number;
+    crowdLevel: 'clear' | 'light' | 'moderate' | 'busy';
+  }[];
+  quietest: { service: string; estimatedWaitMinutes: number } | null;
+  busiest: { service: string; estimatedWaitMinutes: number } | null;
+  crowd: {
+    currentQueue: number;
+    currentWaitMinutes: number;
+    peakRisk: 'low' | 'moderate' | 'high' | 'critical';
+    basis: 'observed' | 'thin-data' | 'insufficient-data';
+    basisNote: string;
+    horizons: { minutes: number; projectedQueue: number; projectedWaitMinutes: number; risk: string }[];
+  };
+  policy: string[];
+  method: string;
+  methodLabel: string;
+  generatedAt: string;
+}
+
+/**
+ * Hospital AI results a patient may read.
+ *
+ * Read-only by construction: there is no companion mutation on this client, and
+ * the operational controls live behind endpoints a visitor role is refused.
+ */
+export async function getVisitorInsights(): Promise<VisitorInsights> {
+  return apiFetch('/api/visitor/insights', {
+    headers: authHeaders(),
+    fallback: 'Hospital insights could not be loaded',
+  });
+}
+
+/** Open or close desks on a queue. Requires queue:manage; 403 otherwise. */
+export async function setServiceCounters(serviceId: string, openCounters: number): Promise<{
+  service: { id: string; name: string; openCounters: number };
+  impact: { waiting: number; beforeWaitMinutes: number; afterWaitMinutes: number };
+}> {
+  return apiFetch(`/api/admin/services/${encodeURIComponent(serviceId)}/counters`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ openCounters }),
+    fallback: 'Counter allocation could not be changed',
+  });
+}

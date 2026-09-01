@@ -1,3 +1,4 @@
+import { ServiceCapacityPanel } from './command/ServiceCapacityPanel';
 import React, { useState } from 'react';
 import { 
   Sparkles, 
@@ -90,6 +91,10 @@ export const CounterOptimizationView: React.FC<CounterOptimizationViewProps> = (
 
   return (
     <div className="space-y-6 pb-12">
+      {/* The real, audited lever. The panels below it remain the simulated
+          planning model they have always been, and keep saying so. */}
+      <ServiceCapacityPanel />
+
       
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

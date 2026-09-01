@@ -226,6 +226,17 @@ model Service {
   estimatedWaitMinutes Int      @default(10) @map("estimated_wait_minutes")
   peopleWaiting        Int      @default(0) @map("people_waiting")
   defaultCounterName   String?  @map("default_counter_name")
+  /**
+   * How many desks are currently serving this queue.
+   *
+   * The one real operational lever in this system. "Counter optimization" was
+   * previously a hardcoded transform over mock counter ids on an
+   * unauthenticated endpoint — it changed nothing a patient could observe, so
+   * no honest before/after could be built on it. This is stored state an
+   * administrator changes, and it genuinely divides the queue: two desks serve
+   * a line roughly twice as fast as one.
+   */
+  openCounters         Int      @default(1) @map("open_counters")
   facilityId           String   @map("facility_id")
   facility             Facility @relation(fields: [facilityId], references: [id])
   createdAt            DateTime @default(now()) @map("created_at")
