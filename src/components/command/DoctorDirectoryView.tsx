@@ -523,7 +523,7 @@ export const DoctorDirectoryView: React.FC<DoctorDirectoryViewProps> = ({ canMan
                   value={newDoc.password}
                   onChange={e => setNewDoc({ ...newDoc, password: e.target.value })}
                   required
-                  minLength={6}
+                  minLength={8}
                 />
               </Field>
 

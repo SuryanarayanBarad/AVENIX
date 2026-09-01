@@ -281,8 +281,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
+                    // Only on sign-up: an existing account may hold a shorter
+                    // password set under the old rule, and blocking their own
+                    // password at the sign-in box would lock them out.
+                    minLength={isRegister ? 8 : undefined}
                     autoComplete={isRegister ? 'new-password' : 'current-password'}
-                    placeholder="Enter Password"
+                    placeholder={isRegister ? 'At least 8 characters' : 'Enter Password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className={`${fieldClass} pr-10`}
