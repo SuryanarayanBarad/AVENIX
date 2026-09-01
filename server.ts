@@ -6473,6 +6473,87 @@ async function startServer() {
   }
 
   /**
+   * Apply pending migrations before serving.
+   *
+   * Normally this belongs in the start command — `prisma migrate deploy &&
+   * npm start` — so the app process never runs DDL. That is not available on
+   * this deployment: Render's Pre-Deploy Command is a paid feature, and a
+   * service created through the dashboard ignores render.yaml's startCommand.
+   * The result was migrations silently never running, a server reporting
+   * healthy, and every sign-in returning 500.
+   *
+   * Running them here is safe *for this deployment specifically*: it is a
+   * single instance (render.yaml pins numInstances: 1, and the free plan
+   * cannot scale out), and `migrate deploy` takes a Postgres advisory lock, so
+   * even a rolling restart cannot interleave two of them. It is idempotent and
+   * costs nothing when there is nothing pending.
+   *
+   * Set SKIP_BOOT_MIGRATIONS=true to disable — for instance once the start
+   * command can run them, or on a host where several instances share a
+   * database.
+   */
+  if (process.env.SKIP_BOOT_MIGRATIONS !== 'true') {
+    const { execFile } = await import('node:child_process');
+    const { promisify } = await import('node:util');
+    const { createRequire } = await import('node:module');
+    const run = promisify(execFile);
+    // This bundle is ESM, where `require` does not exist. createRequire gives a
+    // resolver anchored at this file so the Prisma CLI is found the same way in
+    // dev (tsx) and in the esbuild output.
+    const resolveFrom = createRequire(import.meta.url);
+
+    /**
+     * Try the direct connection first, because a pooler cannot run DDL — that
+     * is the whole reason the schema declares two URLs. But if DIRECT_URL is
+     * missing or misconfigured, falling back to DATABASE_URL is worth an
+     * attempt: a pooler in session mode can run DDL, and the alternative is a
+     * server that refuses to start over a migration it never tried.
+     */
+    const candidates = [
+      { label: 'DIRECT_URL', url: process.env.DIRECT_URL },
+      { label: 'DATABASE_URL', url: process.env.DATABASE_URL },
+    ].filter((c): c is { label: string; url: string } => !!c.url);
+
+    let migrated = false;
+    for (const candidate of candidates) {
+      try {
+        const started = Date.now();
+        const { stdout } = await run(
+          process.execPath,
+          [resolveFrom.resolve('prisma/build/index.js'), 'migrate', 'deploy'],
+          {
+            // BOTH must be overridden. schema.prisma declares
+            // `directUrl = env("DIRECT_URL")`, and migrate deploy prefers that
+            // whenever it is set — so overriding DATABASE_URL alone left it
+            // still using the very connection string that was failing.
+            env: { ...process.env, DATABASE_URL: candidate.url, DIRECT_URL: candidate.url },
+            timeout: 120_000,
+          },
+        );
+        console.log(
+          /Applying migration/.test(stdout)
+            ? `🗃️  Applied pending migrations via ${candidate.label} in ${Date.now() - started}ms`
+            : '🗃️  No pending migrations',
+        );
+        migrated = true;
+        break;
+      } catch (err: any) {
+        console.error(
+          `⚠️  migrate deploy failed via ${candidate.label}: `
+          + String(err?.stderr || err?.message || err).slice(0, 300),
+        );
+      }
+    }
+
+    // Not fatal on its own — the schema check below decides. A server whose
+    // schema is already correct should not be taken down by, say, lacking
+    // permission to write the migrations table.
+    if (!migrated && candidates.length > 0) {
+      console.error('⚠️  No connection string could apply migrations; the schema check will decide.');
+    }
+  }
+
+  /**
    * Verify the database actually has the schema this build expects.
    *
    * "Connected" is not the same as "usable". A raw SELECT 1 succeeds against a
