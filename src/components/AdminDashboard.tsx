@@ -11,6 +11,7 @@ import { Sidebar } from './Sidebar';
 import { AdminOverview } from './AdminOverview';
 import { LiveQueueView } from './LiveQueueView';
 import { MyVisitView } from './command/MyVisitView';
+import { VisitorOverview } from './command/VisitorOverview';
 import type { StaffAppointment } from './AppointmentsView';
 
 /**
@@ -57,7 +58,7 @@ const TabFallback: React.FC = () => (
     <span className="sr-only">Loading…</span>
   </div>
 );
-import { canAccessTab, defaultTabForRole } from '../../lib/permissions';
+import { canAccessTab, defaultTabForRole, hasPermission } from '../../lib/permissions';
 import { adminApi } from '../services/queueApi';
 import {
   AdminTab,
@@ -161,6 +162,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const role = user?.role ?? null;
   const isDoctor = role === 'DOCTOR';
   const canManageDoctors = role === 'SUPER_ADMIN';
+  /** Decides which overview this role sees. Presentation only — every endpoint
+   *  behind it re-checks the caller server-side. */
+  const canReadQueue = hasPermission(role, 'queue:read');
 
   // If the current tab is not available to this role (a role change, or a stale
   // selection), fall back to that role's home tab. The API refuses the data
@@ -451,7 +455,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   mounted at a time, so a per-view boundary would be fifteen
                   copies of the same thing. */}
               <React.Suspense fallback={<TabFallback />}>
-              {currentTab === 'overview' && (
+              {/* Two overviews, one tab. Anyone running the floor gets the
+                  operational one; everybody else gets a patient-safe view.
+                  Chosen by permission, not by hiding controls inside a shared
+                  screen — the operational overview carries an Apply
+                  Recommendation button, and one forgotten `disabled` would hand
+                  a patient a lever they must not have. */}
+              {currentTab === 'overview' && !canReadQueue && (
+                <VisitorOverview
+                  onOpenNavigator={() => onSelectTab('ai-health')}
+                  onBookAppointment={onNavigateToVisitorTracker}
+                  onJoinQueue={onNavigateToKiosk}
+                />
+              )}
+
+              {currentTab === 'overview' && canReadQueue && (
                 <AdminOverview
                   counters={counters}
                   zones={zones}

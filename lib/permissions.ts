@@ -147,6 +147,21 @@ export const TAB_ORDER: CommandTab[] = [
 /** Doctors reach the overview and their own queue through `own:*` grants. */
 const DOCTOR_EXTRA_TABS: CommandTab[] = ['overview', 'live-queue'];
 
+/**
+ * Tabs every signed-in role can open, whatever their permissions.
+ *
+ * The overview is the one screen everybody should land on, but TAB_PERMISSION
+ * maps a tab to a single permission and no single permission means "everyone".
+ * Mapping it to own:visit made it visible to patients and doctors and took it
+ * away from staff and administrators, which is the opposite of the intent.
+ *
+ * What each role SEES there still differs: AdminDashboard renders the
+ * operational overview for anyone holding queue:read and a visitor-safe one for
+ * everybody else. This list governs reachability only — never content, and
+ * never what an endpoint will return.
+ */
+const ALWAYS_VISIBLE_TABS: CommandTab[] = ['overview'];
+
 export function hasPermission(role: string | undefined | null, permission: Permission): boolean {
   if (!role) return false;
   const granted = ROLE_PERMISSIONS[role as Role];
@@ -155,6 +170,7 @@ export function hasPermission(role: string | undefined | null, permission: Permi
 
 export function canAccessTab(role: string | undefined | null, tab: CommandTab): boolean {
   if (!role) return false;
+  if (ALWAYS_VISIBLE_TABS.includes(tab)) return true;
   if (role === 'DOCTOR' && DOCTOR_EXTRA_TABS.includes(tab)) return true;
   return hasPermission(role, TAB_PERMISSION[tab]);
 }

@@ -91,14 +91,30 @@ async function main() {
   ok('the change is audited', (await prisma.auditLog.count({ where: { action: 'service_counters_changed' } })) > 0);
   await api(`/api/admin/services/${svc.id}/counters`, { method: 'POST', headers: auth(A), body: JSON.stringify({ openCounters: before.openCounters }) });
 
-  console.log('\n5. the copilot is available to every role');
+  console.log('\n5. the overview is reachable by every role');
+  // The tab is open to all; what each role SEES there differs. A patient must
+  // never be handed the operational overview's data or its Apply button.
+  const { visibleTabs, hasPermission } = await import('../lib/permissions.ts');
+  for (const r of ['VISITOR', 'STAFF', 'DOCTOR', 'ADMIN', 'SUPER_ADMIN']) {
+    ok(`${r} can open overview`, visibleTabs(r).includes('overview' as any));
+  }
+  ok('a VISITOR still lacks queue:read, so gets the patient overview',
+     !hasPermission('VISITOR', 'queue:read' as any));
+  ok('a DOCTOR also gets the patient overview', !hasPermission('DOCTOR', 'queue:read' as any));
+  ok('STAFF and ADMIN get the operational one',
+     hasPermission('STAFF', 'queue:read' as any) && hasPermission('ADMIN', 'queue:read' as any));
+  // Opening the tab must not open the data behind the operational version.
+  ok('the visitor still cannot read the staff queue board',
+     (await api('/api/admin/tokens', { headers: auth(V) })).status === 403);
+
+  console.log('\n6. the copilot is available to every role');
   for (const [label, token] of [['VISITOR', V], ['STAFF', S], ['DOCTOR', D], ['ADMIN', A]] as const) {
     const r = await api('/api/copilot/suggestions', { headers: auth(token) });
     ok(`${label} gets suggestions`, r.status === 200 && Array.isArray(r.body?.suggestions) && r.body.suggestions.length > 0, `http=${r.status}`);
   }
   ok('anonymous still refused', (await api('/api/copilot/suggestions')).status === 401);
 
-  console.log("\n6. the visitor's copilot snapshot is scoped to them");
+  console.log("\n7. the visitor's copilot snapshot is scoped to them");
   const vs = await api('/api/copilot/suggestions', { headers: auth(V) });
   const snap = JSON.stringify(vs.body?.snapshot ?? {});
   ok('it identifies the viewer as a patient', vs.body?.snapshot?.viewer === 'patient', vs.body?.snapshot?.viewer);
