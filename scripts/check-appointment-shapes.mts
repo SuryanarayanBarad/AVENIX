@@ -18,7 +18,7 @@ if (!/@(localhost|127\.0\.0\.1)[:/]/.test(url)) {
   process.exit(2);
 }
 
-const BASE = 'http://localhost:3001';
+const BASE = process.env.SHAPES_CHECK_BASE ?? 'http://localhost:3001';
 const prisma = new PrismaClient({
   datasources: { db: { url: process.env.DATABASE_URL! } },
 });

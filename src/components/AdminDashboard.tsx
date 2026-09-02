@@ -57,7 +57,7 @@ const TabFallback: React.FC = () => (
     <span className="sr-only">Loading…</span>
   </div>
 );
-import { canAccessTab, defaultTabForRole, hasPermission } from '../../lib/permissions';
+import { canAccessTab, defaultTabForRole } from '../../lib/permissions';
 import { adminApi } from '../services/queueApi';
 import {
   AdminTab,
@@ -161,16 +161,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const role = user?.role ?? null;
   const isDoctor = role === 'DOCTOR';
   const canManageDoctors = role === 'SUPER_ADMIN';
-  /** Decides which overview this role sees. Presentation only — every endpoint
-   *  behind it re-checks the caller server-side. */
-  const canReadQueue = hasPermission(role, 'queue:read');
-  /**
-   * Predictions branch on analytics:read, not queue:read. STAFF run the floor
-   * and hold queue:read, but the matrix deliberately withholds facility
-   * analytics from them — branching on the wrong permission would have widened
-   * their access as a side effect of opening the tab to patients.
-   */
-  const canReadAnalytics = hasPermission(role, 'analytics:read');
 
   // If the current tab is not available to this role (a role change, or a stale
   // selection), fall back to that role's home tab. The API refuses the data
@@ -461,15 +451,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   mounted at a time, so a per-view boundary would be fifteen
                   copies of the same thing. */}
               <React.Suspense fallback={<TabFallback />}>
-              {/* One overview for everyone. Both this and the predictions
-                  screen render from mockData with no API call and no server
-                  write — the doctor names match no real doctor and "Desk Staff
-                  Ava" is a row in mockData.ts — so there is no patient or staff
-                  information here to withhold.
-                  The single exception is the Apply Recommendation button, which
-                  is an action: it is passed only to roles that run the floor, so
-                  a patient is not offered a control over hospital operations
-                  even a cosmetic one. */}
+              {/* The same overview for every role, controls included.
+                  Both this and the predictions screen render from mockData:
+                  no API call, no server write, the counter doctor names match
+                  no row in the doctors table, and "Desk Staff Ava" is a string
+                  in mockData.ts. Apply Recommendation flips one piece of React
+                  state in this component and touches nothing else, so gating it
+                  protected nothing and left patients looking at a button that
+                  did not respond.
+                  What the screen must not do is link a patient somewhere they
+                  are refused — hence canOpenTab, which hides the two links into
+                  Live Queue and Crowd Intelligence for roles the shell would
+                  bounce straight back out. */}
               {currentTab === 'overview' && (
                 <AdminOverview
                   counters={counters}
@@ -478,8 +471,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   tokens={tokens}
                   onNavigateTab={onSelectTab}
                   onOpenCopilot={handleOpenCopilotWithPrompt}
-                  onApplyRecommendation={canReadQueue ? handleApplyRecommendation : undefined}
+                  onApplyRecommendation={handleApplyRecommendation}
                   recommendationApplied={recommendationApplied}
+                  canOpenTab={(tab) => canAccessTab(role, tab as any)}
                 />
               )}
 

@@ -91,20 +91,29 @@ async function main() {
   ok('the change is audited', (await prisma.auditLog.count({ where: { action: 'service_counters_changed' } })) > 0);
   await api(`/api/admin/services/${svc.id}/counters`, { method: 'POST', headers: auth(A), body: JSON.stringify({ openCounters: before.openCounters }) });
 
-  console.log('\n5. the overview is reachable by every role');
-  // The tab is open to all; what each role SEES there differs. A patient must
-  // never be handed the operational overview's data or its Apply button.
-  const { visibleTabs, hasPermission } = await import('../lib/permissions.ts');
+  console.log('\n5. the overview is the same screen for every role');
+  const { visibleTabs, hasPermission, canAccessTab } = await import('../lib/permissions.ts');
   for (const r of ['VISITOR', 'STAFF', 'DOCTOR', 'ADMIN', 'SUPER_ADMIN']) {
     ok(`${r} can open overview`, visibleTabs(r).includes('overview' as any));
   }
-  // The overview and predictions screens are the same for everyone: both render
-  // from mockData with no API call and no server write, so there is nothing on
-  // them to withhold. Only the Apply action is gated, on queue:read.
-  ok('a VISITOR is not offered the Apply action', !hasPermission('VISITOR', 'queue:read' as any));
-  ok('a DOCTOR is not offered it either', !hasPermission('DOCTOR', 'queue:read' as any));
-  ok('STAFF and ADMIN are', hasPermission('STAFF', 'queue:read' as any) && hasPermission('ADMIN', 'queue:read' as any));
-  // Opening the tab must not open the data behind the operational version.
+  // Nothing on the screen is withheld from anybody: it renders from mockData,
+  // makes no API call, performs no server write, and its Apply button flips one
+  // piece of local React state. What IS gated is the two links out of it, into
+  // Live Queue and Crowd Intelligence — destinations that show real rows and
+  // that the shell bounces an unauthorised role out of. The overview asks
+  // canAccessTab for exactly those two tabs before rendering each link.
+  const linkVisible = (role: string, tab: string) => canAccessTab(role, tab as any);
+  ok('the Full Queue link is hidden from a VISITOR', !linkVisible('VISITOR', 'live-queue'));
+  ok('the Full Floorplan link is hidden from a VISITOR', !linkVisible('VISITOR', 'crowd-intel'));
+  // A doctor does get a live queue — their own, scoped by requireDoctor — so
+  // that link stays; facility crowd analytics do not.
+  ok('the Full Queue link stays for a DOCTOR', linkVisible('DOCTOR', 'live-queue'));
+  ok('the Full Floorplan link is hidden from a DOCTOR', !linkVisible('DOCTOR', 'crowd-intel'));
+  ok('both links stay for an ADMIN', linkVisible('ADMIN', 'live-queue') && linkVisible('ADMIN', 'crowd-intel'));
+  // Staff run the floor but hold no analytics, so they keep one link and lose one.
+  ok('STAFF keep the queue link and lose the floorplan link',
+     linkVisible('STAFF', 'live-queue') && !linkVisible('STAFF', 'crowd-intel'));
+  // Opening the tab must not open the data behind the operational screens.
   ok('the visitor still cannot read the staff queue board',
      (await api('/api/admin/tokens', { headers: auth(V) })).status === 403);
 

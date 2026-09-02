@@ -21,13 +21,20 @@ interface AdminOverviewProps {
   tokens: Token[];
   onNavigateTab: (tab: any) => void;
   onOpenCopilot: (initialPrompt?: string) => void;
-  /**
-   * Omitted for anyone who should not be offered the action. Everything else on
-   * this screen is read-only demo data, so the button is the only part that
-   * needed gating when the overview was opened to patients.
-   */
-  onApplyRecommendation?: () => void;
+  onApplyRecommendation: () => void;
   recommendationApplied: boolean;
+  /**
+   * Whether the signed-in role can open a tab this screen links out to.
+   *
+   * The screen itself is identical for every role — it renders from demo
+   * counters, zones and predictions, and the `tokens` prop is not read at all.
+   * But two cards link deeper into the Command Center ("View Full Queue" and
+   * "Full Floorplan"), and those destinations show real queue rows and are
+   * refused to a patient. Rendering the link anyway sent them to a tab the
+   * shell immediately bounced them out of, which looks like a broken page.
+   * Defaults to open so existing callers keep both links.
+   */
+  canOpenTab?: (tab: string) => boolean;
 }
 
 export const AdminOverview: React.FC<AdminOverviewProps> = ({
@@ -39,6 +46,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
   onOpenCopilot,
   onApplyRecommendation,
   recommendationApplied,
+  canOpenTab = () => true,
 }) => {
   const totalWaiting = counters.reduce((sum, c) => sum + c.queueCount, 0);
   const activeCountersCount = counters.filter(c => c.status !== 'Closed').length;
@@ -215,13 +223,15 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
               <h2 className="text-base font-bold text-white font-display">Live Counter Status</h2>
               <p className="text-xs text-white/60">Real-time status across hospital service counters</p>
             </div>
-            <button
-              onClick={() => onNavigateTab('live-queue')}
-              className="text-xs font-semibold text-[#2E37A4] hover:text-[#a78bfa] flex items-center gap-1 transition-colors cursor-pointer"
-            >
-              <span>View Full Queue</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+            {canOpenTab('live-queue') && (
+              <button
+                onClick={() => onNavigateTab('live-queue')}
+                className="text-xs font-semibold text-[#2E37A4] hover:text-[#a78bfa] flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <span>View Full Queue</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           <div className="overflow-x-auto">
@@ -354,13 +364,15 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                 <h3 className="text-sm font-bold text-white font-display">Crowd Capacity Heatmap</h3>
                 <p className="text-[11px] text-white/60">LiDAR & Thermal zone densities</p>
               </div>
-              <button
-                onClick={() => onNavigateTab('crowd-intel')}
-                className="text-xs font-semibold text-[#2E37A4] hover:text-[#a78bfa] flex items-center gap-1 transition-colors cursor-pointer"
-              >
-                <span>Full Floorplan</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
+              {canOpenTab('crowd-intel') && (
+                <button
+                  onClick={() => onNavigateTab('crowd-intel')}
+                  className="text-xs font-semibold text-[#2E37A4] hover:text-[#a78bfa] flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <span>Full Floorplan</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
             <div className="space-y-2.5 text-xs">
