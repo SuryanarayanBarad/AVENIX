@@ -107,6 +107,18 @@ async function main() {
   ok('the visitor still cannot read the staff queue board',
      (await api('/api/admin/tokens', { headers: auth(V) })).status === 403);
 
+  // Predictions: reachable by all, but the operational version is analytics
+  // only. Branching this on queue:read would have handed STAFF an analytics
+  // screen the matrix withholds from them.
+  for (const r of ['VISITOR', 'STAFF', 'DOCTOR', 'ADMIN', 'SUPER_ADMIN']) {
+    ok(`${r} can open ai-predictions`, visibleTabs(r).includes('ai-predictions' as any));
+  }
+  ok('STAFF gets the patient predictions, not the analytics one',
+     !hasPermission('STAFF', 'analytics:read' as any));
+  ok('ADMIN gets the analytics one', hasPermission('ADMIN', 'analytics:read' as any));
+  ok('opening the tab grants no analytics data to a visitor',
+     (await api('/api/admin/crowd', { headers: auth(V) })).status === 403);
+
   console.log('\n6. the copilot is available to every role');
   for (const [label, token] of [['VISITOR', V], ['STAFF', S], ['DOCTOR', D], ['ADMIN', A]] as const) {
     const r = await api('/api/copilot/suggestions', { headers: auth(token) });

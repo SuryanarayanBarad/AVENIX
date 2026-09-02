@@ -12,6 +12,7 @@ import { AdminOverview } from './AdminOverview';
 import { LiveQueueView } from './LiveQueueView';
 import { MyVisitView } from './command/MyVisitView';
 import { VisitorOverview } from './command/VisitorOverview';
+import { VisitorPredictions } from './command/VisitorPredictions';
 import type { StaffAppointment } from './AppointmentsView';
 
 /**
@@ -165,6 +166,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   /** Decides which overview this role sees. Presentation only — every endpoint
    *  behind it re-checks the caller server-side. */
   const canReadQueue = hasPermission(role, 'queue:read');
+  /**
+   * Predictions branch on analytics:read, not queue:read. STAFF run the floor
+   * and hold queue:read, but the matrix deliberately withholds facility
+   * analytics from them — branching on the wrong permission would have widened
+   * their access as a side effect of opening the tab to patients.
+   */
+  const canReadAnalytics = hasPermission(role, 'analytics:read');
 
   // If the current tab is not available to this role (a role change, or a stale
   // selection), fall back to that role's home tab. The API refuses the data
@@ -498,7 +506,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               )}
 
-              {currentTab === 'ai-predictions' && (
+              {/* The operational predictions view runs on mockData and is
+                  labelled Simulated. Fine for staff comparing scenarios; wrong
+                  for a patient, who would act on it. They get the real
+                  projection instead. */}
+              {currentTab === 'ai-predictions' && !canReadAnalytics && <VisitorPredictions />}
+
+              {currentTab === 'ai-predictions' && canReadAnalytics && (
                 <AIPredictionsView
                   predictions={predictions}
                   onOpenCopilot={handleOpenCopilotWithPrompt}

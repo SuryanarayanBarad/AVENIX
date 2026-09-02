@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Sparkles, Ticket, CalendarPlus, MapPin, ArrowRight, Clock } from 'lucide-react';
 import { HospitalInsightsPanel } from './HospitalInsightsPanel';
 import { visitorApi } from '../../services/queueApi';
+import { getVisitorInsights, type VisitorInsights } from '../../services/healthApi';
 import { useLiveUpdates } from '../../hooks/useLiveUpdates';
 import type { PublicQueueToken } from '../VisitorFlow';
 
@@ -29,16 +30,20 @@ interface Props {
 export const VisitorOverview: React.FC<Props> = ({ onOpenNavigator, onBookAppointment, onJoinQueue }) => {
   const [token, setToken] = useState<PublicQueueToken | null>(null);
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [insights, setInsights] = useState<VisitorInsights | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
-    // Both are the patient's own, resolved from their session server-side.
-    const [t, a] = await Promise.all([
+    // The first two are the patient's own, resolved from their session
+    // server-side. The third is the public board every kiosk already displays.
+    const [t, a, i] = await Promise.all([
       visitorApi.getMyActiveToken().catch(() => null),
       visitorApi.getMyAppointments().catch(() => [] as any[]),
+      getVisitorInsights().catch(() => null),
     ]);
     setToken(t);
     setAppointments(Array.isArray(a) ? a : []);
+    setInsights(i);
     setLoading(false);
   };
 
@@ -55,6 +60,42 @@ export const VisitorOverview: React.FC<Props> = ({ onOpenNavigator, onBookAppoin
           Where you stand right now, and how busy the hospital is.
         </p>
       </div>
+
+      {/* The same headline figures the operations overview leads with, from the
+          same live queue. What is absent is deliberate: no fairness score, no
+          named staff, and no Apply Recommendation — an internal metric, a
+          colleague's name, and a control, none of which belong to a patient. */}
+      {insights && (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="pc-card p-5">
+            <span className="text-xs font-medium text-[var(--pc-text-muted)]">People waiting</span>
+            <div className="mt-0.5 font-display text-2xl font-light text-[var(--pc-text)]">
+              {insights.crowd.currentQueue}
+            </div>
+          </div>
+          <div className="pc-card p-5">
+            <span className="text-xs font-medium text-[var(--pc-text-muted)]">Typical wait</span>
+            <div className="mt-0.5 font-display text-2xl font-light text-[var(--pc-text)]">
+              {insights.crowd.currentWaitMinutes}<span className="text-sm text-[var(--pc-text-muted)]"> min</span>
+            </div>
+          </div>
+          <div className="pc-card p-5">
+            <span className="text-xs font-medium text-[var(--pc-text-muted)]">Shortest queue</span>
+            <div className="mt-0.5 truncate text-sm font-semibold text-[var(--pc-text)]">
+              {insights.quietest ? insights.quietest.service : 'No queues'}
+            </div>
+            {insights.quietest && (
+              <span className="text-[11px] text-[var(--pc-text-muted)]">~{insights.quietest.estimatedWaitMinutes} min</span>
+            )}
+          </div>
+          <div className="pc-card p-5">
+            <span className="text-xs font-medium text-[var(--pc-text-muted)]">Desks open</span>
+            <div className="mt-0.5 font-display text-2xl font-light text-[var(--pc-text)]">
+              {insights.queues.reduce((n, q) => n + q.openCounters, 0)}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* The patient's own position — the thing they actually came to check. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

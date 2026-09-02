@@ -160,7 +160,7 @@ const DOCTOR_EXTRA_TABS: CommandTab[] = ['overview', 'live-queue'];
  * everybody else. This list governs reachability only — never content, and
  * never what an endpoint will return.
  */
-const ALWAYS_VISIBLE_TABS: CommandTab[] = ['overview'];
+const ALWAYS_VISIBLE_TABS: CommandTab[] = ['overview', 'ai-predictions'];
 
 export function hasPermission(role: string | undefined | null, permission: Permission): boolean {
   if (!role) return false;
