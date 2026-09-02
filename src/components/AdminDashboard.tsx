@@ -11,8 +11,6 @@ import { Sidebar } from './Sidebar';
 import { AdminOverview } from './AdminOverview';
 import { LiveQueueView } from './LiveQueueView';
 import { MyVisitView } from './command/MyVisitView';
-import { VisitorOverview } from './command/VisitorOverview';
-import { VisitorPredictions } from './command/VisitorPredictions';
 import type { StaffAppointment } from './AppointmentsView';
 
 /**
@@ -463,21 +461,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   mounted at a time, so a per-view boundary would be fifteen
                   copies of the same thing. */}
               <React.Suspense fallback={<TabFallback />}>
-              {/* Two overviews, one tab. Anyone running the floor gets the
-                  operational one; everybody else gets a patient-safe view.
-                  Chosen by permission, not by hiding controls inside a shared
-                  screen — the operational overview carries an Apply
-                  Recommendation button, and one forgotten `disabled` would hand
-                  a patient a lever they must not have. */}
-              {currentTab === 'overview' && !canReadQueue && (
-                <VisitorOverview
-                  onOpenNavigator={() => onSelectTab('ai-health')}
-                  onBookAppointment={onNavigateToVisitorTracker}
-                  onJoinQueue={onNavigateToKiosk}
-                />
-              )}
-
-              {currentTab === 'overview' && canReadQueue && (
+              {/* One overview for everyone. Both this and the predictions
+                  screen render from mockData with no API call and no server
+                  write — the doctor names match no real doctor and "Desk Staff
+                  Ava" is a row in mockData.ts — so there is no patient or staff
+                  information here to withhold.
+                  The single exception is the Apply Recommendation button, which
+                  is an action: it is passed only to roles that run the floor, so
+                  a patient is not offered a control over hospital operations
+                  even a cosmetic one. */}
+              {currentTab === 'overview' && (
                 <AdminOverview
                   counters={counters}
                   zones={zones}
@@ -485,7 +478,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   tokens={tokens}
                   onNavigateTab={onSelectTab}
                   onOpenCopilot={handleOpenCopilotWithPrompt}
-                  onApplyRecommendation={handleApplyRecommendation}
+                  onApplyRecommendation={canReadQueue ? handleApplyRecommendation : undefined}
                   recommendationApplied={recommendationApplied}
                 />
               )}
@@ -506,13 +499,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               )}
 
-              {/* The operational predictions view runs on mockData and is
-                  labelled Simulated. Fine for staff comparing scenarios; wrong
-                  for a patient, who would act on it. They get the real
-                  projection instead. */}
-              {currentTab === 'ai-predictions' && !canReadAnalytics && <VisitorPredictions />}
-
-              {currentTab === 'ai-predictions' && canReadAnalytics && (
+              {currentTab === 'ai-predictions' && (
                 <AIPredictionsView
                   predictions={predictions}
                   onOpenCopilot={handleOpenCopilotWithPrompt}

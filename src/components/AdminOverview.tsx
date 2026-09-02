@@ -21,7 +21,12 @@ interface AdminOverviewProps {
   tokens: Token[];
   onNavigateTab: (tab: any) => void;
   onOpenCopilot: (initialPrompt?: string) => void;
-  onApplyRecommendation: () => void;
+  /**
+   * Omitted for anyone who should not be offered the action. Everything else on
+   * this screen is read-only demo data, so the button is the only part that
+   * needed gating when the overview was opened to patients.
+   */
+  onApplyRecommendation?: () => void;
   recommendationApplied: boolean;
 }
 

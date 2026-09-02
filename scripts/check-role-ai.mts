@@ -98,11 +98,12 @@ async function main() {
   for (const r of ['VISITOR', 'STAFF', 'DOCTOR', 'ADMIN', 'SUPER_ADMIN']) {
     ok(`${r} can open overview`, visibleTabs(r).includes('overview' as any));
   }
-  ok('a VISITOR still lacks queue:read, so gets the patient overview',
-     !hasPermission('VISITOR', 'queue:read' as any));
-  ok('a DOCTOR also gets the patient overview', !hasPermission('DOCTOR', 'queue:read' as any));
-  ok('STAFF and ADMIN get the operational one',
-     hasPermission('STAFF', 'queue:read' as any) && hasPermission('ADMIN', 'queue:read' as any));
+  // The overview and predictions screens are the same for everyone: both render
+  // from mockData with no API call and no server write, so there is nothing on
+  // them to withhold. Only the Apply action is gated, on queue:read.
+  ok('a VISITOR is not offered the Apply action', !hasPermission('VISITOR', 'queue:read' as any));
+  ok('a DOCTOR is not offered it either', !hasPermission('DOCTOR', 'queue:read' as any));
+  ok('STAFF and ADMIN are', hasPermission('STAFF', 'queue:read' as any) && hasPermission('ADMIN', 'queue:read' as any));
   // Opening the tab must not open the data behind the operational version.
   ok('the visitor still cannot read the staff queue board',
      (await api('/api/admin/tokens', { headers: auth(V) })).status === 403);
@@ -113,9 +114,8 @@ async function main() {
   for (const r of ['VISITOR', 'STAFF', 'DOCTOR', 'ADMIN', 'SUPER_ADMIN']) {
     ok(`${r} can open ai-predictions`, visibleTabs(r).includes('ai-predictions' as any));
   }
-  ok('STAFF gets the patient predictions, not the analytics one',
-     !hasPermission('STAFF', 'analytics:read' as any));
-  ok('ADMIN gets the analytics one', hasPermission('ADMIN', 'analytics:read' as any));
+  ok('analytics:read still separates STAFF from ADMIN', !hasPermission('STAFF', 'analytics:read' as any)
+     && hasPermission('ADMIN', 'analytics:read' as any));
   ok('opening the tab grants no analytics data to a visitor',
      (await api('/api/admin/crowd', { headers: auth(V) })).status === 403);
 
