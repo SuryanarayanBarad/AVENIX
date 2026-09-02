@@ -203,7 +203,12 @@ export const HealthNavigatorView: React.FC<Props> = ({ onBookAppointment, onJoin
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-bold font-display text-[var(--pc-text)]">AI Health Navigation</h1>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[var(--pc-tint-lilac)] text-[var(--pc-primary)] border border-[#C7C9F0]">
-              Powered by Google Gemini
+              {/* Which provider answers depends on what is reachable and what
+                  quota remains, so the header states the capability and the
+                  result card names the model that actually replied. Claiming a
+                  specific vendor here would be wrong the moment the fallback
+                  runs. */}
+              AI-powered
             </span>
           </div>
           <p className="text-xs text-[var(--pc-text-muted)] mt-1 max-w-2xl">

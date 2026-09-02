@@ -1395,6 +1395,105 @@ async function findNextRecommendedSlot(
 
 const apiKey = process.env.GEMINI_API_KEY;
 /**
+ * ---------------------------------------------------------------------------
+ * OpenAI — the fallback provider
+ * ---------------------------------------------------------------------------
+ *
+ * Gemini's free allowance is per model per day, and a day of testing exhausts
+ * it. The chain of five Gemini models buys headroom; it does not remove the
+ * wall. A second provider does, because its quota is entirely separate.
+ *
+ * Deliberately no SDK. This is one POST to one endpoint, and the project
+ * already carries more dependencies than it needs — `openai` would add a
+ * package to install on every deploy for something fetch does in thirty lines.
+ *
+ * Entirely optional: with no OPENAI_API_KEY the helper reports itself
+ * unavailable and the ladder behaves exactly as it does today.
+ */
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+/**
+ * Which model to fall back to. Overridable, because model names are retired on
+ * a schedule nobody controls and a hardcoded one turns into an outage later.
+ * A comma-separated list is tried in order.
+ */
+const OPENAI_MODEL_CHAIN = (process.env.OPENAI_MODEL || 'gpt-4o-mini,gpt-4.1-mini')
+  .split(',')
+  .map((m) => m.trim())
+  .filter(Boolean);
+
+export function openAiAvailable(): boolean {
+  return !!OPENAI_API_KEY && OPENAI_MODEL_CHAIN.length > 0;
+}
+
+/**
+ * Ask OpenAI, optionally constraining the reply to a JSON schema.
+ *
+ * Returns the raw text so the callers can keep their existing parsing. Throws
+ * on failure, so it slots into the same ladder as the Gemini attempts and gets
+ * the same retry treatment.
+ */
+async function askOpenAI(input: {
+  systemInstruction: string;
+  userText: string;
+  model: string;
+  maxOutputTokens: number;
+  /** JSON Schema (lowercase types), when the caller needs structured output. */
+  jsonSchema?: Record<string, unknown>;
+}): Promise<string> {
+  if (!OPENAI_API_KEY) throw new Error('OpenAI is not configured (no OPENAI_API_KEY).');
+
+  const body: Record<string, unknown> = {
+    model: input.model,
+    messages: [
+      { role: 'system', content: input.systemInstruction },
+      { role: 'user', content: input.userText },
+    ],
+    // Same reasoning as the Gemini side: this reports on operational data,
+    // where a confident invention is worse than a dull fact.
+    temperature: 0.1,
+    max_tokens: input.maxOutputTokens,
+  };
+
+  if (input.jsonSchema) {
+    body.response_format = {
+      type: 'json_schema',
+      json_schema: { name: 'navigation', strict: true, schema: input.jsonSchema },
+    };
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), GEMINI_CALL_TIMEOUT_MS);
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    const payload: any = await res.json().catch(() => null);
+    if (!res.ok) {
+      // Surfaced with the provider's own wording so the ladder's retry rules —
+      // which already match on 429, quota and rate limit — apply unchanged.
+      const detail = payload?.error?.message ?? `HTTP ${res.status}`;
+      throw new Error(`openai ${res.status}: ${detail}`);
+    }
+
+    const text = payload?.choices?.[0]?.message?.content;
+    if (typeof text !== 'string' || !text.trim()) {
+      throw new Error('openai returned an empty completion');
+    }
+    return text.trim();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Hard ceiling on a single model call.
  *
  * The SDK has no timeout of its own, so a stalled upstream call held an Express
@@ -1778,10 +1877,34 @@ app.post('/api/copilot/chat', apiRoute(async (req, res) => {
       }
     }
 
-    if (!response) throw lastError ?? new Error('No copilot model could answer.');
+    /**
+     * Every Gemini model refused. Usually that means the daily allowance is
+     * spent across the whole chain, which no amount of retrying fixes — a
+     * different provider does, because its quota is unrelated.
+     */
+    let openAiReply: string | null = null;
+    if (!response && openAiAvailable()) {
+      for (const model of OPENAI_MODEL_CHAIN) {
+        try {
+          openAiReply = await askOpenAI({
+            systemInstruction: isOperator ? COPILOT_SYSTEM_INSTRUCTION : VISITOR_COPILOT_INSTRUCTION,
+            userText: String((contents[contents.length - 1] as any)?.parts?.[0]?.text ?? prompt),
+            model,
+            maxOutputTokens: 320,
+          });
+          modelUsed = model;
+          break;
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`Copilot: ${model} declined (${String(err?.message ?? err).slice(0, 120)})`);
+        }
+      }
+    }
+
+    if (!response && !openAiReply) throw lastError ?? new Error('No copilot model could answer.');
 
     res.json({
-      reply: response.text?.trim() || 'I could not produce an answer for that.',
+      reply: openAiReply ?? response.text?.trim() ?? 'I could not produce an answer for that.',
       // Which model actually answered, so the badge in the drawer cannot drift
       // from reality — it read "Gemini 2.5 Flash" as a hardcoded string long
       // after the server had moved on.
@@ -3609,6 +3732,30 @@ const NAVIGATION_SCHEMA = {
   required: ['department', 'reason', 'confidence', 'urgent'],
 } as const;
 
+/**
+ * The same shape for OpenAI, in plain JSON Schema.
+ *
+ * Written out rather than converted from NAVIGATION_SCHEMA: Gemini's Type.OBJECT
+ * is the string "OBJECT" and JSON Schema expects "object", so a transform would
+ * differ by case alone and fail only on the fallback path — the one that runs
+ * when everything else has already gone wrong.
+ *
+ * `strict: true` requires every property listed in `required` and
+ * additionalProperties false, so the fields are guaranteed rather than hoped for.
+ */
+const NAVIGATION_JSON_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    department: { type: 'string' },
+    reason: { type: 'string' },
+    confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
+    urgent: { type: 'boolean' },
+    suggestedQuestions: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['department', 'reason', 'confidence', 'urgent', 'suggestedQuestions'],
+} as const;
+
 /** Trimmed so a long report cannot crowd out the instruction or the catalogue. */
 const MAX_REPORT_CHARS_TO_MODEL = 6000;
 
@@ -3705,6 +3852,31 @@ async function runHealthNavigation(input: {
 
       const worthRetrying = /503|UNAVAILABLE|high demand|overloaded|thinking|INVALID_ARGUMENT|not supported|did not respond in time/i.test(lastError);
       if (!worthRetrying) break;
+    }
+  }
+
+  /**
+   * The whole Gemini chain refused — almost always the daily allowance, spent
+   * across every model at once. A patient at this point would otherwise be told
+   * the navigator is unavailable while a perfectly good second provider sits
+   * unused.
+   */
+  if (!raw && openAiAvailable()) {
+    for (const model of OPENAI_MODEL_CHAIN) {
+      try {
+        raw = await askOpenAI({
+          systemInstruction: NAVIGATOR_INSTRUCTION,
+          userText: parts,
+          model,
+          maxOutputTokens: 500,
+          jsonSchema: NAVIGATION_JSON_SCHEMA as unknown as Record<string, unknown>,
+        });
+        modelUsed = model;
+        break;
+      } catch (err: any) {
+        lastError = String(err?.message ?? err);
+        console.warn(`Navigator: ${model} declined (${lastError.slice(0, 140)})`);
+      }
     }
   }
 
